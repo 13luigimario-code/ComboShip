@@ -66,6 +66,10 @@ static void ComboTerminateHandler() {
 #include <dlfcn.h>
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h> // _NSGetExecutablePath (see ComboExeDir)
+#endif
+
 #ifdef _WIN32
 // Last-chance crash capture for the post-teardown window (FreeLibrary / CRT exit / static dtors),
 // which libultraship's Context-dependent CrashHandler can't cover. Installed after deinit; writes
@@ -120,6 +124,56 @@ static LONG WINAPI ComboLateCrashFilter(PEXCEPTION_POINTERS ex) {
     return EXCEPTION_EXECUTE_HANDLER; // die quietly; the report is on disk
 }
 #endif
+
+// ---------- Executable location ----------
+
+// Directory holding the running executable, or empty if it can't be determined.
+//
+// The modules and the runtime tree sit next to the exe, and CWD is NOT a reliable anchor for
+// either: a macOS .app launched from Finder starts with CWD "/", and on Windows a shortcut can set
+// any working directory. The Linux AppImage sidesteps this by cd'ing to the data dir in AppRun
+// (combo/linux/AppRun); a .app has no such wrapper script, so the launcher resolves it itself.
+static std::filesystem::path ComboExeDir() {
+#ifdef _WIN32
+    // Wide API: the ANSI variant mangles non-ASCII install paths (e.g. accented user names) to '?'.
+    wchar_t exe[MAX_PATH] = { 0 };
+    if (GetModuleFileNameW(nullptr, exe, MAX_PATH))
+        return std::filesystem::path(exe).parent_path();
+#elif defined(__APPLE__)
+    uint32_t size = 0;
+    _NSGetExecutablePath(nullptr, &size); // first call reports the buffer size it needs
+    std::string buf(size, '\0');
+    if (size && _NSGetExecutablePath(buf.data(), &size) == 0) {
+        // buf.c_str() rather than buf: `size` counts the NUL, which is inside the string's own data.
+        // The path may also be a symlink or contain "..", so canonicalize — sibling lookups have to
+        // land in the real directory. Fall back to the raw path if the file is somehow unreadable.
+        const std::filesystem::path raw(buf.c_str());
+        std::error_code ec;
+        const auto real = std::filesystem::canonical(raw, ec);
+        return ec ? raw.parent_path() : real.parent_path();
+    }
+#else
+    std::error_code ec;
+    if (const auto real = std::filesystem::canonical("/proc/self/exe", ec); !ec)
+        return real.parent_path();
+#endif
+    return {};
+}
+
+// Absolute path to a sibling module, e.g. ComboModulePath("libsoh.dylib"). Falls back to the bare
+// leafname, which LoadDll below anchors to "./" (correct whenever CWD is the exe dir).
+//
+// Windows is deliberately left as a bare name: LoadLibrary already searches the executable's own
+// directory first, which is exactly where the deploy rules pin the DLLs, so re-rooting would only
+// swap a working path for an untested one.
+static std::string ComboModulePath(const char* leaf) {
+#ifdef _WIN32
+    return std::string(leaf);
+#else
+    const auto dir = ComboExeDir();
+    return dir.empty() ? std::string(leaf) : (dir / leaf).string();
+#endif
+}
 
 // ---------- DLL helpers ----------
 
@@ -2192,17 +2246,15 @@ static std::filesystem::path ResolveComboSeedPath(const std::string& file) {
     std::error_code ec;
     if (std::filesystem::exists(p, ec))
         return p;
-#ifdef _WIN32
-    // Wide API: the ANSI variant mangles non-ASCII install paths (e.g. accented user names) to '?'.
-    wchar_t exe[MAX_PATH] = { 0 };
-    if (GetModuleFileNameW(nullptr, exe, MAX_PATH)) {
-        const auto dir = std::filesystem::path(exe).parent_path();
+    // Was Windows-only (GetModuleFileNameW inline); ComboExeDir is the portable spelling, so the
+    // re-root now works on every platform. It matters most on macOS, where a Finder-launched .app
+    // starts with CWD "/" and a relative seed path resolves nowhere at all.
+    if (const auto dir = ComboExeDir(); !dir.empty()) {
         // A relative path re-rooted at the exe; a moved absolute one by name under the seed dir.
         for (const auto& alt : { dir / p.relative_path(), dir / ComboRando::ConsolidatedDir() / p.filename() })
             if (std::filesystem::exists(alt, ec))
                 return alt;
     }
-#endif
     return p;
 }
 
@@ -2618,6 +2670,39 @@ static void Combo_OnMMReturn(int kind) {
     g_pendingOOTReturn = true;
 }
 
+// ---------- Data-file location ----------
+
+// The launcher runs BEFORE libultraship's Context exists, so it cannot call
+// Context::LocateFileAcrossAppDirs — but it MUST agree with it, or it checks for archives somewhere
+// other than where the game later reads (and the extractor later writes) them. Mirror that order:
+//   1. SHIP_HOME — set by the .app bundle's Info.plist LSEnvironment (and by AppRun on Linux); the
+//                  writable dir holding config, saves, and the player-extracted ROM archives.
+//   2. exe dir   — the portable/loose layout (inside a bundle this is Contents/MacOS).
+//   3. CWD       — the original behavior, kept so running from a build dir still works.
+// Without step 1 a bundled .app always reported the ROM archives missing: LaunchServices starts it
+// with CWD "/", so every bare relative check below was false no matter what the player had extracted.
+static std::filesystem::path ComboShipHome() {
+    const char* h = std::getenv("SHIP_HOME");
+    if (h == nullptr || *h == '\0')
+        return {};
+    std::string p(h);
+    if (p[0] == '~') { // Info.plist stores it tilde-relative
+        if (const char* home = std::getenv("HOME"))
+            p = std::string(home) + p.substr(1);
+    }
+    return p;
+}
+
+// True if `name` exists in any of the three locations above.
+static bool ComboDataExists(const char* name) {
+    std::error_code ec;
+    if (const auto home = ComboShipHome(); !home.empty() && std::filesystem::exists(home / name, ec))
+        return true;
+    if (const auto dir = ComboExeDir(); !dir.empty() && std::filesystem::exists(dir / name, ec))
+        return true;
+    return std::filesystem::exists(name, ec);
+}
+
 // ---------- O2R existence checks ----------
 
 static bool OOTArchivesExist() {
@@ -2625,22 +2710,22 @@ static bool OOTArchivesExist() {
     // archive (assets/fonts) that always ships with the build — it must NOT count here, or a genuine
     // first run (port archive present, ROM not yet extracted) would skip extraction and then hard-exit
     // inside Initialize() when oot.o2r is missing.
-    return std::filesystem::exists("oot-mq.o2r") || std::filesystem::exists("oot.o2r");
+    return ComboDataExists("oot-mq.o2r") || ComboDataExists("oot.o2r");
 }
 
 // ROM-derived archive (must be extracted from the player's MM ROM)
 static bool MMRomArchiveExists() {
-    return std::filesystem::exists("mm.o2r") || std::filesystem::exists("mm.zip") || std::filesystem::exists("mm.otr");
+    return ComboDataExists("mm.o2r") || ComboDataExists("mm.zip") || ComboDataExists("mm.otr");
 }
 
 // Any MM archive at all (used for general "is MM set up" check)
 static bool MMArchivesExist() {
-    return MMRomArchiveExists() || std::filesystem::exists("2ship.o2r");
+    return MMRomArchiveExists() || ComboDataExists("2ship.o2r");
 }
 
 // ComboShip (issue 24): the combined config. Absent => fresh install => offer settings import.
 static bool ComboConfigExists() {
-    return std::filesystem::exists("comboship.json");
+    return ComboDataExists("comboship.json");
 }
 
 // Parse a JSON object from disk. False on missing/parse-failure/non-object (slot then skipped).
@@ -2716,13 +2801,13 @@ int main(int argc, char** argv) {
     const char* comboUiDll = "comboui.so"; // comboui sets PREFIX "" (see combo/CMakeLists.txt)
 #endif
 
-    DllHandle sohModule = LoadDll(sohDll);
+    DllHandle sohModule = LoadDll(ComboModulePath(sohDll).c_str());
     if (!sohModule) {
         std::cerr << "ERROR: Failed to load " << sohDll << " (" << DllError() << ")" << std::endl;
         return 1;
     }
 
-    DllHandle mmModule = LoadDll(twoShipDll);
+    DllHandle mmModule = LoadDll(ComboModulePath(twoShipDll).c_str());
     if (!mmModule) {
         std::cerr << "ERROR: Failed to load " << twoShipDll << " (" << DllError() << ")" << std::endl;
         FreeDll(sohModule);
@@ -2924,7 +3009,7 @@ int main(int argc, char** argv) {
         windowInitialized = true;
 
         if (!comboUIModule) {
-            comboUIModule = LoadDll(comboUiDll);
+            comboUIModule = LoadDll(ComboModulePath(comboUiDll).c_str());
         }
         if (comboUIModule) {
             ComboUI_RunExtraction = (ComboFnRunExtraction)GetSym(comboUIModule, "ComboUI_RunExtraction");
@@ -2979,7 +3064,7 @@ int main(int argc, char** argv) {
             windowInitialized = true;
         }
         if (!comboUIModule) {
-            comboUIModule = LoadDll(comboUiDll);
+            comboUIModule = LoadDll(ComboModulePath(comboUiDll).c_str());
         }
         if (comboUIModule && !ComboUI_RunSettingsImport) {
             ComboUI_RunSettingsImport = (ComboFnRunSettingsImport)GetSym(comboUIModule, "ComboUI_RunSettingsImport");
@@ -3092,7 +3177,7 @@ int main(int argc, char** argv) {
     // OOT has created the shared Gui. comboui owns the menu for the whole process.
     // (It may already be loaded if the extraction screen ran — reuse that handle.)
     if (!comboUIModule) {
-        comboUIModule = LoadDll(comboUiDll);
+        comboUIModule = LoadDll(ComboModulePath(comboUiDll).c_str());
     }
     if (comboUIModule) {
         ComboUI_Register = (FnComboUIRegister)GetSym(comboUIModule, "ComboUI_Register");
