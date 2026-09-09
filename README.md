@@ -109,6 +109,11 @@ entries exist, so `CMAKE_PREFIX_PATH` alone silently keeps whatever was found fi
 `otool -L build-macos/combo/ComboShip` — genuine 2.30.3 reports `current version 3001.3.0`,
 sdl2-compat reports `3201.x`.
 
+A source-built SDL installs itself as `@rpath/libSDL2-2.0.0.dylib`, which only resolves if the
+dylib sits beside the binaries, so the build copies it into the runtime directory and into the
+`.app` automatically. Homebrew's SDL has an absolute install name and needs no such copy; the build
+picks between the two by reading the install name, so neither route needs a flag.
+
 ## Packaging
 
 ### Windows
