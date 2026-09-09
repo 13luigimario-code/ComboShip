@@ -156,3 +156,62 @@ jobs:
             x64/Release/comborando.exe
             x64/Release/*.dll
           if-no-files-found: error
+
+  # ComboShip: macOS Release build + signed .app/.dmg. Mirrors the Windows job's target order
+  # (libultraship -> soh -> 2ship, then ComboShip pulls comboui in) and the same cpack step.
+  # runs-on macos-14 matches upstream Shipwright's own macOS job and is arm64, which is what our
+  # 11.0 deployment target and the -exported_symbols_list export filtering are exercised against.
+  build-macos:
+    needs: gate
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v5
+
+      # cmake ships on the runner image; ninja does not. Everything else is the dependency set
+      # documented in the README's macOS section.
+      # NOTE: Homebrew's `sdl2` is an alias for sdl2-compat (SDL2 on SDL3) — real SDL2 is gone from
+      # homebrew-core. It builds and runs, and it is what this job tests. See the README for why a
+      # genuine SDL2 (MacPorts libsdl2, as upstream's own CI uses) is preferable for release builds.
+      - name: Install dependencies
+        run: >
+          brew install ninja libpng glew tinyxml2 nlohmann-json libzip
+          opusfile libvorbis libogg opus spdlog glfw sdl2_net
+
+      # GenerateSohOtr / Generate2ShipOtr run OTRExporter/extract_assets.py.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure
+        run: cmake -S . -B build-cmake -GNinja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build libultraship
+        run: cmake --build build-cmake --target libultraship -j3
+      - name: Build soh
+        run: cmake --build build-cmake --target soh -j3
+      - name: Build 2ship
+        run: cmake --build build-cmake --target 2ship -j3
+      - name: Build ComboShip
+        run: cmake --build build-cmake --target ComboShip -j3
+
+      # cpack's install rules read the port archives from the BUILD tree, so these must run in the
+      # same build dir before packaging or the Bundle step fails on a missing soh.o2r.
+      - name: Generate port archives
+        run: |
+          cmake --build build-cmake --target GenerateSohOtr
+          cmake --build build-cmake --target Generate2ShipOtr
+
+      - name: Package (cpack .app/.dmg)
+        # Spotlight indexing the disk image cpack just created keeps hdiutil from unmounting it,
+        # failing the build with "Resource busy". Same workaround upstream Shipwright uses.
+        run: |
+          sudo mdutil -a -i off || true
+          cd build-cmake && cpack
+
+      - name: Upload ComboShip macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ComboShip-macos
+          path: _packages/*.dmg
+          if-no-files-found: error
