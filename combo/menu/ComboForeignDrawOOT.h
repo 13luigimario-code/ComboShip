@@ -50,6 +50,9 @@ struct ComboForeignDrawInfo {
     int32_t opCount = 0;                      // CW_DRAW_KIND_OPS payload
     CwDrawOp ops[CW_DRAW_MAX_OPS] = {};
     const char* dls[CW_DRAW_MAX_DLISTS] = { nullptr }; // interned "__OTR__@mm:..." routed paths
+    // MM's own setup DL for each stream (raw Gfx* in 2ship.dll), or null for our 25 Opa/Xlu.
+    const void* setupDlOpa = nullptr;
+    const void* setupDlXlu = nullptr;
     // ComboShip: animated class (no static DL row — MM stray fairies). When animOk, anim describes
     // the item and ComboForeignAnim_Draw renders it; path strings point at 2ship.dll statics.
     bool animOk = false;
@@ -131,6 +134,8 @@ inline ComboForeignResolve ComboFillForeignDrawInfo(RandomizerCheck rc, int slot
     info.count = n;
     info.xluStart = raw.xluStartIndex;
     info.scale = raw.scale;
+    info.setupDlOpa = raw.setupDlOpa;
+    info.setupDlXlu = raw.setupDlXlu;
     info.hasEnvColor = raw.hasEnvColor != 0;
     info.xluSeg8TexScroll = raw.xluSeg8TexScroll != 0;
     info.matAnimPath = raw.matAnimPath; // 2ship static literal (process-lifetime); loaded, not emitted
@@ -148,34 +153,71 @@ inline ComboForeignResolve ComboFillForeignDrawInfo(RandomizerCheck rc, int slot
     return ComboForeignResolve::Ok;
 }
 
+// Recipe cache, swept per save slot and per foreign-map generation. Shared by the resolver and the
+// grant-time latch below so both observe the same sweep.
+struct ComboForeignDrawCache {
+    std::unordered_map<int32_t, ComboForeignDrawInfo> map;
+    int slot = -1;
+    uint64_t gen = (uint64_t)-1;
+};
+
+inline ComboForeignDrawCache& ComboForeignDrawCacheGet() {
+    static ComboForeignDrawCache c;
+    int slot = gSaveContext.fileNum;
+    uint64_t gen = OOT_ForeignMapGen();
+    if (slot != c.slot || gen != c.gen) {
+        c.map.clear();
+        c.slot = slot;
+        c.gen = gen;
+    }
+    return c;
+}
+
 // Full lookup chain (foreign map -> MM export -> routed strings), cached per check per slot per
 // foreign-map generation so it runs once per check instead of every frame.
 inline const ComboForeignDrawInfo* ComboResolveForeignDrawInfo(RandomizerCheck rc) {
-    static std::unordered_map<int32_t, ComboForeignDrawInfo> sCache;
-    static int sCacheSlot = -1;
-    static uint64_t sCacheGen = (uint64_t)-1;
-    int slot = gSaveContext.fileNum;
-    uint64_t gen = OOT_ForeignMapGen();
-    if (slot != sCacheSlot || gen != sCacheGen) {
-        sCache.clear();
-        sCacheSlot = slot;
-        sCacheGen = gen;
-    }
-    auto cached = sCache.find(rc);
-    if (cached != sCache.end() && !cached->second.stateDependent) {
+    ComboForeignDrawCache& c = ComboForeignDrawCacheGet();
+    auto cached = c.map.find(rc);
+    if (cached != c.map.end() && !cached->second.stateDependent) {
         return cached->second.ok ? &cached->second : nullptr;
     }
     // A state-dependent recipe (progressive tier, Triforce shard, junk/trap) is re-resolved every
     // frame; caching it would freeze whichever model happened to be correct on the first draw.
     ComboForeignDrawInfo info{}; // built locally: a failure must not clobber a live cached recipe
-    if (ComboFillForeignDrawInfo(rc, slot, info) == ComboForeignResolve::NotReady) {
-        sCache.erase(rc); // transient — retry next frame instead of freezing the sentinel in
+    if (ComboFillForeignDrawInfo(rc, c.slot, info) == ComboForeignResolve::NotReady) {
+        c.map.erase(rc); // transient — retry next frame instead of freezing the sentinel in
         return nullptr;
     }
-    ComboForeignDrawInfo& entry = sCache[rc]; // Unknown caches ok=false: one lookup, then sentinel
+    ComboForeignDrawInfo& entry = c.map[rc]; // Unknown caches ok=false: one lookup, then sentinel
     entry = info;
     return entry.ok ? &entry : nullptr;
 }
+
+// ComboShip: freeze this check's recipe at the tier it is ABOUT to grant. The cross-grant mutates
+// MM's dormant save mid-presentation, so a live re-resolve would flip the held-up model next frame.
+inline void ComboLatchForeignDraw(RandomizerCheck rc) {
+    if (rc == RC_UNKNOWN_CHECK) {
+        return;
+    }
+    ComboForeignDrawCache& c = ComboForeignDrawCacheGet();
+    ComboForeignDrawInfo info{};
+    if (ComboFillForeignDrawInfo(rc, c.slot, info) != ComboForeignResolve::Ok) {
+        return; // nothing written, nothing erased: the draw stays live, i.e. no worse than before
+    }
+    if (info.animOk) {
+        return; // MM's anim class (stray fairies, souls, minifrogs) is never state-dependent
+    }
+    // The fill's lookup may have built the foreign map, bumping the generation the cache keys on;
+    // adopt it (dropping entries resolved against the old map) so this latch survives.
+    uint64_t gen = OOT_ForeignMapGen();
+    if (gen != c.gen) {
+        c.map.clear();
+        c.gen = gen;
+    }
+    info.stateDependent = false; // frozen: the resolver's cache-hit path now serves it verbatim
+    c.map[rc] = info;
+}
+
 } // namespace
 
 // ---- Non-portable MM draw funcs. Each handler is a 1:1 port of the MM get-item func
@@ -514,7 +556,14 @@ inline void OOT_DrawForeignSimple(PlayState* play, const ComboForeignDrawInfo* i
     // Mirror MM's GetItem_DrawOpa*/Xlu* structure: one 25Opa setup + matrix for the OPA layers,
     // then one 25Xlu setup + matrix for the XLU layers.
     if (xs > 0) {
-        Gfx_SetupDL_25Opa(play->state.gfxCtx);
+        // MM's own setup when the row uses one other than 25 (bombchu = 23, which is 1-CYCLE without
+        // fog). Under OOT's 2-cycle 25 the list's duplicated second cycle wins and samples TEXEL1 —
+        // whatever tile OOT last bound — instead of the item's own texture.
+        if (info->setupDlOpa != nullptr) {
+            gSPDisplayList(POLY_OPA_DISP++, (Gfx*)info->setupDlOpa);
+        } else {
+            Gfx_SetupDL_25Opa(play->state.gfxCtx);
+        }
         OOT_FOREIGN_PIN_OPA();
         COMBO_FOREIGN_MTX(POLY_OPA_DISP++);
         if (info->hasEnvColor) {
@@ -525,7 +574,11 @@ inline void OOT_DrawForeignSimple(PlayState* play, const ComboForeignDrawInfo* i
         }
     }
     if (xs < n) {
-        Gfx_SetupDL_25Xlu(play->state.gfxCtx);
+        if (info->setupDlXlu != nullptr) { // compass glass: setup 5, not 25
+            gSPDisplayList(POLY_XLU_DISP++, (Gfx*)info->setupDlXlu);
+        } else {
+            Gfx_SetupDL_25Xlu(play->state.gfxCtx);
+        }
         OOT_FOREIGN_PIN_XLU();
         // ComboShip: MM's GetItem_DrawSkullToken inlines this seg-8 flame scroll (no texanim
         // resource to carry), so it is hardcoded here. See docs/deviations/rando.md.

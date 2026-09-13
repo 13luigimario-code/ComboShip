@@ -1671,6 +1671,13 @@ extern "C" uint16_t ResourceMgr_LoadTexHeightByName(char* texPath);
 extern "C" char* ResourceMgr_LoadTexOrDListByName(const char* filePath) {
     auto res = GetResourceByName(filePath);
 
+#ifdef COMBO_BUILD
+    // ComboShip: a miss returns null here (same as ResourceMgr_LoadIfDListByName). The GBI wrappers
+    // that reach this (stubs.c gSPInvalidateTexCache / gSPSegmentLoadRes) tolerate a null address.
+    if (res == nullptr) {
+        return nullptr;
+    }
+#endif
     if (res->GetInitData()->Type == static_cast<uint32_t>(Fast::ResourceType::DisplayList))
         return (char*)&((std::static_pointer_cast<Fast::DisplayList>(res))->Instructions[0]);
     else if (res->GetInitData()->Type == static_cast<uint32_t>(SOH::ResourceType::SOH_Array))
@@ -3980,10 +3987,8 @@ static bool Combo_IsBottleRefill(RandoItemId rid) {
 }
 
 void Combo_MM_GiveDormantResolved(RandoItemId rid) {
-    // ComboShip (#84): drop a bottle refill when no bottle is free. This path bypasses
-    // Rando::ConvertItem, whose !Inventory_HasEmptyBottle() check normally blocks it, and Item_Give's
-    // bottle-contents branch falls through to `INV_CONTENT(item) = item` — which maps every content to
-    // SLOT_BOTTLE_1 and so overwrites bottle #1. Keep this even if that branch is ever fixed upstream.
+    // ComboShip (#84): drop a bottle refill when no bottle is free. Callers convert first, so this is
+    // a backstop — Item_Give's bottle-contents branch overwrites bottle #1. Keep it either way.
     if (Combo_IsBottleRefill(rid) && !Inventory_HasEmptyBottle()) {
         SPDLOG_INFO("[ComboShip] MM cross-grant: no empty bottle, dropping refill");
         return;
@@ -4025,7 +4030,14 @@ extern "C" COMBO_EXPORT void MM_GrantCrossItem(const char* itemName) {
         SPDLOG_WARN("[ComboShip] MM_GrantCrossItem: unknown MM item '{}'", itemName);
         return;
     }
-    RandoItemId rid = it->second;
+    const RandoItemId placed = it->second;
+    // ComboShip: convert like a native pickup does. MM's equipped shield value IS ownership, so an
+    // already-owned item would otherwise downgrade it through vanilla Item_Give.
+    RandoItemId rid = Rando::ConvertItem(placed);
+    if (rid != placed) {
+        SPDLOG_INFO("[ComboShip] MM_GrantCrossItem: '{}' not obtainable (already have / no slot), converted {} -> {}",
+                    itemName, (int)placed, (int)rid);
+    }
     // ComboShip: MM junk can't rotate when collected in OOT; deliver a fixed Red Rupee.
     if (rid == RI_JUNK) {
         rid = RI_RUPEE_RED;

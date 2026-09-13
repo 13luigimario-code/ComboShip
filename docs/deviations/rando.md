@@ -720,8 +720,47 @@ runtime lookups on either game's side, since only the combo layer sees both worl
 
 **Known v1 limitations (documented, not bugs):** trial/gossip text for cross entries is English-only
 (no translation source); MM can't exclude an already-obtained OOT item from its own gossip pool
-(only its own-game repeat-hint pool is protected); Ganondorf's combined-hint phrasing variant isn't
-mirrored.
+(only its own-game repeat-hint pool is protected). ~~Ganondorf's combined-hint phrasing variant isn't
+mirrored~~ — fixed 2026-08-29, see below.
+
+## Ganondorf hint variants + foreign item names in hints (2026-08-29)
+
+**Why:** a player's Ganondorf hint showed an EMPTY textbox. `BuildGanondorfHint` (StaticHints.cpp)
+picks the message by INDEX from live state — 1 or 2 while Master Sword is shuffled and unowned — but
+the combo payload carried a single message, and `Hint::GetHintMessage` returns empty text for an
+out-of-range index. The seed had Master Sword shuffled, so the player could never see a hint.
+
+- `combo/rando/CrossHints.h` — new `itemAreaText` resolver (an OOT item's area wherever it landed, in
+  either game), shared with the altar block's `rewardArea`. The Ganondorf hint now emits all three
+  variants in native's `hintKeys` order (LA_ONLY / MS_ONLY / LA_AND_MS) when the sword is shuffled and
+  isn't a starting item. `nullopt` (item in no check at all — starting item, or category not shuffled)
+  means the hint is not emitted, so native fills that slot from its own placement instead: a static
+  hint never names a location for an item that isn't in the pool.
+- `soh/soh/OTRGlobals.cpp` — `SOH_DumpRandoHintData` exports `shuffleMasterSword`/`startingMasterSword`;
+  `Combo_IsUsedHintTemplate` allows the two extra Ganondorf templates plus `RHT_YOUR_POCKET`.
+- `soh/soh/Enhancements/randomizer/hint.cpp` — `GetHintMessage` falls back to the LAST message when a
+  builder indexes past a MESSAGE hint's payload, so an old seed (or any short payload) shows the one
+  variant it has instead of a blank box. It has to sit here, not in the apply walk: `LoadRandomizer`
+  rebuilds every hint from the save's own `comboMessagesEn` array AFTER `SOH_ApplyComboHints` runs, so
+  anything the walk padded is thrown away on a save load.
+- `soh/soh/Enhancements/randomizer/hint.cpp` — `GetItemHintText` resolves `RG_COMBO_FOREIGN` through
+  the foreign map. The sentinel's own hint key is `RHT_NONE`, which renders as the literal string
+  "No Hint", so every item-naming hint pointing at a cross-placed check used to say "I will give you
+  No Hint!" (Loach, HBA, Malon, Big Poes, Chickens, Biggoron, Frogs, OoT, Mask Shop). A lookup that
+  races the blob push falls back to "something", never to the sentinel.
+- `soh/soh/Enhancements/randomizer/hook_handlers.{h,cpp}` — `OOT_LookupForeignByCheck`, the same
+  lookup keyed by check for callers with no save/location context.
+- `combo/gui/ComboHintTracker.cpp` — shows a multi-message hint's last (most complete) variant.
+
+Verified headlessly: regenerating the reported seed changes only the Ganondorf entry (1 -> 3 messages,
+message 0 byte-identical); all 42 other OOT hints, the MM hints and both placement maps are unchanged,
+because the new templates have no clarity variants and so draw nothing from the RNG.
+
+**Known limitations (unchanged):** composed area names are English in all three languages, including
+for OOT areas that do have translations (`areaText` wraps them in `EnglishOnly`); warp-song hints still
+use native's OOT-only area resolution; ~~the 12 area-type NPC static hints (Sheik, boss keys, Dampé,
+Greg, Saria, Mido, Fishing Pole) still say "an Isolated Place" for a cross-placed target~~ — fixed
+2026-09-02, see "NPC item hints resolve cross-placed items" below.
 
 **Settings-persistence fix (2026-07-16):** the silent file-select auto-reload
 (`Combo_OnReloadRequest(NULL)`) was writing the pending seed's `gRando.*` CVars over the user's
@@ -1692,3 +1731,102 @@ which retries until `2ship.dll` is loaded.
 - A hand-edited seed file with no `masterSeed` key falls back to 0 consistently on every path (latch,
   `SOH_SetComboRandoSeed`, the rolls), so all such seeds share one palette and one audio shuffle — the
   pre-existing behavior of `SOH_SetComboRandoSeed(0)`, not a new deviation.
+
+## NPC item hints resolve cross-placed items (2026-09-02)
+
+**Why:** a player's Greg hint (Treasure Chest Shop owner) said the rupee was "somewhere in an Isolated
+Place"; Greg was in a Snowhead Temple pot. Native `CreateStaticHintFromData` (hints.cpp) resolves each
+static hint's target item through `FindItemsAndMarkHinted`, which searches only `ctx->allLocations`
+(OOT's own checks). An item cross-placed into MM comes back `RC_UNKNOWN_CHECK`, whose empty area set
+is stored as `RA_NONE`, and `StaticData::areaNames[RA_NONE]` is `RHT_ISOLATED_PLACE`. The same path
+covered every area-type NPC hint with a target item: Sheik's Light Arrows, the six boss-door hints,
+Dampé's diary (hookshot), Greg, Saria (magic meter), Mido (Kokiri Sword) and the fishing pond owner.
+
+- `combo/rando/CrossHints.h` — new block after the Ganondorf hint composes those 12 hints from the
+  two-game placement list via the existing `itemAreaText` (Link's Pocket -> `RHT_YOUR_POCKET` for the
+  rows native flags `yourPocket`). Each is emitted as `"__STATIC__<RandomizerHint>"` with `type:
+  "static"`, one message per native `hintKeys` entry (Saria gets talk + song). The hinted check is
+  reserved in `usedCheckKeys`, mirroring native's `SetHintAccesible` (static hints are created before
+  stone/always hints natively, so stones never re-target them). An item in no check at all (starting
+  item, category not shuffled) is skipped and native fills the slot as before. These templates have no
+  clarity variants, so the block draws nothing from the RNG — existing seeds regenerate with identical
+  stone picks.
+- `soh/soh/OTRGlobals.cpp` — `SOH_DumpRandoHintData` exports the seven NPC hint options
+  (`sheikLaHint`, `bossKeyHint`, `dampesDiaryHint`, `gregHint`, `sariaHint`, `midoHint`,
+  `fishingPoleHint`); `Combo_IsUsedHintTemplate` allows the eight templates; `Combo_WalkComboHints`
+  maps the sentinel back to its `RandomizerHint` (checked BEFORE the generic `__` branch, which would
+  otherwise burn a gossip-stone slot on it). Native `CreateStaticHints()` then self-skips the enabled
+  key.
+- `soh/soh/Enhancements/randomizer/hint.cpp` — `GetHintMessage` re-stamps a MESSAGE-type Saria hint's
+  slot 1 as `TEXTBOX_TYPE_BLUE` (native's `RHT_SARIA_SONG_HINT` box type; the payload and the save
+  carry text only). Placed in the reader, not the apply walk, for the same reason as the last-message
+  fallback above it: `LoadRandomizer` rebuilds hints from the save arrays after the walk.
+- `combo/gui/ComboHintTracker.cpp` — new "NPC Item Hints" group, labelled by speaker.
+
+**Behavior change for OOT-placed targets too:** these hints are now composed by combo for every seed
+with the option on, not only cross-placed ones, so their area names follow the composer's conventions
+(English in all three languages, clear area name regardless of the obscure/ambiguous area-name pool
+native's `NamesChosen` draws from). Progressive items (hookshot, magic) hint the first copy in
+placement order, as native hinted the first copy in `allLocations` order — either copy is a valid
+target for both.
+
+## Foreign progressive models froze one tier too late (2026-09-04)
+
+`24d328af3` (#88) made a foreign progressive item draw the tier it actually grants instead of its
+static tier-1 model, by resolving through `Rando::ConvertItem` / `Item::GetGIEntry` and marking the
+recipe `stateDependent` — which makes both draw caches re-resolve it **every frame**.
+
+That is right while the item is only being *previewed* (lying in the world, on a shop shelf), but the
+cross-grant fires **mid-presentation**: `OOT_DeliverForeign` runs from `Randomizer_Item_Give` while
+the item is still held up, and MM's foreign branch cross-delivers from inside the `giveItem` lambda.
+The grant moves the other game's dormant save, so the next frame resolves one tier higher — picking
+up MM's Progressive Bow in OOT drew a Bow for one frame, then a Large Quiver. Every progressive, both
+directions, plus the MM foreign shop shelf (which keeps drawing until `boughtFunc` blanks it).
+
+MM's own **native** items never had this: `CheckQueue` converts once before the give and latches the
+concrete id into `CUSTOM_ITEM_PARAM`. The foreign path had no equivalent because its recipe is keyed
+by *check*, not by a stored resolved item.
+
+**Fix — a grant-time latch.** Both foreign caches gained a second entry point
+(`ComboLatchForeignDraw` / `ComboLatchForeignDrawOOT`) that resolves the recipe once, immediately
+before the grant, and stores it with `stateDependent = false`. The three function-local statics moved
+into a `ComboForeignDrawCache{,OOT}` struct + accessor so the resolver and the latch share one
+slot/generation sweep. The OOT latch re-adopts the generation after a successful fill, because
+`OOT_LookupForeign` can bump it from inside that fill (`OOT_GetForeignCategory` does the same);
+MM needs no equivalent — `ComboRandoGen()` is only ever bumped by `MM_LoadComboRando`. Vendored seams are thin wrappers: `Randomizer_LatchComboForeign` (draw.cpp,
+`int32_t` because `RandomizerCheck` isn't in `draw.h`'s scope) and `Rando::LatchComboForeign`
+(DrawItem.cpp). Call sites: `OOT_DeliverForeign`, `CheckQueue`'s foreign branch, `EnGirlA_RandoBuyFunc`.
+
+**Why clearing the flag beats a separate `latched` field:** the resolver returns at the cache-hit gate
+*before* reaching the fill, so a mid-presentation `NotReady` can no longer `erase` the latch and an
+`Unknown` can no longer overwrite it with `ok=false`. Both hazards become structurally unreachable.
+
+**Placement traps.**
+- OOT: the latch goes *after* the `fi` lookup, not at the top of `OOT_DeliverForeign` —
+  `OOT_LookupForeign` can lazily build the map and bump `OOT_ForeignMapGen()`, which would sweep the
+  latch straight back out. (`OOT_GetForeignCategory` documents the same hazard.)
+- MM: gated on `!wasObtained`, so a Song-of-Time re-presentation — which grants nothing — keeps
+  showing the tier the check actually gave instead of live-resolving one it will never grant. That
+  guarantee is session-scoped: any cache sweep (below) drops it and the re-presentation goes live again.
+- Neither trap branch latches: a foreign trap fires on the finder and touches only that game's save.
+- `info.animOk` recipes are skipped. No item in either anim class is progressive, so the skip is a
+  no-op on the OOT host (MM's stray fairies / souls / minifrogs never set `stateDependent` at all),
+  and on the MM host it preserves the one real anim state-dependence: the `SimplerBossSoulModels` CVar,
+  which a grant never moves and which must keep tracking a mid-session toggle.
+
+**Failure-path invariant:** any non-`Ok` resolution at latch time writes nothing and erases nothing.
+The entry keeps `stateDependent == true`, the draw resumes live per-frame re-resolution, and the worst
+case is exactly the pre-fix behaviour. The latch never sentinels a check and never negative-caches —
+the resolver's `erase`/`ok=false` are correct *for a draw* (something must be on screen this frame),
+but the latch isn't drawing, so it has no licence to poison a check for the rest of the slot.
+
+**Latch lifetime:** cleared by save-slot change, foreign-map generation change, save reload/seed
+rebake (both go through the first two), and re-latching on a later grant. Deliberately *not* cleared
+when the presentation ends — a frame-gap heuristic would reintroduce the bug on any frame the held-up
+item isn't submitted (fade, pause, textbox-only phase).
+
+**Residual:** the *name* alongside is static (`fi->displayName` both directions) and never re-resolved,
+so an OOT player now sees the correct Bow model under "You found Progressive Bow!". Resolving the text
+to the granted tier needs a new cross-game name ABI, and every other `displayName` consumer (check
+tracker, hints, merchant text, MM shop descriptions) must keep the generic name or it leaks
+progression. Separate follow-up.
