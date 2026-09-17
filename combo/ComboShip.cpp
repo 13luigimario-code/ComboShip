@@ -453,7 +453,7 @@ static void Combo_SetForegroundGame(int game) {
 }
 
 static std::filesystem::path ComboContainerPath(int fileNum) {
-    return std::filesystem::path("Save") / ("file" + std::to_string(fileNum + 1) + ".combosav");
+    return ComboRando::ContainerPath(fileNum); // anchored: see ComboRando::DataDir
 }
 
 // Only the three real save slots have a container. Callbacks reached from a game's gSaveContext.fileNum
@@ -531,8 +531,15 @@ static void FlushContainer(int fileNum) {
     tmp += ".temp";
     {
         std::ofstream out(tmp, std::ios::trunc | std::ios::binary);
-        if (!out.is_open())
+        // A failure here USED TO BE a bare `return`. With the path CWD-relative and a Finder-launched
+        // .app starting at "/" (read-only on macOS), that silently discarded every save while the
+        // game logged "Save File Finish" — a whole playthrough lost with no on-disk trace. The path
+        // is anchored now, but a save that cannot be written must be loud regardless of the reason.
+        if (!out.is_open()) {
+            std::cerr << "[ComboShip] ERROR: cannot write save container " << path
+                      << " — THIS SLOT IS NOT BEING SAVED." << std::endl;
             return;
+        }
         it->second["comboRelease"] = COMBO_RELEASE_VERSION; // every write carries the current release
         out << it->second.dump();
     }
@@ -540,6 +547,10 @@ static void FlushContainer(int fileNum) {
     if (ec) { // some filesystems won't replace-on-rename — remove then retry
         std::filesystem::remove(path, ec);
         std::filesystem::rename(tmp, path, ec);
+    }
+    if (ec) {
+        std::cerr << "[ComboShip] ERROR: cannot commit save container " << path << " (" << ec.message()
+                  << ") — THIS SLOT IS NOT BEING SAVED." << std::endl;
     }
 }
 
