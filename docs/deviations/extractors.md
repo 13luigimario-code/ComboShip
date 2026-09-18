@@ -16,20 +16,18 @@ Bump them by hand: fetch `up-zapd` / `up-otrx`, apply upstream's own
 `<oldPin>..<newPin>` diff over the vendored tree, then re-run CMake configure so the
 `file(GLOB Source_Files__Utils ...)` in `ZAPD/CMakeLists.txt` picks up added/removed files.
 
-## macOS: MM extractor's background-notice box crashes off the main thread (2026-09-07)
+## macOS: MM extractor's background-notice box crashed off the main thread — RESOLVED UPSTREAM (2026-09-18)
 
-**Why:** upstream 2S2H's `Extractor::CallZapd()` shows an informational "Extraction will now begin in
-the background" `SDL_ShowSimpleMessageBox` on non-Windows, standing in for the progress display it
-lacks there. Harmless upstream, which calls it on the main thread. ComboShip runs extraction on a
-WORKER thread (`MM_StartExtraction` → `std::async`, `mm/2s2h/BenPort.cpp`) behind its own progress
-UI, so that box reached `-[NSWindow makeKeyAndOrderFront:]` off the main thread and AppKit trapped
-(`SIGTRAP`). Only reproducible once ComboShip ran as a real `.app` bundle — a loose binary is not a
-full AppKit application and did not take the trapping path. soh's `CallZapd()` has no equivalent box,
-which is why the OoT half extracted fine and only MM died.
+Upstream 2S2H's `Extractor::CallZapd()` used to show an informational "Extraction will now begin in
+the background" `SDL_ShowSimpleMessageBox` on non-Windows. ComboShip runs extraction on a WORKER
+thread (`MM_StartExtraction` → `std::async`, `mm/2s2h/BenPort.cpp`), so that box reached
+`-[NSWindow makeKeyAndOrderFront:]` off the main thread and AppKit trapped (`SIGTRAP`) — only once
+ComboShip ran as a real `.app` bundle. We carried a `#elif !defined(COMBO_BUILD)` guard for it.
 
-**`mm/2s2h/Extractor/Extract.cpp` (vendored, COMBO_BUILD-guarded — preserve on future mm merges):**
-the `#else` branch becomes `#elif !defined(COMBO_BUILD)`, skipping the box under the combo build. No
-upstream lines deleted; non-combo builds keep it. This also aligns the two extractors.
+**No longer a deviation.** Upstream PR #210 (`fix(mm): drop SDL message box from MM extraction`)
+deleted the box outright for the same reason on Linux, so our guard was dropped in the
+2026-09-18 develop merge. Nothing to preserve here — if a future mm merge reintroduces the box,
+delete it rather than re-adding a guard.
 
 ## Deviations to preserve
 

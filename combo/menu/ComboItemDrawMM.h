@@ -836,6 +836,7 @@ static bool MM_IsStateDependentDraw(RandoItemId id) {
 }
 
 static int32_t MM_FillItemDrawInfo(RandoItemId id, CwItemDrawInfo* out) {
+    bool progressiveConverted = false;
     // ComboShip (#88): a progressive item's model is the tier the player is owed, not the static base
     // drawId (which is always tier 1 — every Progressive Sword drew a Kokiri Sword). Resolve it the way
     // MM's own drawer does. Runs before the helpers so Progressive Lullaby, which resolves to a song,
@@ -844,15 +845,23 @@ static int32_t MM_FillItemDrawInfo(RandoItemId id, CwItemDrawInfo* out) {
         RandoItemId resolved = Rando::ConvertItem(id);
         if (resolved != RI_UNKNOWN && resolved != id) {
             id = resolved;
+            progressiveConverted = true;
         }
     }
-    // ComboShip: junk/trap are indirections MM resolves at draw time (Rando::DrawItem). We have no
-    // check id here, so the seed-only default is used — the model is stable but may differ from the
-    // one MM itself would pick for this check.
+    // ComboShip: junk/trap are indirections MM resolves at draw time (Rando::DrawItem), with no check
+    // id here to resolve against. Generation now bakes cross-placed junk, so the junk arm is only
+    // reached by an older seed or a plando row that still names the placeholder.
     if (id == RI_JUNK) {
         id = Rando::CurrentJunkItem();
     } else if (id == RI_TRAP) {
         id = Rando::CurrentTrapItem();
+    }
+    // Name follows the same id the model used (so a maxed progressive that fell to junk names the junk item).
+    if (progressiveConverted) {
+        auto nameIt = Rando::StaticData::Items.find(id);
+        if (nameIt != Rando::StaticData::Items.end()) {
+            out->resolvedName = nameIt->second.name;
+        }
     }
     auto it = Rando::StaticData::Items.find(id);
     if (it == Rando::StaticData::Items.end()) {

@@ -74,7 +74,8 @@ manual (it's judgement work). Three pieces:
   `docs/merges/<date>-<key>.md` scaffold. An upstream with nothing new gets no PR, and one whose PR
   is already open is left untouched while its siblings proceed. You finish each on its branch:
   resolve markers, work the build-fix chain, flesh out the merge log.
-  `build-artifacts.yml` / `clang-format.yml` / `conflict-markers` are the PR gates.
+  `build-artifacts.yml`'s single `gate` job (conflict markers, asset collisions, clang-format) is
+  the PR gate.
   - **Merge the libultraship PR first** — soh/mm `#include` libultraship by path (see the coupling
     note above). Nothing enforces it mechanically; the soh/mm PR bodies say so, and each PR in a
     pass links its siblings.
@@ -181,7 +182,7 @@ asset — a plausible wrong mesh/texture, no error (issue #97; mechanism in
 `scripts/check-asset-collisions.py` diffs the two **tracked** trees against the checked-in baseline
 `asset-collisions.json` and fails on any new differing-content collision or stale baseline entry. It
 runs locally via the CMake `CheckAssetCollisions` target (a dependency of `GenerateSohOtr`,
-`Generate2ShipOtr`, and the `combo` meta target) and on PRs via `asset-collisions.yml`.
+`Generate2ShipOtr`, and the `combo` meta target) and on PRs via `build-artifacts.yml`'s `gate` job.
 
 Convention: **new custom assets that can be drawn cross-game get per-game-distinct paths.** A
 deliberate same-path-different-content addition must be baselined (`--update`) in the PR that
@@ -260,3 +261,15 @@ for whichever lands second. The bot deliberately never touches this index.
 
 Moved to [`deviations/`](deviations/) — one file per subsystem. Preserve every entry across
 upstream merges (each also carries a `// ComboShip:` comment at the code site).
+
+Recent vendored signature changes (full rationale in [`deviations/rando.md`](deviations/rando.md)):
+
+- `soh/soh/Enhancements/randomizer/item.{h,cpp}` — `Item::GetGIEntry(RandomizerGet* actualOut =
+  nullptr)`, COMBO_BUILD-guarded defaulted out-param. Why: the resolved progressive tier is a hidden
+  local; a combo-owned reverse `GetItemID -> RandomizerGet` map is ambiguous on the Strength/Scale/
+  stick/nut-upgrade tiers, so the real function has to expose it instead.
+- `mm/2s2h/Rando/StaticData/{StaticData.h,Items.cpp}` — `GetItemName(..., bool livePreview = false)`,
+  COMBO_BUILD-guarded, plus 12 one-argument call-site edits (10 in `ActorBehavior/EnGirlA.cpp`, 2 in
+  `ActorBehavior/EnBal.cpp`). Why: opt-in per call site, not a check-type gate — `GetItemName` is one
+  choke point for ~25 callers including hint feeders that pass a hinted check's id, so a blanket rule
+  would leak a live tier into persisted hint text.

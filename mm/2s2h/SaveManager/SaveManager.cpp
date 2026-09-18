@@ -245,6 +245,16 @@ void SaveManager_InitNewSaveForSlot(int mmFileNum, const unsigned char* ootName8
 }
 
 void SaveManager_SaveCurrentForCombo() {
+#ifdef COMBO_BUILD
+    // Guard the write itself, not each caller's own gate. 0xFF (no save) reaches here on real,
+    // non-buggy paths (play proceeding after a failed load), so refuse and return — don't assert.
+    if (gSaveContext.fileNum < 0 || gSaveContext.fileNum > 2) {
+        SPDLOG_ERROR("[ComboShip] SaveManager_SaveCurrentForCombo: refusing write, fileNum={} is not a "
+                     "loaded slot",
+                     gSaveContext.fileNum);
+        return;
+    }
+#endif
     int mmFileNum = (int)gSaveContext.fileNum + 1;
     std::string fileName = SaveManager_GetFileName(mmFileNum);
     nlohmann::json j;
@@ -257,6 +267,14 @@ void SaveManager_SaveCurrentForCombo() {
 #endif
     j["newCycleSave"]["save"] = gSaveContext.save;
 #ifdef COMBO_BUILD
+    // ComboShip (#death-jingle-hang): this is the only save writer with no "don't persist while dead"
+    // guard. Floor health in the SERIALIZED doc only — never touch live gSaveContext or the load path.
+    bool comboDeadForSave = ((gPlayState != nullptr && gPlayState->gameOverCtx.state != GAMEOVER_INACTIVE) ||
+                             gSaveContext.save.saveInfo.playerData.health == 0) &&
+                            gSaveContext.save.saveInfo.playerData.health < 0x30;
+    if (comboDeadForSave) {
+        j["newCycleSave"]["save"]["saveInfo"]["playerData"]["health"] = 0x30;
+    }
     if (j.contains("owlSave")) {
         if (gComboOwlBlobSlot == mmFileNum) {
             // gSaveContext descends from this blob, so refresh the WHOLE SaveContext — same shape the
@@ -272,6 +290,9 @@ void SaveManager_SaveCurrentForCombo() {
                 j["owlSave"]["save"]["shipSaveInfo"]["pauseSaveEntrance"] =
                     keep.at("shipSaveInfo").at("pauseSaveEntrance");
                 j["owlSave"]["save"]["shipSaveInfo"]["respawn"] = keep.at("shipSaveInfo").at("respawn");
+                if (comboDeadForSave) {
+                    j["owlSave"]["save"]["saveInfo"]["playerData"]["health"] = 0x30;
+                }
             } catch (...) {
                 SPDLOG_ERROR("[ComboShip] Owl blob refresh failed; dropping it");
                 j.erase("owlSave");
@@ -305,14 +326,18 @@ extern "C" COMBO_EXPORT void MM_InvalidateOwlBlobSlot(void) {
 }
 #endif
 
-// ComboShip: nothing usable was loaded, so leave gSaveContext pointing at NO slot. 0xFF is the "no save"
+// ComboShip: nothing usable is loaded, so leave gSaveContext pointing at NO slot. 0xFF is the "no save"
 // sentinel every dormant writer tests (Combo_MM_GiveDormantResolved, MM_MarkForeignObtained, MMAnchor's
 // PumpDormant), so a stray write lands nowhere instead of persisting the PREVIOUS slot's save — or
-// zeroed vanilla BSS — into the failed slot. Clearing saveType makes IS_RANDO false for the same reason:
-// the peek trackers must not keep drawing the previous slot's save as if it were this one.
-static int SaveManager_LoadFailedForCombo(int code) {
+// zeroed/never-loaded BSS — into the failed slot. Clearing saveType makes IS_RANDO false for the same
+// reason: the peek trackers must not keep drawing the previous slot's save as if it were this one.
+void SaveManager_MarkNoSaveLoaded() {
     gSaveContext.fileNum = 0xFF;
     gSaveContext.save.shipSaveInfo.saveType = SAVETYPE_VANILLA;
+}
+
+static int SaveManager_LoadFailedForCombo(int code) {
+    SaveManager_MarkNoSaveLoaded();
     return code;
 }
 

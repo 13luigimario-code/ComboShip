@@ -672,18 +672,6 @@ bool Extractor::CallZapd(std::string installPath, std::string exportdir, std::at
     // extraction.
     ShowWindow(cmdWindow, SW_SHOW);
     SetWindowPos(cmdWindow, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-// ComboShip: skip upstream's "extracting in the background" notice. ComboShip runs extraction on a
-// WORKER thread (MM_StartExtraction -> std::async, BenPort.cpp) behind its own progress UI, so the
-// notice is redundant — and on macOS it is fatal: SDL_ShowSimpleMessageBox reaches
-// -[NSWindow makeKeyAndOrderFront:], and AppKit traps (SIGTRAP) when a window is raised off the main
-// thread. Only reproducible once ComboShip ran as a real .app bundle. soh's extractor has no
-// equivalent box, so skipping it also brings the two extractors in line.
-#elif !defined(COMBO_BUILD)
-    // Show extraction in background message until linux/mac can have visual progress
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Extracting",
-                             "Extraction will now begin in the background.\n\nPlease be patient for the process to "
-                             "finish. Do not close the main program.",
-                             nullptr);
 #endif
 
     // ZAPD's HANDLE_ERROR macro throws std::runtime_error on any extraction error.
