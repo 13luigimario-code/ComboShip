@@ -573,7 +573,7 @@ inline PlaythroughResult RunPlaythrough(const std::string& spoilerJson, const Or
         std::filesystem::create_directories(dir, ec);
         std::ofstream f(dir / "slot0.playthrough.txt", std::ios::trunc);
         f << log.str();
-        std::cout << "[PLAYTHROUGH] full sphere log -> saves/combo/slot0.playthrough.txt\n";
+        std::cout << "[PLAYTHROUGH] full sphere log -> " << (dir / "slot0.playthrough.txt").string() << "\n";
     }
 
     std::cout << "[PLAYTHROUGH] seed '" << seedLabel << "' - " << (beatableSphere >= 0 ? "BEATABLE" : "NOT beatable")
