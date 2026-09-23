@@ -34,6 +34,9 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#ifndef NOMINMAX
+#define NOMINMAX // windows.h's min/max macros break std::min/std::max in headers included after this one
+#endif
 #include <windows.h>
 #elif defined(__APPLE__)
 #include <mach-o/dyld.h> // _NSGetExecutablePath (see ExeDir)
