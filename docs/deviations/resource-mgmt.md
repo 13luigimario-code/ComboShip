@@ -20,7 +20,7 @@ changes to `GetSavedAudioBackend()`, all `__APPLE__`-gated except the first:
    pattern libultraship already uses for `SHIP_HOME`.
 2. The `__APPLE__` fallback returns `AudioBackend::SDL` instead of `COREAUDIO`.
 3. A saved `"coreaudio"` is rewritten to `"sdl"`, in the same shape as the existing `pulse` → `sdl`
-   migration a few lines above.
+   migration a few lines above — unless the value came from (1), which is honoured as-is.
 
 **(3) is the part that matters, and it is stronger than it looks.** Changing only the *default*
 protects nobody who has already launched ComboShip on macOS — which is every existing user, since

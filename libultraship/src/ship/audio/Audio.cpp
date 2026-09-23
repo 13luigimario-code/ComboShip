@@ -80,7 +80,9 @@ AudioBackend Audio::GetSavedAudioBackend() {
     // that self-corrects for the dangerous case — a config left saying "coreaudio" is migrated back
     // to "sdl" on the next launch unless the variable is set again — so forcing CoreAudio stays an
     // opt-in you have to keep making. Any other value simply sticks, like picking it in the menu.
-    if (const char* env = std::getenv("SHIP_AUDIO_BACKEND"); env != nullptr && *env != '\0') {
+    const char* env = std::getenv("SHIP_AUDIO_BACKEND");
+    const bool fromEnv = env != nullptr && *env != '\0';
+    if (fromEnv) {
         backendName = env;
     }
     if (backendName == "wasapi") {
@@ -108,15 +110,16 @@ AudioBackend Audio::GetSavedAudioBackend() {
         // mode is permanent, system-wide, and hits applications other than this one, so it is not a
         // choice worth honouring until the player itself is fixed. Anyone who truly needs it can set
         // SHIP_AUDIO_BACKEND=coreaudio (checked at the top of this function) on each run.
-        mConfig->SetString("Window.AudioBackend", "sdl");
-        mConfig->Save();
-        SPDLOG_WARN("macOS: forcing Window.AudioBackend sdl (was coreaudio). The CoreAudio player "
-                    "reconfigures the output device's sample rate system-wide and persistently. "
-                    "Set SHIP_AUDIO_BACKEND=coreaudio to override.");
-        return AudioBackend::SDL;
-#else
-        return AudioBackend::COREAUDIO;
+        if (!fromEnv) {
+            mConfig->SetString("Window.AudioBackend", "sdl");
+            mConfig->Save();
+            SPDLOG_WARN("macOS: forcing Window.AudioBackend sdl (was coreaudio). The CoreAudio player "
+                        "reconfigures the output device's sample rate system-wide and persistently. "
+                        "Set SHIP_AUDIO_BACKEND=coreaudio to override.");
+            return AudioBackend::SDL;
+        }
 #endif
+        return AudioBackend::COREAUDIO;
     }
 
     if (backendName == "sdl") {
@@ -140,7 +143,7 @@ AudioBackend Audio::GetSavedAudioBackend() {
     // AudioPlayer.h's hardcoded default SampleRate = 44100. macOS PERSISTS a device's chosen format,
     // so first launch left a DisplayPort display stuck at 44100 (it expects 48000) and every other
     // app on the system cut out — surviving both quitting the game and a reboot. A saved "coreaudio"
-    // is migrated to "sdl" above; a CoreAudio choice made AFTER that migration is honoured normally.
+    // is migrated to "sdl" above on every launch, so only SHIP_AUDIO_BACKEND=coreaudio reaches it.
     // Revert once the player uses DefaultOutput or queries the device's nominal rate. See
     // docs/deviations/resource-mgmt.md.
     return AudioBackend::SDL;
