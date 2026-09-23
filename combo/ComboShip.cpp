@@ -57,6 +57,18 @@ static void ComboTerminateHandler() {
     std::abort();
 }
 
+// Exits that happen after the window exists but without the games' normal teardown (SOH_Deinit,
+// which assumes SOH_FinishInit ran). Left to static destructors, the shared Ship::Context dies in an
+// unspecified order across the modules: on macOS spdlog's registry goes first, ~Context logs through
+// a freed logger, and closing the ROM extraction screen ended in a "quit unexpectedly" crash.
+// ponytail: skips teardown rather than doing it. The upgrade is a window-only counterpart of
+// SOH_Deinit that calls Context::DestroyInstance().
+[[noreturn]] static void ComboExitWithoutTeardown(int code) {
+    std::cout.flush();
+    std::cerr.flush();
+    std::_Exit(code);
+}
+
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -3178,11 +3190,7 @@ int main(int argc, char** argv) {
         }
         if (!ComboUI_RunExtraction) {
             std::cerr << "ERROR: comboui module missing ComboUI_RunExtraction (rebuild required)." << std::endl;
-            if (comboUIModule)
-                FreeDll(comboUIModule);
-            FreeDll(mmModule);
-            FreeDll(sohModule);
-            return 1;
+            ComboExitWithoutTeardown(1);
         }
 
         ComboExtractCallbacks cb = {};
@@ -3199,19 +3207,11 @@ int main(int argc, char** argv) {
 
         if (!ComboUI_RunExtraction(&cb)) {
             std::cerr << "[ComboShip] Extraction cancelled or failed — exiting." << std::endl;
-            if (comboUIModule)
-                FreeDll(comboUIModule);
-            FreeDll(mmModule);
-            FreeDll(sohModule);
-            return 1;
+            ComboExitWithoutTeardown(1);
         }
         if (!OOTArchivesExist() || !MMRomArchiveExists()) {
             std::cerr << "ERROR: ROM archives still missing after extraction — exiting." << std::endl;
-            if (comboUIModule)
-                FreeDll(comboUIModule);
-            FreeDll(mmModule);
-            FreeDll(sohModule);
-            return 1;
+            ComboExitWithoutTeardown(1);
         }
         std::cout << "[ComboShip] Extraction complete." << std::endl;
     }
@@ -3337,10 +3337,10 @@ int main(int argc, char** argv) {
         }
     } catch (const std::exception& e) {
         std::cerr << "[ComboShip] SOH_Init threw std::exception: " << e.what() << std::endl;
-        return 1;
+        ComboExitWithoutTeardown(1);
     } catch (...) {
         std::cerr << "[ComboShip] SOH_Init threw a non-std exception" << std::endl;
-        return 1;
+        ComboExitWithoutTeardown(1);
     }
     std::cout << "[ComboShip] OOT initialized." << std::endl;
 
@@ -3440,18 +3440,14 @@ int main(int argc, char** argv) {
             seedBase = static_cast<uint32_t>(std::strtoul(b, nullptr, 10));
         }
         int failures = RunComboGenTest(n, seedBase);
-        std::cout.flush();
-        std::cerr.flush();
-        std::exit(failures == 0 ? 0 : 1);
+        ComboExitWithoutTeardown(failures == 0 ? 0 : 1);
     }
 
     // ComboShip: env-gated playthrough log — COMBO_PLAYTHROUGH=<seed> generates that seed and writes a
     // sphere-by-sphere "what you grab, in what order, until Ganon+Majora are both killable" log.
     if (const char* ptSeed = std::getenv("COMBO_PLAYTHROUGH")) {
         RunComboPlaythrough(std::string(ptSeed));
-        std::cout.flush();
-        std::cerr.flush();
-        std::exit(0);
+        ComboExitWithoutTeardown(0);
     }
 
     if (SOH_SetOnNewSaveCallback && MM_InitRandoSaveFile) {
