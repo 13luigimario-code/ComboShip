@@ -561,8 +561,8 @@ static void FlushContainer(int fileNum) {
         // game logged "Save File Finish" — a whole playthrough lost with no on-disk trace. The path
         // is anchored now, but a save that cannot be written must be loud regardless of the reason.
         if (!out.is_open()) {
-            std::cerr << "[ComboShip] ERROR: cannot write save container " << path
-                      << " — THIS SLOT IS NOT BEING SAVED." << std::endl;
+            std::cerr << "[ComboShip] ERROR: cannot write save container " << path << " — THIS SLOT IS NOT BEING SAVED."
+                      << std::endl;
             return;
         }
         it->second["comboRelease"] = COMBO_RELEASE_VERSION; // every write carries the current release
