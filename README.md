@@ -91,7 +91,8 @@ Format back to **48000 Hz**.
 
 Homebrew's `sdl2` is now an alias for **sdl2-compat** — the SDL2 API reimplemented on top of SDL3.
 Real SDL2 is no longer in homebrew-core. ComboShip builds and runs fine against it, so the command
-above is the quick path.
+above is the quick path for a development build. It cannot be packaged, though: sdl2-compat loads
+SDL3 at run time, which the `.app` cannot carry, so `cpack` refuses it.
 
 It is not what upstream uses, though, and it is measurably worse here. A Time Profiler capture while
 dragging tracker windows showed a noticeable share of main-thread time in ObjC/CoreFoundation churn
@@ -129,8 +130,9 @@ cpack
 
 ### macOS
 
-`cpack` produces a signed `ComboShip.app` inside a DMG. Generate the port archives **in the same
-build tree** first — the install rules read them from the build directory:
+`cpack` produces an ad-hoc signed `ComboShip.app` inside a DMG. It needs genuine SDL2 (see the SDL2
+note above) and the port archives. Generate those first — the install rules copy them from the
+source tree (`soh/soh.o2r`, `mm/2ship.o2r`) and fail the package if either is missing:
 
 ```bash
 cmake --build build-macos --target GenerateSohOtr && cmake --build build-macos --target Generate2ShipOtr
@@ -139,6 +141,11 @@ cmake --build build-macos --target GenerateSohOtr && cmake --build build-macos -
 ```bash
 cd build-macos && cpack
 ```
+
+The `.app` is self-contained: packaging copies every non-system dylib it uses into
+`Contents/MacOS`, so it runs on a Mac without Homebrew. Those dylibs are built for the macOS they
+were installed on, not for the 11.0 deployment target, so the bundle's `LSMinimumSystemVersion` is
+set to the newest `minos` among them — a bundle built on macOS 14 requires macOS 14.
 
 The bundle keeps its own settings and saves in `~/Library/Application Support/com.comboship.ComboShip`,
 so it never touches a Ship of Harkinian or 2 Ship 2 Harkinian install. ROM-derived archives are

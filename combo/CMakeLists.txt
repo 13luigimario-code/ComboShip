@@ -271,57 +271,6 @@ if(APPLE)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt $<TARGET_FILE_DIR:ComboShip>/gamecontrollerdb.txt
     )
-
-    # Deploy an SDL that expects to be found via @rpath.
-    #
-    # Homebrew's SDL has an ABSOLUTE install name (/opt/homebrew/opt/sdl2-compat/lib/...), so the
-    # loader finds it wherever the binary runs and nothing needs deploying. An SDL built from source
-    # into a prefix — the genuine-SDL2 route the README documents, since Homebrew's sdl2 is now
-    # sdl2-compat — installs itself as "@rpath/libSDL2-2.0.0.dylib" instead. That resolves against
-    # the binary's own @executable_path/@loader_path, i.e. only if the dylib sits beside it. Without
-    # this the loose build could not start and the .app was silently broken off this machine, which
-    # is exactly the configuration worth testing.
-    #
-    # otool -D is the discriminator: deploy iff the install name is @rpath-relative.
-    function(combo_deploy_rpath_dylib tgt)
-        if(NOT TARGET ${tgt})
-            return()
-        endif()
-        set(loc "")
-        foreach(prop IMPORTED_LOCATION_RELEASE IMPORTED_LOCATION_RELWITHDEBINFO
-                     IMPORTED_LOCATION_DEBUG IMPORTED_LOCATION)
-            get_target_property(candidate ${tgt} ${prop})
-            if(candidate AND EXISTS "${candidate}")
-                set(loc "${candidate}")
-                break()
-            endif()
-        endforeach()
-        if(NOT loc)
-            return()
-        endif()
-        execute_process(COMMAND otool -D "${loc}" OUTPUT_VARIABLE otool_out ERROR_QUIET)
-        if(NOT otool_out MATCHES "@rpath/([^\n\r]+)")
-            return() # absolute install name: the loader resolves it unaided
-        endif()
-        # Deploy under the INSTALL NAME, not the filename on disk. These differ: SDL2_net's imported
-        # location is the real file (libSDL2_net-2.0.201.0.0.dylib) while its install name — and so
-        # what every dependent binary actually asks for — is the versioned symlink
-        # (libSDL2_net-2.0.1.dylib). Copying under the on-disk name produced a bundle that resolved
-        # in the build tree, where the build RPATH still points into the SDL prefix, and failed to
-        # launch anywhere else.
-        set(link_name "${CMAKE_MATCH_1}")
-        get_filename_component(real_file "${loc}" REALPATH)
-        message(STATUS "ComboShip: deploying @rpath SDL ${link_name} (${real_file})")
-        add_custom_command(TARGET ComboShip POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${real_file}" "$<TARGET_FILE_DIR:ComboShip>/${link_name}"
-        )
-        install(FILES "${real_file}" DESTINATION ../MacOS RENAME "${link_name}" COMPONENT combo)
-    endfunction()
-
-    combo_deploy_rpath_dylib(SDL2::SDL2)
-    combo_deploy_rpath_dylib(SDL2_net::SDL2_net)
-    combo_deploy_rpath_dylib(SDL2_net::SDL2_net-static)
 endif()
 
 # Install — flat layout for the Windows ZIP and the Linux AppImage. NOT on Apple: the macOS block

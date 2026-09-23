@@ -384,33 +384,33 @@ if(APPLE)
     set(CPACK_COMBO_BUNDLE_ICON  "${CMAKE_SOURCE_DIR}/combo/macosx/ComboShip.icns")
     set(CPACK_COMBO_BINARY_DIR   "${CMAKE_BINARY_DIR}")
 
-    # Executable + the four loadable modules + the SDL mapping DB -> Contents/MacOS.
+    # Executable + the four loadable modules -> Contents/MacOS.
     install(PROGRAMS "$<TARGET_FILE:ComboShip>"    DESTINATION ../MacOS COMPONENT combo)
     install(PROGRAMS "$<TARGET_FILE:libultraship>" DESTINATION ../MacOS COMPONENT combo)
     install(PROGRAMS "$<TARGET_FILE:comboui>"      DESTINATION ../MacOS COMPONENT combo)
     install(PROGRAMS "$<TARGET_FILE:soh>"          DESTINATION ../MacOS COMPONENT combo)
     install(PROGRAMS "$<TARGET_FILE:2ship>"        DESTINATION ../MacOS COMPONENT combo)
-    install(FILES "${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt" DESTINATION ../MacOS COMPONENT combo)
 
-    # Read-only payload -> Contents/Resources (the install prefix itself). The ROM-derived
+    # Read-only payload -> Contents/Resources (the install prefix itself). The SDL mapping DB goes
+    # here too, not beside the exe as soh/mm's own Darwin rules put it: libultraship looks for it in
+    # SHIP_HOME, then the bundle's Resources, then the CWD ("/" from Finder). The ROM-derived
     # oot.o2r / mm.o2r are deliberately NOT packaged: they are player-extracted user data and live
     # in SHIP_HOME, both on principle and so nothing ROM-derived ends up in a distributable bundle.
-    if(EXISTS "${CMAKE_SOURCE_DIR}/soh/soh.o2r")
-        install(FILES "${CMAKE_SOURCE_DIR}/soh/soh.o2r" DESTINATION . COMPONENT combo)
-    else()
-        message(STATUS "ComboShip: soh/soh.o2r not found — bundle will lack it (run GenerateSohOtr).")
-    endif()
-    if(EXISTS "${CMAKE_SOURCE_DIR}/mm/2ship.o2r")
-        install(FILES "${CMAKE_SOURCE_DIR}/mm/2ship.o2r" DESTINATION . COMPONENT combo)
-    else()
-        message(STATUS "ComboShip: mm/2ship.o2r not found — bundle will lack it (run Generate2ShipOtr).")
-    endif()
+    # Unconditional on purpose: a missing port archive must fail cpack (run GenerateSohOtr /
+    # Generate2ShipOtr first), not quietly produce a .app that cannot boot either game.
+    install(FILES "${CMAKE_SOURCE_DIR}/soh/soh.o2r" "${CMAKE_SOURCE_DIR}/mm/2ship.o2r"
+            DESTINATION . COMPONENT combo)
+    install(FILES "${CMAKE_SOURCE_DIR}/gamecontrollerdb.txt" DESTINATION . COMPONENT combo)
 
     # Extractor assets, merged flat exactly as the runtime deploy does (CallZapd expects this shape).
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/soh/assets/extractor/" DESTINATION ./assets     COMPONENT combo)
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/soh/assets/xml/"       DESTINATION ./assets/xml COMPONENT combo)
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/mm/assets/extractor/"  DESTINATION ./assets     COMPONENT combo)
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/mm/assets/xml/"        DESTINATION ./assets/xml COMPONENT combo)
+
+    # Last, once everything is staged: embed the non-system dylibs and set LSMinimumSystemVersion.
+    install(CODE "set(COMBO_BUNDLE_PLIST \"${CPACK_COMBO_BUNDLE_PLIST}\")
+                  include(\"${CMAKE_SOURCE_DIR}/combo/macosx/FixupBundle.cmake\")" COMPONENT combo)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows|NintendoSwitch|CafeOS")
