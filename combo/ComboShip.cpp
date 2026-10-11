@@ -57,12 +57,10 @@ static void ComboTerminateHandler() {
     std::abort();
 }
 
-// Exits that happen after the window exists but without the games' normal teardown (SOH_Deinit,
-// which assumes SOH_FinishInit ran). Left to static destructors, the shared Ship::Context dies in an
-// unspecified order across the modules: on macOS spdlog's registry goes first, ~Context logs through
-// a freed logger, and closing the ROM extraction screen ended in a "quit unexpectedly" crash.
-// ponytail: skips teardown rather than doing it. The upgrade is a window-only counterpart of
-// SOH_Deinit that calls Context::DestroyInstance().
+// Exits that skip static destructors. Left to them, the shared Ship::Context dies in an unspecified
+// order across the modules: on macOS spdlog's registry goes first, ~Context logs through a freed
+// logger, and closing the ROM extraction screen ended in a "quit unexpectedly" crash. Callers tear
+// the Context down first where they can (ComboExitEarly), so config and log are still written.
 [[noreturn]] static void ComboExitWithoutTeardown(int code) {
     std::cout.flush();
     std::cerr.flush();
@@ -282,6 +280,15 @@ static int g_MmSaveInMemorySlot = -1;
 static FnSetSceneSwitchCallback SOH_SetOnSceneSwitchCallback = nullptr;
 static FnMMRunGame MM_RunGame = nullptr;
 static FnSOHDeinit SOH_Deinit = nullptr;
+static FnSOHDeinit SOH_DeinitWindowOnly = nullptr;
+
+// Exit after the window exists but before the games finished starting (the ROM extraction screen was
+// closed, or SOH_Init threw): SOH_Deinit assumes a finished init, so tear down only the window half.
+[[noreturn]] static void ComboExitEarly(int code) {
+    if (SOH_DeinitWindowOnly)
+        SOH_DeinitWindowOnly();
+    ComboExitWithoutTeardown(code);
+}
 static FnSOHPrepare SOH_PrepareForTransition = nullptr;
 static FnMMNotify MM_NotifyComboTransition = nullptr;
 
@@ -3081,6 +3088,7 @@ int main(int argc, char** argv) {
     SOH_SetOnSceneSwitchCallback = (FnSetSceneSwitchCallback)GetSym(sohModule, "SOH_SetOnSceneSwitchCallback");
     MM_RunGame = (FnMMRunGame)GetSym(mmModule, "MM_RunGame");
     SOH_Deinit = (FnSOHDeinit)GetSym(sohModule, "SOH_Deinit");
+    SOH_DeinitWindowOnly = (FnSOHDeinit)GetSym(sohModule, "SOH_DeinitWindowOnly");
     SOH_PrepareForTransition = (FnSOHPrepare)GetSym(sohModule, "SOH_PrepareForTransition");
     MM_NotifyComboTransition = (FnMMNotify)GetSym(mmModule, "MM_NotifyComboTransition");
     MM_SetOnComboReturnCallback = (FnMMSetReturnCb)GetSym(mmModule, "MM_SetOnComboReturnCallback");
@@ -3280,7 +3288,7 @@ int main(int argc, char** argv) {
         }
         if (!ComboUI_RunExtraction) {
             std::cerr << "ERROR: comboui module missing ComboUI_RunExtraction (rebuild required)." << std::endl;
-            ComboExitWithoutTeardown(1);
+            ComboExitEarly(1);
         }
 
         ComboExtractCallbacks cb = {};
@@ -3297,11 +3305,11 @@ int main(int argc, char** argv) {
 
         if (!ComboUI_RunExtraction(&cb)) {
             std::cerr << "[ComboShip] Extraction cancelled or failed — exiting." << std::endl;
-            ComboExitWithoutTeardown(1);
+            ComboExitEarly(1);
         }
         if (!OOTArchivesExist() || !MMRomArchiveExists()) {
             std::cerr << "ERROR: ROM archives still missing after extraction — exiting." << std::endl;
-            ComboExitWithoutTeardown(1);
+            ComboExitEarly(1);
         }
         std::cout << "[ComboShip] Extraction complete." << std::endl;
     }
@@ -3432,10 +3440,10 @@ int main(int argc, char** argv) {
         }
     } catch (const std::exception& e) {
         std::cerr << "[ComboShip] SOH_Init threw std::exception: " << e.what() << std::endl;
-        ComboExitWithoutTeardown(1);
+        ComboExitEarly(1);
     } catch (...) {
         std::cerr << "[ComboShip] SOH_Init threw a non-std exception" << std::endl;
-        ComboExitWithoutTeardown(1);
+        ComboExitEarly(1);
     }
     std::cout << "[ComboShip] OOT initialized." << std::endl;
 

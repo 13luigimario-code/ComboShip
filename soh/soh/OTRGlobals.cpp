@@ -1954,6 +1954,24 @@ extern "C" void DeinitOTR() {
 }
 
 #ifdef COMBO_BUILD
+// ComboShip: the window half of DeinitOTR, for launcher exits before Combo_FinishInit completed (the
+// ROM extraction screen was closed, or SOH_Init threw). DeinitOTR would dereference the save manager
+// and network clients FinishInit creates. Destroying the Context here, rather than leaving it to
+// static destructors, saves the config and drains the async log before the process exits.
+extern "C" COMBO_EXPORT void SOH_DeinitWindowOnly() {
+    if (OTRGlobals::Instance == nullptr) { // the OTRGlobals ctor itself threw
+        return;
+    }
+    OTRAudio_Exit(); // only joins a thread FinishInit started
+    SohGui::Destroy();
+    sohFast3dWindow = nullptr;
+    Ship::CrossRMRegistry::Unregister("oot");
+    sOOTResourceManager = nullptr;
+    OTRGlobals::Instance->context = nullptr;
+    Ship::Context::DestroyInstance();
+    ImGui::SetCurrentContext(nullptr);
+}
+
 // ComboShip: stop OOT audio and wait for pending saves WITHOUT destroying the context or window.
 // Called before launching MM so archives can be safely swapped.
 // COMBO_EXPORT must follow the extern "C" specifier: the split form (the export attribute on its
