@@ -103,6 +103,7 @@ jobs:
           for key in ["RO_CROSS_BOOTS_IRON", "RO_CROSS_BOOTS_HOVER", "RO_CROSS_TUNIC_GORON",
                       "RO_CROSS_TUNIC_ZORA", "RO_CROSS_SCALES", "RO_CROSS_STRENGTH", "RO_CROSS_MASK_GERUDO",
                       "RO_CROSS_MASK_SKULL", "RO_CROSS_MASK_SPOOKY", "RO_CROSS_SONG_ZELDA",
+                      "RO_CROSS_SPELL_FIRE", "RO_CROSS_SPELL_WIND", "RO_CROSS_SPELL_LOVE",
                       "RO_SHUFFLE_SONG_SUN", "RO_SHUFFLE_SONG_SARIA", "RO_SHUFFLE_SONG_WARP_SONGS"]:
               mm[key] = 1
           json.dump(cfg, open(path, "w"), indent=2)
