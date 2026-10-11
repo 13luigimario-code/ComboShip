@@ -181,7 +181,7 @@ extern "C" void Combo_OotMask_Draw(PlayState* play, Player* player) {
     switch (sWornMask) {
         case ITEM_COMBO_MASK_BLAST:
             // MM's Player_DrawBlastMask with the fuse not lit: segment 9 just sets an opaque env color.
-            gSPSegment(POLY_OPA_DISP++, 0x09, sBlastFuseOff);
+            gSPSegment(POLY_OPA_DISP++, 0x09, (uintptr_t)sBlastFuseOff);
             gSPDisplayList(POLY_OPA_DISP++, (Gfx*)gComboMmBlastMaskDL);
             break;
         case ITEM_COMBO_MASK_STONE:
