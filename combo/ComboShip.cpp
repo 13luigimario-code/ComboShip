@@ -2925,28 +2925,14 @@ static void Combo_OnMMReturn(int kind) {
 // The launcher runs BEFORE libultraship's Context exists, so it cannot call
 // Context::LocateFileAcrossAppDirs — but it MUST agree with it, or it checks for archives somewhere
 // other than where the game later reads (and the extractor later writes) them. Mirror that order:
-//   1. SHIP_HOME — set by the .app bundle's Info.plist LSEnvironment (and by AppRun on Linux); the
-//                  writable dir holding config, saves, and the player-extracted ROM archives.
-//   2. exe dir   — the portable/loose layout (inside a bundle this is Contents/MacOS).
-//   3. CWD       — the original behavior, kept so running from a build dir still works.
+//   1. app dir — ComboRando::DataDir, libultraship's rule (SHIP_HOME on macOS/Linux, else CWD).
+//   2. exe dir — the portable/loose layout (inside a bundle this is Contents/MacOS).
+//   3. CWD     — the original behavior, kept so running from a build dir still works.
 // Without step 1 a bundled .app always reported the ROM archives missing: LaunchServices starts it
 // with CWD "/", so every bare relative check below was false no matter what the player had extracted.
-static std::filesystem::path ComboShipHome() {
-    const char* h = std::getenv("SHIP_HOME");
-    if (h == nullptr || *h == '\0')
-        return {};
-    std::string p(h);
-    if (p[0] == '~') { // Info.plist stores it tilde-relative
-        if (const char* home = std::getenv("HOME"))
-            p = std::string(home) + p.substr(1);
-    }
-    return p;
-}
-
-// True if `name` exists in any of the three locations above.
 static bool ComboDataExists(const char* name) {
     std::error_code ec;
-    if (const auto home = ComboShipHome(); !home.empty() && std::filesystem::exists(home / name, ec))
+    if (std::filesystem::exists(ComboRando::DataDir() / name, ec))
         return true;
     if (const auto dir = ComboExeDir(); !dir.empty() && std::filesystem::exists(dir / name, ec))
         return true;

@@ -30,18 +30,6 @@
 
 #include "SharedItems.h"
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX // windows.h's min/max macros break std::min/std::max in headers included after this one
-#endif
-#include <windows.h>
-#elif defined(__APPLE__)
-#include <mach-o/dyld.h> // _NSGetExecutablePath (see ExeDir)
-#endif
-
 namespace ComboRando {
 
 // Game identity used across the cross-world rando layer (soh.dll, 2ship.dll, ComboShip.exe).
@@ -111,44 +99,15 @@ inline GameId KeyToGameId(const std::string& s) {
     return s == "mm" ? GAME_MM : GAME_OOT;
 }
 
-// Directory holding the running executable, or empty if it can't be determined. Shared by the
-// launcher and comboui, which must agree on where the runtime tree is.
-inline std::filesystem::path ExeDir() {
-#ifdef _WIN32
-    // Wide API: the ANSI variant mangles non-ASCII install paths (e.g. accented user names) to '?'.
-    wchar_t exe[MAX_PATH] = { 0 };
-    if (GetModuleFileNameW(nullptr, exe, MAX_PATH))
-        return std::filesystem::path(exe).parent_path();
-#elif defined(__APPLE__)
-    uint32_t size = 0;
-    _NSGetExecutablePath(nullptr, &size); // first call reports the buffer size it needs
-    std::string buf(size, '\0');
-    if (size && _NSGetExecutablePath(buf.data(), &size) == 0) {
-        const std::filesystem::path raw(buf.c_str()); // size counts the NUL, which is in the string
-        std::error_code ec;
-        const auto real = std::filesystem::canonical(raw, ec);
-        return ec ? raw.parent_path() : real.parent_path();
-    }
-#else
-    std::error_code ec;
-    if (const auto real = std::filesystem::canonical("/proc/self/exe", ec); !ec)
-        return real.parent_path();
-#endif
-    return {};
-}
-
 // Base directory for ComboShip's WRITABLE data (save containers, seeds, spoilers).
 //
-// This must never be a bare relative path. A .app launched from Finder starts with CWD "/", which
-// on macOS is the read-only Signed System Volume — so "Save/file1.combosav" resolved to
-// "/Save/file1.combosav" and every write failed. Silently, because the write path swallowed its
-// error codes: the game logged "Save File Finish" while nothing reached disk. An entire
-// playthrough was lost to this. Windows has the same exposure via a shortcut's "Start in", and the
-// Linux AppImage only escapes it because AppRun cd's to the data dir first.
-//
-// Order matches the launcher's read-side lookup (ComboDataExists in ComboShip.cpp) and
-// libultraship's Context::LocateFileAcrossAppDirs: SHIP_HOME, then the exe dir, then CWD.
+// Same rule as libultraship's Context::GetAppDirectoryPath, which places the games' own saves and
+// config: SHIP_HOME on macOS/Linux, else the working directory. Agreeing with it keeps
+// Save/*.combosav and Randomizer/ beside the games' saves wherever the player launches from.
+// SHIP_HOME is what keeps this off CWD on macOS: the .app's Info.plist always sets it, because a
+// Finder launch starts with CWD "/" (the read-only system volume), where every save write failed.
 inline std::filesystem::path DataDir() {
+#if defined(__APPLE__) || defined(__linux__)
     if (const char* h = std::getenv("SHIP_HOME"); h != nullptr && *h != '\0') {
         std::string p(h);
         if (p[0] == '~') { // the .app's Info.plist stores it tilde-relative
@@ -157,16 +116,15 @@ inline std::filesystem::path DataDir() {
         }
         return p;
     }
-    if (const auto dir = ExeDir(); !dir.empty())
-        return dir;
-    return std::filesystem::path("."); // last resort: the historical CWD-relative behavior
+#endif
+    return std::filesystem::path(".");
 }
 
 inline std::filesystem::path ConsolidatedDir() {
     return DataDir() / "Randomizer";
 }
 
-// Slot save containers. Anchored for the same reason as ConsolidatedDir above.
+// Slot save containers, under the same base as ConsolidatedDir.
 inline std::filesystem::path SaveDir() {
     return DataDir() / "Save";
 }
