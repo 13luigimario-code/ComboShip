@@ -241,7 +241,7 @@ void Fast3dGui::RebuildFontTexture() {
             break;
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(COMBO_BUILD)
         case WindowBackend::FAST3D_SDL_METAL:
             // ComboShip: without this case the switch fell through to `default`, the Metal font texture
             // was never rebuilt after a late AddFont, and the next ImGui::NewFrame() ran on an unbuilt

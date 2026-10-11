@@ -105,6 +105,7 @@ void GfxRenderingAPIMetal::NewFrame() {
     ImGui_ImplMetal_NewFrame(current_render_pass);
 }
 
+#ifdef COMBO_BUILD
 // ComboShip: force the ImGui font atlas back onto the GPU after fonts were added late (see
 // Fast3dGui::RebuildFontTexture). CreateFontsTexture calls GetTexDataAsRGBA32(), which builds the
 // atlas, then uploads it and re-sets TexID — the only route that actually clears IsBuilt()==false.
@@ -112,6 +113,7 @@ void GfxRenderingAPIMetal::RebuildFontsTexture() {
     ImGui_ImplMetal_DestroyFontsTexture();
     ImGui_ImplMetal_CreateFontsTexture(mDevice);
 }
+#endif
 
 void GfxRenderingAPIMetal::SetupFloatingFrame() {
     // We need the descriptor for the main framebuffer and to clear the existing depth attachment

@@ -136,6 +136,7 @@ void Gui::ImGuiWMInit() {
 }
 
 void Gui::ShutDownImGui(Ship::Window* window) {
+#ifdef COMBO_BUILD
     // ComboShip: under COMBO_BUILD two game modules deinit against ONE shared ImGui context, so this
     // is reached twice on exit — MM_Deinit tears it down, then SOH_Deinit destroys the shared Context
     // and the Window destructor gets here again. Every ImGui backend asserts on a second shutdown
@@ -145,6 +146,7 @@ void Gui::ShutDownImGui(Ship::Window* window) {
     if (ImGui::GetCurrentContext() == nullptr || ImGui::GetIO().BackendPlatformUserData == nullptr) {
         return;
     }
+#endif
     ImGuiWMShutdown();
     ImGuiBackendShutdown();
     ImGui::DestroyContext();

@@ -8,7 +8,9 @@
 #include "ship/config/Config.h"
 #include "ship/controller/controldeck/ControlDeck.h"
 
+#ifdef COMBO_BUILD
 #include <cstdlib> // ComboShip: std::getenv, for the SHIP_AUDIO_BACKEND override
+#endif
 
 namespace Ship {
 
@@ -71,6 +73,7 @@ AudioBackend Audio::GetCurrentAudioBackend() {
 AudioBackend Audio::GetSavedAudioBackend() {
     std::string backendName = mConfig->GetString("Window.AudioBackend");
 
+#ifdef COMBO_BUILD
     // ComboShip: env override, checked before the config so it wins over the macOS coreaudio
     // migration below — which is otherwise a standing override with no way out of it. Same
     // environment-as-config pattern libultraship already uses for SHIP_HOME.
@@ -85,6 +88,7 @@ AudioBackend Audio::GetSavedAudioBackend() {
     if (fromEnv) {
         backendName = env;
     }
+#endif
     if (backendName == "wasapi") {
         return AudioBackend::WASAPI;
     }
@@ -97,7 +101,7 @@ AudioBackend Audio::GetSavedAudioBackend() {
     }
 
     if (backendName == "coreaudio") {
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(COMBO_BUILD)
         // ComboShip: migrate coreaudio -> sdl on macOS, in the same shape as the pulse migration
         // above. A saved "coreaudio" is almost never a deliberate choice — it is what libultraship's
         // own pre-fix default wrote on first launch — and honouring it leaves every existing macOS
@@ -137,6 +141,7 @@ AudioBackend Audio::GetSavedAudioBackend() {
 #endif
 
 #ifdef __APPLE__
+#ifdef COMBO_BUILD
     // ComboShip: default macOS to SDL, not CoreAudio, until the CoreAudio player stops reconfiguring
     // the user's output device. CoreAudioAudioPlayer opens a kAudioUnitSubType_HALOutput unit — which
     // binds the device directly, unlike DefaultOutput, which converts — and sets a client format at
@@ -147,6 +152,9 @@ AudioBackend Audio::GetSavedAudioBackend() {
     // Revert once the player uses DefaultOutput or queries the device's nominal rate. See
     // docs/deviations/resource-mgmt.md.
     return AudioBackend::SDL;
+#else
+    return AudioBackend::COREAUDIO;
+#endif
 #endif
 
     return AudioBackend::SDL;
