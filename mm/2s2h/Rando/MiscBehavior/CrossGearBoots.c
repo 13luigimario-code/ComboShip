@@ -5,6 +5,8 @@
 // textures are OOT's own, loaded at runtime from the player's extracted OOT archive through "@oot:" routed
 // paths (CrossItemAssets.h) instead of OoTMM's custom keep. gsSPMatrix(0x0D......) loads the left/right foot
 // limb matrices of the skeleton just drawn (see Player_DrawImpl in z_player_lib.c).
+// Segmented addresses carry bit 0 set (0x0D000181, 0x0C000001): libultraship only resolves an address through
+// the segment table when bit 0 is set (Interpreter::SegAddr; OTRExporter writes them the same way).
 #ifdef COMBO_BUILD
 
 #include "global.h"
@@ -61,7 +63,7 @@ static Vtx sComboIronBootsVtx[87] = {
 };
 
 Gfx gComboLinkLeftIronBootDL[] = {
-    gsSPMatrix(0x0D000180, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW),
+    gsSPMatrix(0x0D000181, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW),
     gsDPPipeSync(),
     gsDPSetTextureLUT(G_TT_RGBA16),
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
@@ -72,7 +74,7 @@ Gfx gComboLinkLeftIronBootDL[] = {
     gsDPSetRenderMode(G_RM_FOG_SHADE_A, G_RM_AA_ZB_OPA_SURF2),
     gsSPClearGeometryMode(G_TEXTURE_GEN | G_TEXTURE_GEN_LINEAR),
     gsSPSetGeometryMode(G_FOG | G_LIGHTING),
-    gsSPDisplayList(0x0C000000),
+    gsSPDisplayList(0x0C000001),
     gsDPSetPrimColor(0, 0, 255, 255, 255, 255),
     gsSPVertex(&sComboIronBootsVtx[0], 32, 0),
     gsSP2Triangles(0, 1, 2, 0, 2, 1, 3, 0),
@@ -95,7 +97,7 @@ Gfx gComboLinkLeftIronBootDL[] = {
 };
 
 Gfx gComboLinkRightIronBootDL[] = {
-    gsSPMatrix(0x0D0000C0, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW),
+    gsSPMatrix(0x0D0000C1, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW),
     gsDPPipeSync(),
     gsDPSetTextureLUT(G_TT_RGBA16),
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
@@ -106,7 +108,7 @@ Gfx gComboLinkRightIronBootDL[] = {
     gsDPSetRenderMode(G_RM_FOG_SHADE_A, G_RM_AA_ZB_OPA_SURF2),
     gsSPClearGeometryMode(G_TEXTURE_GEN | G_TEXTURE_GEN_LINEAR),
     gsSPSetGeometryMode(G_FOG | G_LIGHTING),
-    gsSPDisplayList(0x0C000000),
+    gsSPDisplayList(0x0C000001),
     gsDPSetPrimColor(0, 0, 255, 255, 255, 255),
     gsSPVertex(&sComboIronBootsVtx[43], 32, 0),
     gsSP2Triangles(0, 1, 2, 0, 3, 1, 0, 0),
@@ -211,7 +213,7 @@ static Vtx sComboHoverBootsVtx[154] = {
 };
 
 Gfx gComboLinkLeftHoverBootDL[] = {
-    gsSPMatrix(0x0D000180, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW),
+    gsSPMatrix(0x0D000181, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW),
     gsDPPipeSync(),
     gsDPSetTextureLUT(G_TT_NONE),
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
@@ -221,7 +223,7 @@ Gfx gComboLinkLeftHoverBootDL[] = {
     gsDPSetRenderMode(G_RM_FOG_SHADE_A, G_RM_AA_ZB_OPA_SURF2),
     gsSPClearGeometryMode(G_TEXTURE_GEN | G_TEXTURE_GEN_LINEAR),
     gsSPSetGeometryMode(G_FOG | G_LIGHTING),
-    gsSPDisplayList(0x0C000000),
+    gsSPDisplayList(0x0C000001),
     gsDPSetPrimColor(0, 0, 255, 255, 255, 255),
     gsSPVertex(&sComboHoverBootsVtx[0], 32, 0),
     gsSP2Triangles(0, 1, 2, 0, 0, 2, 3, 0),
@@ -264,7 +266,7 @@ Gfx gComboLinkLeftHoverBootDL[] = {
 };
 
 Gfx gComboLinkRightHoverBootDL[] = {
-    gsSPMatrix(0x0D0000C0, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW),
+    gsSPMatrix(0x0D0000C1, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW),
     gsDPPipeSync(),
     gsDPSetTextureLUT(G_TT_NONE),
     gsSPTexture(0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON),
@@ -274,7 +276,7 @@ Gfx gComboLinkRightHoverBootDL[] = {
     gsDPSetRenderMode(G_RM_FOG_SHADE_A, G_RM_AA_ZB_OPA_SURF2),
     gsSPClearGeometryMode(G_TEXTURE_GEN | G_TEXTURE_GEN_LINEAR),
     gsSPSetGeometryMode(G_FOG | G_LIGHTING),
-    gsSPDisplayList(0x0C000000),
+    gsSPDisplayList(0x0C000001),
     gsDPSetPrimColor(0, 0, 255, 255, 255, 255),
     gsSPVertex(&sComboHoverBootsVtx[77], 32, 0),
     gsSP2Triangles(0, 1, 2, 0, 3, 0, 2, 0),

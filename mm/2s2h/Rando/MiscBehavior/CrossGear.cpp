@@ -536,7 +536,7 @@ extern "C" void Combo_Gear_DrawBoots(PlayState* play, Player* player) {
         static const char* const kMaskDLs[] = { gComboLinkChildGerudoMaskDL, gComboLinkChildSkullMaskDL,
                                                 gComboLinkChildSpookyMaskDL };
         // Head limb matrix (OoTMM's prepareMask: 0x0D0001C0), then OOT's own worn-mask mesh.
-        gSPMatrix(POLY_OPA_DISP++, 0x0D0001C0, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        gSPMatrix(POLY_OPA_DISP++, 0x0D0001C1, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
         gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kMaskDLs[mask - COMBO_MASK_GERUDO]);
     }
     CLOSE_DISPS(play->state.gfxCtx);
