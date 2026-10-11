@@ -179,6 +179,16 @@ bool Logic::HasItem(RandomizerGet itemName) {
 #ifdef COMBO_BUILD
             // ComboShip (teleport songs)
         case RG_SONG_OF_SOARING:
+            // ComboShip (cross-game items): MM masks in OOT
+        case RG_COMBO_MASK_BLAST:
+        case RG_COMBO_MASK_STONE:
+        case RG_COMBO_MASK_KAMARO:
+        case RG_COMBO_SONG_ELEGY:
+        case RG_COMBO_SONG_HEALING:
+        case RG_COMBO_SONG_SONATA:
+        case RG_COMBO_SONG_GORON:
+        case RG_COMBO_SONG_BOSSA:
+        case RG_COMBO_SONG_OATH:
 #endif
             // Ocarina Buttons
         case RG_OCARINA_A_BUTTON:
@@ -2053,7 +2063,16 @@ std::map<RandomizerGet, uint32_t> StaticData::RandoGetToRandInf = {
     { RG_OCARINA_C_LEFT_BUTTON, RAND_INF_HAS_OCARINA_C_LEFT },
     { RG_OCARINA_C_RIGHT_BUTTON, RAND_INF_HAS_OCARINA_C_RIGHT },
 #ifdef COMBO_BUILD
-    { RG_SONG_OF_SOARING, RAND_INF_HAS_SONG_OF_SOARING }, // ComboShip (teleport songs)
+    { RG_SONG_OF_SOARING, RAND_INF_HAS_SONG_OF_SOARING },        // ComboShip (teleport songs)
+    { RG_COMBO_MASK_BLAST, RAND_INF_OBTAINED_COMBO_MASK_BLAST }, // ComboShip (cross-game items)
+    { RG_COMBO_MASK_STONE, RAND_INF_OBTAINED_COMBO_MASK_STONE },
+    { RG_COMBO_MASK_KAMARO, RAND_INF_OBTAINED_COMBO_MASK_KAMARO },
+    { RG_COMBO_SONG_ELEGY, RAND_INF_OBTAINED_COMBO_SONG_ELEGY },
+    { RG_COMBO_SONG_HEALING, RAND_INF_OBTAINED_COMBO_SONG_HEALING },
+    { RG_COMBO_SONG_SONATA, RAND_INF_OBTAINED_COMBO_SONG_SONATA },
+    { RG_COMBO_SONG_GORON, RAND_INF_OBTAINED_COMBO_SONG_GORON },
+    { RG_COMBO_SONG_BOSSA, RAND_INF_OBTAINED_COMBO_SONG_BOSSA },
+    { RG_COMBO_SONG_OATH, RAND_INF_OBTAINED_COMBO_SONG_OATH },
 #endif
     { RG_KEATON_MASK, RAND_INF_CHILD_TRADES_HAS_MASK_KEATON },
     { RG_SKULL_MASK, RAND_INF_CHILD_TRADES_HAS_MASK_SKULL },
@@ -2530,7 +2549,16 @@ void Logic::ApplyItemEffect(Item& item, bool state) {
                 case RG_OCARINA_C_LEFT_BUTTON:
                 case RG_OCARINA_C_RIGHT_BUTTON:
 #ifdef COMBO_BUILD
-                case RG_SONG_OF_SOARING: // ComboShip (teleport songs)
+                case RG_SONG_OF_SOARING:  // ComboShip (teleport songs)
+                case RG_COMBO_MASK_BLAST: // ComboShip (cross-game items)
+                case RG_COMBO_MASK_STONE:
+                case RG_COMBO_MASK_KAMARO:
+                case RG_COMBO_SONG_ELEGY:
+                case RG_COMBO_SONG_HEALING:
+                case RG_COMBO_SONG_SONATA:
+                case RG_COMBO_SONG_GORON:
+                case RG_COMBO_SONG_BOSSA:
+                case RG_COMBO_SONG_OATH:
 #endif
                 case RG_KEATON_MASK:
                 case RG_SKULL_MASK:

@@ -49,6 +49,18 @@ enum SharedFamily {
     SF_SPOOKY_MASK,
     SF_SUNS_SONG,
     SF_SARIAS_SONG,
+    // MM masks worn in OOT (OOT's copy exists with the matching OOT option on).
+    SF_BLAST_MASK,
+    SF_STONE_MASK,
+    SF_KAMARO_MASK,
+    // Songs playable in the other game (OOT's copy of an MM song needs OOT's "MM Songs in OoT"; MM's Zelda's
+    // Lullaby needs MM's matching option).
+    SF_ELEGY,
+    SF_SONG_OF_HEALING,
+    SF_SONATA,
+    SF_BOSSA_NOVA,
+    SF_OATH,
+    SF_ZELDAS_LULLABY,
     SF_COUNT
 };
 // Family bitmask (bit i = SharedFamily i). 64 bits since the cross-game item families (was uint32_t);
@@ -180,6 +192,35 @@ inline const SharedFamilyDef* SharedFamilyTable() {
           "One Saria's Song counts for both games. Requires MM's Saria's Song shuffle (its copies are replaced "
           "by the shared one).",
           "Saria's Song", "Saria's Song", 1, false, true, false },
+        // MM masks in OOT: OOT's copy only exists with OOT's matching "MM Masks in OoT" option on (otherwise the
+        // family logs "OOT pool has none" and stays unshared).
+        { SF_BLAST_MASK, "maskBlast", "gCombo.Rando.Shared.MaskBlast", "Shared Blast Mask",
+          "One Blast Mask counts for both games. Requires OOT's Blast Mask (MM Masks in OoT).", "Blast Mask",
+          "Blast Mask", 1, false, true, false },
+        { SF_STONE_MASK, "maskStone", "gCombo.Rando.Shared.MaskStone", "Shared Stone Mask",
+          "One Stone Mask counts for both games. Requires OOT's Stone Mask (MM Masks in OoT).", "Stone Mask",
+          "Stone Mask", 1, false, true, false },
+        { SF_KAMARO_MASK, "maskKamaro", "gCombo.Rando.Shared.MaskKamaro", "Shared Kamaro's Mask",
+          "One Kamaro's Mask counts for both games. Requires OOT's Kamaro's Mask (MM Masks in OoT).", "Kamaro's Mask",
+          "Kamaro's Mask", 1, false, true, false },
+        { SF_ELEGY, "songElegy", "gCombo.Rando.Shared.SongElegy", "Shared Elegy of Emptiness",
+          "One Elegy of Emptiness counts for both games. Requires OOT's MM Songs in OoT.", "Elegy of Emptiness",
+          "Elegy of Emptiness", 1, false, true, false },
+        { SF_SONG_OF_HEALING, "songHealing", "gCombo.Rando.Shared.SongHealing", "Shared Song of Healing",
+          "One Song of Healing counts for both games. Requires OOT's MM Songs in OoT.", "Song of Healing",
+          "Song of Healing", 1, false, true, false },
+        { SF_SONATA, "songAwakening", "gCombo.Rando.Shared.SongAwakening", "Shared Sonata of Awakening",
+          "One Sonata of Awakening counts for both games. Requires OOT's MM Songs in OoT.", "Sonata of Awakening",
+          "Sonata of Awakening", 1, false, true, false },
+        { SF_BOSSA_NOVA, "songZora", "gCombo.Rando.Shared.SongZora", "Shared New Wave Bossa Nova",
+          "One New Wave Bossa Nova counts for both games. Requires OOT's MM Songs in OoT.", "New Wave Bossa Nova",
+          "New Wave Bossa Nova", 1, false, true, false },
+        { SF_OATH, "songOrder", "gCombo.Rando.Shared.SongOrder", "Shared Oath to Order",
+          "One Oath to Order counts for both games. Requires OOT's MM Songs in OoT.", "Oath to Order", "Oath to Order",
+          1, false, true, false },
+        { SF_ZELDAS_LULLABY, "songZeldaLullaby", "gCombo.Rando.Shared.SongZeldaLullaby", "Shared Zelda's Lullaby",
+          "One Zelda's Lullaby counts for both games. Requires MM's Zelda's Lullaby (Ocarina of Time Gear).",
+          "Zelda's Lullaby", "Zelda's Lullaby", 1, false, true, false },
     };
     return table;
 }

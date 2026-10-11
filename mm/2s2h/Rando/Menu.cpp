@@ -465,6 +465,7 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_CROSS_MASK_GERUDO",
                                                                    "gRando.Options.RO_CROSS_MASK_SKULL",
                                                                    "gRando.Options.RO_CROSS_MASK_SPOOKY",
+                                                                   "gRando.Options.RO_CROSS_SONG_ZELDA",
 #endif
                                                                });
 
@@ -1071,6 +1072,10 @@ static void DrawItemPoolTab() {
     ItemPoolCheckbox("Spooky Mask", RO_CROSS_MASK_SPOOKY,
                      "Adds Ocarina of Time's Spooky Mask to the item pool (Letter to Kafei / Pendant slot). "
                      "Human Link can wear it in Termina.",
+                     1);
+    ItemPoolCheckbox("Zelda's Lullaby", RO_CROSS_SONG_ZELDA,
+                     "Adds Ocarina of Time's Zelda's Lullaby to the item pool as a song Link can play in Termina "
+                     "(no effect there; combine with Shared Items so one copy counts for both games).",
                      1);
 #endif
     CVarCheckbox("Repeatable Rupee Purchases", Rando::StaticData::Options[RO_PURCHASE_INFINITE_RUPEES].cvar,

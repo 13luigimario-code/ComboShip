@@ -38,6 +38,9 @@ void Rando::GiveItem(RandoItemId randoItemId) {
         case RI_MASK_SPOOKY:
             Rando::CrossGearGive(randoItemId);
             break;
+        case RI_SONG_ZELDA:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);
+            break;
 #endif
         case RI_CLOCK_TOWN_STRAY_FAIRY:
             SET_WEEKEVENTREG(WEEKEVENTREG_08_80);

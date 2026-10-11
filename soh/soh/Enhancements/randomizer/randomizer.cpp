@@ -1228,6 +1228,15 @@ extern "C" u16 Randomizer_Item_Give(PlayState* play, GetItemEntry giEntry) {
             if (!ChildTradeSlotOccupied()) {
                 INV_CONTENT(ITEM_TRADE_CHILD) = ITEM_LETTER_ZELDA;
             }
+#ifdef COMBO_BUILD
+        } else if (item >= RG_COMBO_MASK_BLAST && item <= RG_COMBO_MASK_KAMARO) {
+            // ComboShip (cross-game items): MM masks join the child trade cycle (ShuffleTradeItems.c).
+            u8 slotItem = INV_CONTENT(ITEM_TRADE_CHILD);
+            if (!ChildTradeSlotOccupied() &&
+                !(slotItem >= ITEM_COMBO_MASK_BLAST && slotItem <= ITEM_COMBO_MASK_KAMARO)) {
+                INV_CONTENT(ITEM_TRADE_CHILD) = (int)ITEM_COMBO_MASK_BLAST + (item - RG_COMBO_MASK_BLAST);
+            }
+#endif
         } else if (item == RG_ROCS_FEATHER) {
             if (INV_CONTENT(ITEM_NAYRUS_LOVE) == ITEM_NONE) {
                 INV_CONTENT(ITEM_NAYRUS_LOVE) = ITEM_ROCS_FEATHER;

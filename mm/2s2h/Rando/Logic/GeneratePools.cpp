@@ -335,6 +335,9 @@ void GeneratePools(RandoSaveInfo& saveInfo, std::vector<RandoCheckId>& checkPool
     if (saveInfo.randoSaveOptions[RO_CROSS_MASK_SPOOKY] == RO_GENERIC_YES) {
         itemPool.push_back(RI_MASK_SPOOKY);
     }
+    if (saveInfo.randoSaveOptions[RO_CROSS_SONG_ZELDA] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_SONG_ZELDA);
+    }
 #endif
 
     // Tycoon's Wallet

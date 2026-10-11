@@ -2232,3 +2232,50 @@ force) and `gMMComboSharedMask` are `uint64_t`. Spoilers store family keys, so n
 New families: `maskGerudo`, `maskSkull`, `maskSpooky` (need OOT Shuffle Masks + MM's matching OOT-mask
 option), `songSun`, `songSaria` (need MM's Sun's/Saria's Song shuffle; sharing Saria's replaces MM's
 hint-charge copies with the one shared song, as OoTMM).
+
+### MM masks in OOT: Blast, Stone, Kamaro (2026-10-11)
+
+OoTMM's `blastMaskOot`, `stoneMaskOot`, `kamaroMaskOot` and their `sharedMask*` twins. OOT seed options
+`RSK_COMBO_MASK_BLAST/STONE/KAMARO` (Additional Items; default off); items `RG_COMBO_MASK_*`, owned as
+`RAND_INF_OBTAINED_COMBO_MASK_*` (appended, `RandoGetToRandInf` sets them on grant).
+
+- **Item ids (`soh/include/z64item.h`, guarded):** `ITEM_COMBO_MASK_BLAST/STONE/KAMARO` = `0x9E..0xA0`, after
+  `ITEM_ROCS_FEATHER`; `gItemIcons` (and its `variables.h` extern) widen to `ITEM_COMBO_TABLE_SIZE` with MM's
+  icons through `"@mm:"` (`soh/soh/Enhancements/combo/ComboMmAssets.h`). `gItemSlots` is left alone, as for
+  Roc's Feather: every `SLOT(item)` caller is ammo/bottle-ranged. `gItemAgeReqs` = child (`z_play.c`).
+- **Child trade cycle (`ShuffleTradeItems.c`):** the three masks follow Weird Egg..Mask of Truth; the grant
+  (`randomizer.cpp`) fills an empty slot like the vanilla masks.
+- **Use/wear (`ComboMmMasks.cpp`):** `VB_CHANGE_HELD_ITEM_AND_USE_ITEM` toggles the worn mask (`VB_ITEM_ACTION_BE_NONE`:
+  they have no item action); worn state is separate from `Player::currentMask` (its tables cover OOT's eight
+  masks only) and the two exclude each other. Name textures: `VB_DRAW_CUSTOM_ITEM_NAME`, MM's own.
+- **Draw (`z_player.c`, guarded):** `Combo_OotMask_Draw` after the vanilla mask block in `Player_DrawGameplay`:
+  head-limb matrix `0x0D0001C1` then MM's player mask DL (`object_mask_*`) via `"@mm:"`. Blast Mask: segment 9 =
+  opaque env color (MM's unlit-fuse branch of `Player_DrawBlastMask`).
+- **Effects:** Blast — B (read in `ShouldActorUpdate` for the player, before its update, then swallowed) spawns
+  an `EnBom` with `timer = 1` at Link's focus whose explosion AT is `AT_TYPE_PLAYER` (hits enemies and bombable
+  walls, never Link); cooldown 0x136 frames (OoTMM's default). Stone — OoTMM's `shouldActorIgnorePlayer` list
+  sees Link far away for the length of its update (`ShouldActorUpdate` fakes `yawTowardsPlayer` /
+  `xzDistToPlayer` / `yDistToPlayer` / `xyzDistToPlayerSq`, `OnActorUpdate` restores; a skipped update is
+  restored at the next actor). Kamaro — cosmetic (OoTMM's dance needs MM's animation; not ported).
+- **Models:** OOT draws MM's real get-item model by MM item name (`Randomizer_DrawComboMmMask` →
+  `OOT_DrawMMItemByName`, a by-name split of `ComboFillForeignDrawInfo`); OOT's copies placed in MM draw MM's
+  native mask (`ComboCrossMaskNativeMM` in `ComboForeignDrawMM.h`).
+- **Shared Items:** `maskBlast`, `maskStone`, `maskKamaro` (`SF_BLAST_MASK`..). **Logic:** none.
+
+### Songs in the other game (2026-10-11)
+
+OoTMM's `elegyOot`, `songHealingOot`, `songAwakeningOot`, `songGoronOot`, `songZoraOot`, `songOrderOot` (one OOT
+toggle, `RSK_COMBO_MM_SONGS`) and `songZeldaLullabyMm` (MM `RO_CROSS_SONG_ZELDA`). Like OoTMM they have no
+effect in the other game; their use is as items and with Shared Items.
+
+- **OOT (`ComboMmSongs.cpp`):** `RG_COMBO_SONG_*` / `RAND_INF_OBTAINED_COMBO_SONG_*`; recognized by a note ring
+  on `OnOcarinaNote` (the Song of Soaring's rules, OOT's song table untouched) during free play: chime, ocarina
+  put away, an `OCEFF_WIPE3` flash (Elegy: OoTMM's green time-block flash). Drawn as song notes in MM's colors.
+- **MM (`MiscBehavior/CrossSongs.cpp`):** `RI_SONG_ZELDA` / `RANDO_INF_OBTAINED_SONG_ZELDA` make MM's leftover
+  `OCARINA_SONG_ZELDAS_LULLABY` recognizable through `VB_SONG_AVAILABLE_TO_PLAY` (yielding to the Termina wall
+  like the warp songs); its name box (`0x1B72 + 21`) is supplied in `OnOpenText`. In free play MM treats it
+  as a generic song event.
+- **Shared Items:** `songElegy`, `songHealing`, `songAwakening`, `songZora`, `songOrder`, `songZeldaLullaby`.
+  No shared Goron Lullaby: MM's is a two-tier progressive (intro, full) while OOT's copy is one item.
+- **Draw across games:** OOT's copies placed in MM draw MM's song notes; MM's Zelda's Lullaby placed in OOT
+  draws OOT's own.

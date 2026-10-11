@@ -271,6 +271,8 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SKULL);
         case RI_MASK_SPOOKY:
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SPOOKY);
+        case RI_SONG_ZELDA:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);
 #endif
         case RI_PROGRESSIVE_WALLET:
             if (hasObtainedCheck) {

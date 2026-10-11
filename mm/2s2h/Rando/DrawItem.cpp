@@ -162,6 +162,9 @@ void DrawSong(RandoItemId randoItemId) {
         case RI_SONG_PRELUDE:
             gDPSetEnvColor(POLY_XLU_DISP++, 255, 240, 100, 255);
             break;
+        case RI_SONG_ZELDA: // ComboShip (cross-game items): OOT's lullaby purple
+            gDPSetEnvColor(POLY_XLU_DISP++, 186, 120, 255, 255);
+            break;
 #endif
         case RI_SONG_ELEGY:
             gDPSetEnvColor(POLY_XLU_DISP++, 255, 98, 0, 255);
@@ -630,6 +633,7 @@ void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* 
         case RI_SONG_REQUIEM:
         case RI_SONG_NOCTURNE:
         case RI_SONG_PRELUDE:
+        case RI_SONG_ZELDA: // ComboShip (cross-game items)
 #endif
             DrawSong(randoItemId);
             break;

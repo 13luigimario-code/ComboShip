@@ -29,6 +29,9 @@ void Rando::RemoveItem(RandoItemId randoItemId) {
         case RI_MASK_SPOOKY:
             Rando::CrossGearRemove(randoItemId);
             break;
+        case RI_SONG_ZELDA:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);
+            break;
 #endif
         case RI_CLOCK_TOWN_STRAY_FAIRY:
             CLEAR_WEEKEVENTREG(WEEKEVENTREG_08_80);

@@ -1475,6 +1475,13 @@ void Settings::CreateOptions() {
     OPT_BOOL(RSK_BUNNY_HOOD, CVAR_RANDOMIZER_SETTING("BunnyHood"));
     OPT_BOOL(RSK_MASKS_AS_ADULT, CVAR_RANDOMIZER_SETTING("MasksAsAdult"));
     OPT_BOOL(RSK_ROCS_FEATHER, CVAR_RANDOMIZER_SETTING("RocsFeather"));
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): MM masks in OOT (OoTMM blastMaskOot / stoneMaskOot / kamaroMaskOot)
+    OPT_BOOL(RSK_COMBO_MASK_BLAST, CVAR_RANDOMIZER_SETTING("ComboMaskBlast"));
+    OPT_BOOL(RSK_COMBO_MASK_STONE, CVAR_RANDOMIZER_SETTING("ComboMaskStone"));
+    OPT_BOOL(RSK_COMBO_MASK_KAMARO, CVAR_RANDOMIZER_SETTING("ComboMaskKamaro"));
+    OPT_BOOL(RSK_COMBO_MM_SONGS, CVAR_RANDOMIZER_SETTING("ComboMmSongs"));
+#endif
     OPT_U8(RSK_INFINITE_UPGRADES, {"Off", "Progressive", "Condensed Progressive"}, OptionCategory::Setting, CVAR_RANDOMIZER_SETTING("InfiniteUpgrades"));
     OPT_BOOL(RSK_SKELETON_KEY, CVAR_RANDOMIZER_SETTING("SkeletonKey"));
     OPT_BOOL(RSK_SLINGBOW_BREAK_BEEHIVES, CVAR_RANDOMIZER_SETTING("SlingBowBeehives"));
@@ -2210,6 +2217,12 @@ void Settings::CreateOptions() {
                                                                                  &mOptions[RSK_SHUFFLE_OPEN_CHEST],
                                                                                  &mOptions[RSK_SHUFFLE_BEAN_SOULS],
                                                                                  &mOptions[RSK_ROCS_FEATHER],
+#ifdef COMBO_BUILD
+                                                                                 &mOptions[RSK_COMBO_MASK_BLAST],
+                                                                                 &mOptions[RSK_COMBO_MASK_STONE],
+                                                                                 &mOptions[RSK_COMBO_MASK_KAMARO],
+                                                                                 &mOptions[RSK_COMBO_MM_SONGS],
+#endif
                                                                                  &mOptions[RSK_BOMBCHU_BAG],
                                                                                  &mOptions[RSK_ENABLE_BOMBCHU_DROPS],
                                                                                  &mOptions[RSK_PROGRESSIVE_GORON_SWORD],
@@ -2413,6 +2426,12 @@ void Settings::CreateOptions() {
                                             &mOptions[RSK_SHUFFLE_100_GS_REWARD],
                                             &mOptions[RSK_SHUFFLE_BEAN_SOULS],
                                             &mOptions[RSK_ROCS_FEATHER],
+#ifdef COMBO_BUILD
+                                            &mOptions[RSK_COMBO_MASK_BLAST],
+                                            &mOptions[RSK_COMBO_MASK_STONE],
+                                            &mOptions[RSK_COMBO_MASK_KAMARO],
+                                            &mOptions[RSK_COMBO_MM_SONGS],
+#endif
                                             &mOptions[RSK_PROGRESSIVE_GORON_SWORD],
                                             &mOptions[RSK_SHUFFLE_BOSS_SOULS],
                                             &mOptions[RSK_SHUFFLE_DEKU_STICK_BAG],

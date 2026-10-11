@@ -327,6 +327,13 @@ RANDO_ENUM_ITEM(RSK_EXCLUDE_MASK_SHOP_ENTRANCE)
 // ComboShip (teleport songs): MM's Song of Soaring as an OOT item that soars to an MM owl statue
 RANDO_ENUM_ITEM(RSK_SONG_OF_SOARING_OOT)
 RANDO_ENUM_ITEM(RSK_STARTING_SONG_OF_SOARING)
+// ComboShip (cross-game items): OoTMM's blastMaskOot / stoneMaskOot / kamaroMaskOot
+RANDO_ENUM_ITEM(RSK_COMBO_MASK_BLAST)
+RANDO_ENUM_ITEM(RSK_COMBO_MASK_STONE)
+RANDO_ENUM_ITEM(RSK_COMBO_MASK_KAMARO)
+// ComboShip (cross-game items): OoTMM's elegyOot / songHealingOot / songAwakeningOot / songGoronOot / songZoraOot /
+// songOrderOot
+RANDO_ENUM_ITEM(RSK_COMBO_MM_SONGS)
 #endif
 RANDO_ENUM_ITEM(RSK_MAX)
 RANDO_ENUM_END(RandomizerSettingKey)

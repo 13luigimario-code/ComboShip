@@ -300,6 +300,8 @@ std::map<RandoItemId, RandoStaticItem> Items = {
     RI(RI_MASK_GERUDO,                "the",  "Gerudo Mask",                RITYPE_MAJOR,           ITEM_COMBO_MASK_GERUDO,          GI_NONE,                     GID_NONE),
     RI(RI_MASK_SKULL,                 "the",  "Skull Mask",                 RITYPE_MAJOR,           ITEM_COMBO_MASK_SKULL,           GI_NONE,                     GID_NONE),
     RI(RI_MASK_SPOOKY,                "the",  "Spooky Mask",                RITYPE_MAJOR,           ITEM_COMBO_MASK_SPOOKY,          GI_NONE,                     GID_NONE),
+    // OOT songs playable in MM (MiscBehavior/CrossSongs.cpp). No quest bit: owned as a RandoInf flag.
+    RI(RI_SONG_ZELDA,                 "",     "Zelda's Lullaby",            RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
 };
 
 std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
@@ -340,7 +342,7 @@ std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
 #ifdef COMBO_BUILD
           // ComboShip (cross-game items)
           RI_BOOTS_IRON, RI_BOOTS_HOVER, RI_TUNIC_GORON, RI_TUNIC_ZORA, RI_PROGRESSIVE_SCALE, RI_PROGRESSIVE_STRENGTH,
-          RI_MASK_GERUDO, RI_MASK_SKULL, RI_MASK_SPOOKY,
+          RI_MASK_GERUDO, RI_MASK_SKULL, RI_MASK_SPOOKY, RI_SONG_ZELDA,
 #endif
         } }, 
 };
@@ -654,6 +656,7 @@ const char* GetIconTexturePath(RandoItemId randoItemId) {
         case RI_SONG_REQUIEM:
         case RI_SONG_NOCTURNE:
         case RI_SONG_PRELUDE:
+        case RI_SONG_ZELDA: // ComboShip (cross-game items)
             // ComboShip (teleport songs): no MM icon of their own; the soaring note stands in (they soar to OOT).
             return (const char*)gItemIcons[ITEM_SONG_SOARING];
 #endif

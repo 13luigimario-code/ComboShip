@@ -2976,6 +2976,8 @@ typedef enum {
     RI_MASK_GERUDO,
     RI_MASK_SKULL,
     RI_MASK_SPOOKY,
+    // OOT songs playable in MM (OoTMM "Zelda's Lullaby (MM)").
+    RI_SONG_ZELDA,
 #endif
     RI_MAX_TRAP, // Just used for ice trap ice cube model
     RI_MAX,
@@ -3387,6 +3389,7 @@ typedef enum {
     RO_CROSS_MASK_GERUDO,
     RO_CROSS_MASK_SKULL,
     RO_CROSS_MASK_SPOOKY,
+    RO_CROSS_SONG_ZELDA,
 #endif
     RO_MAX,
 } RandoOptionId;
@@ -3560,6 +3563,7 @@ typedef enum {
     RANDO_INF_COMBO_WEARING_MASK_GERUDO,
     RANDO_INF_COMBO_WEARING_MASK_SKULL,
     RANDO_INF_COMBO_WEARING_MASK_SPOOKY,
+    RANDO_INF_OBTAINED_SONG_ZELDA,
 #endif
     RANDO_INF_MAX,
 } RandoInf;

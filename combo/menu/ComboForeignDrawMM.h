@@ -865,7 +865,31 @@ inline bool MM_DrawForeignSilverRupee(const ComboForeignDrawInfoOOT* info) {
 // never draw blank. Mirrors Randomizer_DrawComboForeign (soh/.../draw.cpp).
 inline void MM_DrawForeignResolved(const ComboForeignDrawInfoOOT* info);
 
+// ComboShip (cross-game items): OOT's copies of MM masks and songs (Blast Mask (OOT), ...) have no OOT model; MM draws
+// its own. Names are OOT's English item names for those items (item_list.cpp). RI_UNKNOWN for any other item.
+inline RandoItemId ComboCrossMaskNativeMM(const std::string& ootName) {
+    static const std::unordered_map<std::string, RandoItemId> kMap = {
+        { "Blast Mask", RI_MASK_BLAST },        { "Stone Mask", RI_MASK_STONE },
+        { "Kamaro's Mask", RI_MASK_KAMARO },    { "Elegy of Emptiness", RI_SONG_ELEGY },
+        { "Song of Healing", RI_SONG_HEALING }, { "Sonata of Awakening", RI_SONG_SONATA },
+        { "Goron Lullaby", RI_SONG_LULLABY },   { "New Wave Bossa Nova", RI_SONG_NOVA },
+        { "Oath to Order", RI_SONG_OATH },
+    };
+    auto it = kMap.find(ootName);
+    return (it == kMap.end()) ? RI_UNKNOWN : it->second;
+}
+
 inline void MM_DrawComboForeign(RandoCheckId randoCheckId) {
+    if (randoCheckId != RC_UNKNOWN) {
+        const ComboRando::ForeignItem* fi = Rando::MiscBehavior::MM_LookupForeign(randoCheckId);
+        if (fi != nullptr && fi->itemGame == ComboRando::GAME_OOT) {
+            RandoItemId native = ComboCrossMaskNativeMM(fi->HasDisguise() ? fi->fakeItemName : fi->itemName);
+            if (native != RI_UNKNOWN) {
+                Rando::DrawItem(native);
+                return;
+            }
+        }
+    }
     const ComboForeignDrawInfoOOT* info =
         (randoCheckId != RC_UNKNOWN) ? ComboResolveForeignDrawInfoOOT(randoCheckId) : nullptr;
     if (info == nullptr) {

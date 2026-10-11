@@ -19,6 +19,7 @@ void Rando::MiscBehavior::OnFileLoad() {
     Rando::MiscBehavior::SariasSongHint();
 #ifdef COMBO_BUILD
     Rando::MiscBehavior::WarpSongs();
+    Rando::MiscBehavior::CrossSongs();
 #endif
     Rando::MiscBehavior::BankSignHint();
     Rando::MiscBehavior::InitTycoonWallet();

@@ -3764,6 +3764,9 @@ static void GiveItemForOracle(RandoItemId ri) {
         case RI_MASK_SPOOKY:
             Rando::CrossGearGive(ri);
             break;
+        case RI_SONG_ZELDA: // ComboShip (cross-game items)
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);
+            break;
 
         // ComboShip: owl-warp statues. Logic gates nearly every exit from the root region on
         // CAN_OWL_WARP, the primary entry into each cardinal cluster. The default case below would set
@@ -4300,6 +4303,24 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
                    : Flags_GetRandoInf(RANDO_INF_OBTAINED_STRENGTH_SILVER_GAUNTLETS) ? 2
                    : Flags_GetRandoInf(RANDO_INF_OBTAINED_STRENGTH_GORONS_BRACELET)  ? 1
                                                                                      : 0;
+        case ComboRando::SF_ELEGY:
+            return CHECK_QUEST_ITEM(QUEST_SONG_ELEGY) ? 1 : 0;
+        case ComboRando::SF_SONG_OF_HEALING:
+            return CHECK_QUEST_ITEM(QUEST_SONG_HEALING) ? 1 : 0;
+        case ComboRando::SF_SONATA:
+            return CHECK_QUEST_ITEM(QUEST_SONG_SONATA) ? 1 : 0;
+        case ComboRando::SF_BOSSA_NOVA:
+            return CHECK_QUEST_ITEM(QUEST_SONG_BOSSA_NOVA) ? 1 : 0;
+        case ComboRando::SF_OATH:
+            return CHECK_QUEST_ITEM(QUEST_SONG_OATH) ? 1 : 0;
+        case ComboRando::SF_ZELDAS_LULLABY:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA) ? 1 : 0;
+        case ComboRando::SF_BLAST_MASK:
+            return INV_CONTENT(ITEM_MASK_BLAST) != ITEM_NONE ? 1 : 0;
+        case ComboRando::SF_STONE_MASK:
+            return INV_CONTENT(ITEM_MASK_STONE) != ITEM_NONE ? 1 : 0;
+        case ComboRando::SF_KAMARO_MASK:
+            return INV_CONTENT(ITEM_MASK_KAMARO) != ITEM_NONE ? 1 : 0;
         case ComboRando::SF_GERUDO_MASK:
             return Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_GERUDO) ? 1 : 0;
         case ComboRando::SF_SKULL_MASK:
@@ -4421,6 +4442,33 @@ extern "C" COMBO_EXPORT void MM_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_STRENGTH:
                 base = RI_PROGRESSIVE_STRENGTH;
+                break;
+            case ComboRando::SF_ELEGY:
+                base = RI_SONG_ELEGY;
+                break;
+            case ComboRando::SF_SONG_OF_HEALING:
+                base = RI_SONG_HEALING;
+                break;
+            case ComboRando::SF_SONATA:
+                base = RI_SONG_SONATA;
+                break;
+            case ComboRando::SF_BOSSA_NOVA:
+                base = RI_SONG_NOVA;
+                break;
+            case ComboRando::SF_OATH:
+                base = RI_SONG_OATH;
+                break;
+            case ComboRando::SF_ZELDAS_LULLABY:
+                base = RI_SONG_ZELDA;
+                break;
+            case ComboRando::SF_BLAST_MASK:
+                base = RI_MASK_BLAST;
+                break;
+            case ComboRando::SF_STONE_MASK:
+                base = RI_MASK_STONE;
+                break;
+            case ComboRando::SF_KAMARO_MASK:
+                base = RI_MASK_KAMARO;
                 break;
             case ComboRando::SF_GERUDO_MASK:
                 base = RI_MASK_GERUDO;

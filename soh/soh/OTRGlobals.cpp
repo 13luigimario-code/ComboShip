@@ -3354,6 +3354,24 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
             return CUR_UPG_VALUE(UPG_SCALE);
         case ComboRando::SF_STRENGTH:
             return CUR_UPG_VALUE(UPG_STRENGTH);
+        case ComboRando::SF_ELEGY:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_SONG_ELEGY) ? 1 : 0;
+        case ComboRando::SF_SONG_OF_HEALING:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_SONG_HEALING) ? 1 : 0;
+        case ComboRando::SF_SONATA:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_SONG_SONATA) ? 1 : 0;
+        case ComboRando::SF_BOSSA_NOVA:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_SONG_BOSSA) ? 1 : 0;
+        case ComboRando::SF_OATH:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_SONG_OATH) ? 1 : 0;
+        case ComboRando::SF_ZELDAS_LULLABY:
+            return CHECK_QUEST_ITEM(QUEST_SONG_LULLABY) ? 1 : 0;
+        case ComboRando::SF_BLAST_MASK:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_MASK_BLAST) ? 1 : 0;
+        case ComboRando::SF_STONE_MASK:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_MASK_STONE) ? 1 : 0;
+        case ComboRando::SF_KAMARO_MASK:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_MASK_KAMARO) ? 1 : 0;
         case ComboRando::SF_GERUDO_MASK:
             return Flags_GetRandomizerInf(RAND_INF_CHILD_TRADES_HAS_MASK_GERUDO) ? 1 : 0;
         case ComboRando::SF_SKULL_MASK:
@@ -3475,6 +3493,33 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_STRENGTH:
                 rg = cur == 0 ? RG_GORONS_BRACELET : cur == 1 ? RG_SILVER_GAUNTLETS : RG_GOLDEN_GAUNTLETS;
+                break;
+            case ComboRando::SF_ELEGY:
+                rg = RG_COMBO_SONG_ELEGY;
+                break;
+            case ComboRando::SF_SONG_OF_HEALING:
+                rg = RG_COMBO_SONG_HEALING;
+                break;
+            case ComboRando::SF_SONATA:
+                rg = RG_COMBO_SONG_SONATA;
+                break;
+            case ComboRando::SF_BOSSA_NOVA:
+                rg = RG_COMBO_SONG_BOSSA;
+                break;
+            case ComboRando::SF_OATH:
+                rg = RG_COMBO_SONG_OATH;
+                break;
+            case ComboRando::SF_ZELDAS_LULLABY:
+                rg = RG_ZELDAS_LULLABY;
+                break;
+            case ComboRando::SF_BLAST_MASK:
+                rg = RG_COMBO_MASK_BLAST;
+                break;
+            case ComboRando::SF_STONE_MASK:
+                rg = RG_COMBO_MASK_STONE;
+                break;
+            case ComboRando::SF_KAMARO_MASK:
+                rg = RG_COMBO_MASK_KAMARO;
                 break;
             case ComboRando::SF_GERUDO_MASK:
                 rg = RG_GERUDO_MASK;

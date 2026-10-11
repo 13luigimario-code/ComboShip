@@ -12329,6 +12329,10 @@ typedef struct BunnyEarKinematics {
 
 static BunnyEarKinematics sBunnyEarKinematics;
 
+#ifdef COMBO_BUILD
+void Combo_OotMask_Draw(PlayState* play, Player* player); // ComboShip: ComboMmMasks.cpp
+#endif
+
 static Gfx* sMaskDlists[PLAYER_MASK_MAX - 1] = {
     gLinkChildKeatonMaskDL, gLinkChildSkullMaskDL, gLinkChildSpookyMaskDL, gLinkChildBunnyHoodDL,
     gLinkChildGoronMaskDL,  gLinkChildZoraMaskDL,  gLinkChildGerudoMaskDL, gLinkChildMaskOfTruthDL,
@@ -12387,6 +12391,13 @@ void Player_DrawGameplay(PlayState* play, Player* this, s32 lod, Gfx* cullDList,
         if (CVarGetInteger(CVAR_GENERAL("FixIceTrapWithBunnyHood"), 1))
             Matrix_Pop();
     }
+
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): a worn MM mask (Blast/Stone/Kamaro) - see ComboMmMasks.cpp.
+    if (overrideLimbDraw == Player_OverrideLimbDrawGameplayDefault) {
+        Combo_OotMask_Draw(play, this);
+    }
+#endif
 
     if ((this->currentBoots == PLAYER_BOOTS_HOVER) && !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) &&
         !(this->stateFlags1 & PLAYER_STATE1_ON_HORSE) && (this->hoverBootsTimer != 0)) {
