@@ -3366,6 +3366,16 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
             return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_SONG_OATH) ? 1 : 0;
         case ComboRando::SF_ZELDAS_LULLABY:
             return CHECK_QUEST_ITEM(QUEST_SONG_LULLABY) ? 1 : 0;
+        case ComboRando::SF_DINS_FIRE:
+            return INV_CONTENT(ITEM_DINS_FIRE) == ITEM_DINS_FIRE ? 1 : 0;
+        case ComboRando::SF_FARORES_WIND:
+            return INV_CONTENT(ITEM_FARORES_WIND) == ITEM_FARORES_WIND ? 1 : 0;
+        case ComboRando::SF_NAYRUS_LOVE:
+            // With Roc's Feather the slot can hold the feather; ownership is then the RandInf flag.
+            return (INV_CONTENT(ITEM_NAYRUS_LOVE) == ITEM_NAYRUS_LOVE ||
+                    Flags_GetRandomizerInf(RAND_INF_OBTAINED_NAYRUS_LOVE))
+                       ? 1
+                       : 0;
         case ComboRando::SF_BLAST_MASK:
             return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_MASK_BLAST) ? 1 : 0;
         case ComboRando::SF_STONE_MASK:
@@ -3511,6 +3521,15 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_ZELDAS_LULLABY:
                 rg = RG_ZELDAS_LULLABY;
+                break;
+            case ComboRando::SF_DINS_FIRE:
+                rg = RG_DINS_FIRE;
+                break;
+            case ComboRando::SF_FARORES_WIND:
+                rg = RG_FARORES_WIND;
+                break;
+            case ComboRando::SF_NAYRUS_LOVE:
+                rg = RG_NAYRUS_LOVE;
                 break;
             case ComboRando::SF_BLAST_MASK:
                 rg = RG_COMBO_MASK_BLAST;

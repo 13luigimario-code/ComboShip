@@ -338,6 +338,15 @@ void GeneratePools(RandoSaveInfo& saveInfo, std::vector<RandoCheckId>& checkPool
     if (saveInfo.randoSaveOptions[RO_CROSS_SONG_ZELDA] == RO_GENERIC_YES) {
         itemPool.push_back(RI_SONG_ZELDA);
     }
+    if (saveInfo.randoSaveOptions[RO_CROSS_SPELL_FIRE] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_SPELL_FIRE);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_SPELL_WIND] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_SPELL_WIND);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_SPELL_LOVE] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_SPELL_LOVE);
+    }
 #endif
 
     // Tycoon's Wallet

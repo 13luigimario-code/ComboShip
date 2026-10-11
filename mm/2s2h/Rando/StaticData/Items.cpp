@@ -302,6 +302,10 @@ std::map<RandoItemId, RandoStaticItem> Items = {
     RI(RI_MASK_SPOOKY,                "the",  "Spooky Mask",                RITYPE_MAJOR,           ITEM_COMBO_MASK_SPOOKY,          GI_NONE,                     GID_NONE),
     // OOT songs playable in MM (MiscBehavior/CrossSongs.cpp). No quest bit: owned as a RandoInf flag.
     RI(RI_SONG_ZELDA,                 "",     "Zelda's Lullaby",            RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    // OOT spells cast by human Link in MM (MiscBehavior/CrossSpells.cpp), from the trade-slot cycles.
+    RI(RI_SPELL_FIRE,                 "",     "Din's Fire",                 RITYPE_MAJOR,           ITEM_COMBO_SPELL_FIRE,           GI_NONE,                     GID_NONE),
+    RI(RI_SPELL_WIND,                 "",     "Farore's Wind",              RITYPE_MAJOR,           ITEM_COMBO_SPELL_WIND,           GI_NONE,                     GID_NONE),
+    RI(RI_SPELL_LOVE,                 "",     "Nayru's Love",               RITYPE_MAJOR,           ITEM_COMBO_SPELL_LOVE,           GI_NONE,                     GID_NONE),
 };
 
 std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
@@ -343,6 +347,7 @@ std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
           // ComboShip (cross-game items)
           RI_BOOTS_IRON, RI_BOOTS_HOVER, RI_TUNIC_GORON, RI_TUNIC_ZORA, RI_PROGRESSIVE_SCALE, RI_PROGRESSIVE_STRENGTH,
           RI_MASK_GERUDO, RI_MASK_SKULL, RI_MASK_SPOOKY, RI_SONG_ZELDA,
+          RI_SPELL_FIRE, RI_SPELL_WIND, RI_SPELL_LOVE,
 #endif
         } }, 
 };
@@ -491,6 +496,12 @@ const char* GetIconTexturePath(RandoItemId randoItemId) {
             return gComboIconMaskSkullTex;
         case RI_MASK_SPOOKY:
             return gComboIconMaskSpookyTex;
+        case RI_SPELL_FIRE:
+            return gComboIconDinsFireTex;
+        case RI_SPELL_WIND:
+            return gComboIconFaroresWindTex;
+        case RI_SPELL_LOVE:
+            return gComboIconNayrusLoveTex;
 #endif
         case RI_BOMBCHU:
         case RI_BOMBCHU_5:

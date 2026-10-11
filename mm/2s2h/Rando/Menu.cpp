@@ -466,6 +466,9 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_CROSS_MASK_SKULL",
                                                                    "gRando.Options.RO_CROSS_MASK_SPOOKY",
                                                                    "gRando.Options.RO_CROSS_SONG_ZELDA",
+                                                                   "gRando.Options.RO_CROSS_SPELL_FIRE",
+                                                                   "gRando.Options.RO_CROSS_SPELL_WIND",
+                                                                   "gRando.Options.RO_CROSS_SPELL_LOVE",
 #endif
                                                                });
 
@@ -1076,6 +1079,19 @@ static void DrawItemPoolTab() {
     ItemPoolCheckbox("Zelda's Lullaby", RO_CROSS_SONG_ZELDA,
                      "Adds Ocarina of Time's Zelda's Lullaby to the item pool as a song Link can play in Termina "
                      "(no effect there; combine with Shared Items so one copy counts for both games).",
+                     1);
+    ItemPoolCheckbox("Din's Fire", RO_CROSS_SPELL_FIRE,
+                     "Adds Ocarina of Time's Din's Fire to the item pool (Moon's Tear / Title Deed slot). Human Link "
+                     "casts it in Termina for 12 magic: a sphere of fire that burns nearby enemies.",
+                     1);
+    ItemPoolCheckbox("Farore's Wind", RO_CROSS_SPELL_WIND,
+                     "Adds Ocarina of Time's Farore's Wind to the item pool (Room Key / Letter to Mama slot). Cast it "
+                     "once to set a warp point where human Link stands, again to return there (12 magic each). Not "
+                     "where the Song of Soaring is refused.",
+                     1);
+    ItemPoolCheckbox("Nayru's Love", RO_CROSS_SPELL_LOVE,
+                     "Adds Ocarina of Time's Nayru's Love to the item pool (Letter to Kafei / Pendant slot). Cast by "
+                     "human Link in Termina for 24 magic, nothing can hurt him for about a minute.",
                      1);
 #endif
     CVarCheckbox("Repeatable Rupee Purchases", Rando::StaticData::Options[RO_PURCHASE_INFINITE_RUPEES].cvar,

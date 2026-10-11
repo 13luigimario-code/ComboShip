@@ -20,6 +20,7 @@ void Rando::MiscBehavior::OnFileLoad() {
 #ifdef COMBO_BUILD
     Rando::MiscBehavior::WarpSongs();
     Rando::MiscBehavior::CrossSongs();
+    Rando::MiscBehavior::CrossSpells();
 #endif
     Rando::MiscBehavior::BankSignHint();
     Rando::MiscBehavior::InitTycoonWallet();

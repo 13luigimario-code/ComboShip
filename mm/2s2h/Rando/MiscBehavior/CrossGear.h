@@ -73,6 +73,10 @@ float Combo_Gear_MaxDiveDepth(void);
 int Combo_Gear_FloorDamageDelay(int floorDamageType);
 // Per-frame cosmetic refresh (tunic color); called from Player_Update.
 void Combo_Gear_OnPlayerUpdate(struct PlayState* play, struct Player* player);
+// CrossSpells.cpp: cast an ITEM_COMBO_SPELL_* (Din's Fire, Farore's Wind, Nayru's Love); 1 if handled.
+int Combo_Spell_Cast(struct PlayState* play, struct Player* player, int item);
+// CrossSpells.cpp: per-frame update of spells in progress (from Combo_Gear_OnPlayerUpdate).
+void Combo_Spells_OnPlayerUpdate(struct PlayState* play, struct Player* player);
 // Draws worn OOT gear (boots on the feet, masks on the head); called after the skeleton draw while segment
 // 0x0D holds Link's limb matrices.
 void Combo_Gear_DrawBoots(struct PlayState* play, struct Player* player);

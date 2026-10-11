@@ -248,6 +248,10 @@ extern "C" int Combo_CrossItem_TryUse(PlayState* play, Player* player, int item)
         case ITEM_COMBO_MASK_SKULL:
         case ITEM_COMBO_MASK_SPOOKY:
             return UseCustomMask(player, item);
+        case ITEM_COMBO_SPELL_FIRE: // CrossSpells.cpp
+        case ITEM_COMBO_SPELL_WIND:
+        case ITEM_COMBO_SPELL_LOVE:
+            return Combo_Spell_Cast(play, player, item);
         default:
             // Cross-game items that aren't usable this way (yet): refuse cleanly, never fall into vanilla
             // item handling with an id past its tables.
@@ -340,6 +344,7 @@ extern "C" void Combo_Gear_OnPlayerUpdate(PlayState* play, Player* player) {
         Flags_ClearRandoInf(RANDO_INF_COMBO_WEARING_MASK_SKULL);
         Flags_ClearRandoInf(RANDO_INF_COMBO_WEARING_MASK_SPOOKY);
     }
+    Combo_Spells_OnPlayerUpdate(play, player); // CrossSpells.cpp: Din's Fire / Nayru's Love in progress
 }
 
 // ---- Rando item plumbing (Rando.h) ----
@@ -389,6 +394,12 @@ const char* Rando::CrossGearOOTItemName(RandoItemId randoItemId) {
             return "Skull Mask";
         case RI_MASK_SPOOKY:
             return "Spooky Mask";
+        case RI_SPELL_FIRE:
+            return "Din's Fire";
+        case RI_SPELL_WIND:
+            return "Farore's Wind";
+        case RI_SPELL_LOVE:
+            return "Nayru's Love";
         default:
             return nullptr;
     }
@@ -441,6 +452,18 @@ bool Rando::CrossGearGive(RandoItemId randoItemId) {
         case RI_MASK_SPOOKY:
             Flags_SetRandoInf(RANDO_INF_OBTAINED_MASK_SPOOKY);
             GrantSlot(ITEM_COMBO_MASK_SPOOKY);
+            return true;
+        case RI_SPELL_FIRE:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SPELL_FIRE);
+            GrantSlot(ITEM_COMBO_SPELL_FIRE);
+            return true;
+        case RI_SPELL_WIND:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SPELL_WIND);
+            GrantSlot(ITEM_COMBO_SPELL_WIND);
+            return true;
+        case RI_SPELL_LOVE:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE);
+            GrantSlot(ITEM_COMBO_SPELL_LOVE);
             return true;
         case RI_PROGRESSIVE_STRENGTH: {
             s32 tier = Combo_Gear_GetStrength();
@@ -506,6 +529,18 @@ bool Rando::CrossGearRemove(RandoItemId randoItemId) {
             Flags_ClearRandoInf(RANDO_INF_OBTAINED_MASK_SPOOKY);
             Flags_ClearRandoInf(RANDO_INF_COMBO_WEARING_MASK_SPOOKY);
             RemoveSlot(ITEM_COMBO_MASK_SPOOKY);
+            return true;
+        case RI_SPELL_FIRE:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_SPELL_FIRE);
+            RemoveSlot(ITEM_COMBO_SPELL_FIRE);
+            return true;
+        case RI_SPELL_WIND:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_SPELL_WIND);
+            RemoveSlot(ITEM_COMBO_SPELL_WIND);
+            return true;
+        case RI_SPELL_LOVE:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE);
+            RemoveSlot(ITEM_COMBO_SPELL_LOVE);
             return true;
         case RI_PROGRESSIVE_STRENGTH: {
             s32 tier = Combo_Gear_GetStrength();

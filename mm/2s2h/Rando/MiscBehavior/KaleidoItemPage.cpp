@@ -110,6 +110,9 @@ std::vector<u8> BuildAvailableItemsList(u8 slot) {
             if (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_GERUDO)) {
                 availableItems.push_back(ITEM_COMBO_MASK_GERUDO);
             }
+            if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_FIRE)) {
+                availableItems.push_back(ITEM_COMBO_SPELL_FIRE);
+            }
 #endif
             break;
         case SLOT_TRADE_KEY_MAMA:
@@ -130,6 +133,9 @@ std::vector<u8> BuildAvailableItemsList(u8 slot) {
             if (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SKULL)) {
                 availableItems.push_back(ITEM_COMBO_MASK_SKULL);
             }
+            if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_WIND)) {
+                availableItems.push_back(ITEM_COMBO_SPELL_WIND);
+            }
 #endif
             break;
         case SLOT_TRADE_COUPLE:
@@ -148,6 +154,9 @@ std::vector<u8> BuildAvailableItemsList(u8 slot) {
             }
             if (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SPOOKY)) {
                 availableItems.push_back(ITEM_COMBO_MASK_SPOOKY);
+            }
+            if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE)) {
+                availableItems.push_back(ITEM_COMBO_SPELL_LOVE);
             }
 #endif
             break;

@@ -2279,3 +2279,26 @@ effect in the other game; their use is as items and with Shared Items.
   No shared Goron Lullaby: MM's is a two-tier progressive (intro, full) while OOT's copy is one item.
 - **Draw across games:** OOT's copies placed in MM draw MM's song notes; MM's Zelda's Lullaby placed in OOT
   draws OOT's own.
+
+### OOT spells in MM: Din's Fire, Farore's Wind, Nayru's Love (2026-10-11)
+
+OoTMM's `spellFireMm`, `spellWindMm`, `spellLoveMm` and their `sharedSpell*` twins. MM options
+`RO_CROSS_SPELL_FIRE/WIND/LOVE`; items `RI_SPELL_*` (`ITEM_COMBO_SPELL_*`, already reserved with icons, names, slots
+and form restrictions), owned as `RANDO_INF_OBTAINED_SPELL_*`. They join the trade cycles (Din's: Moon's Tear /
+Deeds, Farore's: Room Key / Letter to Mama, Nayru's: Letter to Kafei / Pendant) and are cast from a C button by
+human Link (`Combo_CrossItem_TryUse` → `Combo_Spell_Cast`).
+
+**Effects (`mm/2s2h/Rando/MiscBehavior/CrossSpells.cpp`):** OOT's `Magic_Fire` / `Magic_Dark` logic run as combo
+state from `Combo_Gear_OnPlayerUpdate` and drawn from an `OnActorDraw` hook on the player, not as actors (MM's actor
+table has no slot for them); models are OOT's own (`"@oot:overlays/ovl_Magic_*"`).
+- Din's Fire (12 magic): the expanding sphere and screen tint; its cylinder (owned by the player actor) carries
+  `DMG_FIRE_ARROW`, like OoTMM, so enemies burn as from a fire arrow. A scene change ends it.
+- Nayru's Love (24 magic): `invincibilityTimer = -100` for 1200 frames, the diamond around Link's waist; carries
+  over scene changes like OOT's `nayrusLoveTimer`.
+- Farore's Wind (12 magic): first cast stores the spot (`Play_SetRespawnData(RESPAWN_MODE_HUMAN, ...)`, which
+  MM only initializes); the next one restores it and transitions with `respawnFlag = RESPAWN_MODE_HUMAN + 1`
+  (Player_Init reads `respawn[flag - 1]`), using the point up. Refused where the Song of Soaring is. Kept in memory
+  only (not saved), and without OoTMM's return/dispel prompt.
+- No casting animation: the effect starts from the C-button press.
+
+**Shared Items:** `spellFire`, `spellWind`, `spellLove`. **Logic:** none. OOT draws MM's copies with its own models.

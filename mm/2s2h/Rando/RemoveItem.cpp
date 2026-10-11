@@ -27,6 +27,9 @@ void Rando::RemoveItem(RandoItemId randoItemId) {
         case RI_MASK_GERUDO:
         case RI_MASK_SKULL:
         case RI_MASK_SPOOKY:
+        case RI_SPELL_FIRE:
+        case RI_SPELL_WIND:
+        case RI_SPELL_LOVE:
             Rando::CrossGearRemove(randoItemId);
             break;
         case RI_SONG_ZELDA:

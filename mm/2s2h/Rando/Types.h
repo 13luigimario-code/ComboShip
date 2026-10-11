@@ -2978,6 +2978,10 @@ typedef enum {
     RI_MASK_SPOOKY,
     // OOT songs playable in MM (OoTMM "Zelda's Lullaby (MM)").
     RI_SONG_ZELDA,
+    // OOT spells human Link can cast in MM (OoTMM "Din's Fire (MM)" etc.).
+    RI_SPELL_FIRE,
+    RI_SPELL_WIND,
+    RI_SPELL_LOVE,
 #endif
     RI_MAX_TRAP, // Just used for ice trap ice cube model
     RI_MAX,
@@ -3390,6 +3394,9 @@ typedef enum {
     RO_CROSS_MASK_SKULL,
     RO_CROSS_MASK_SPOOKY,
     RO_CROSS_SONG_ZELDA,
+    RO_CROSS_SPELL_FIRE,
+    RO_CROSS_SPELL_WIND,
+    RO_CROSS_SPELL_LOVE,
 #endif
     RO_MAX,
 } RandoOptionId;
@@ -3564,6 +3571,9 @@ typedef enum {
     RANDO_INF_COMBO_WEARING_MASK_SKULL,
     RANDO_INF_COMBO_WEARING_MASK_SPOOKY,
     RANDO_INF_OBTAINED_SONG_ZELDA,
+    RANDO_INF_OBTAINED_SPELL_FIRE,
+    RANDO_INF_OBTAINED_SPELL_WIND,
+    RANDO_INF_OBTAINED_SPELL_LOVE,
 #endif
     RANDO_INF_MAX,
 } RandoInf;

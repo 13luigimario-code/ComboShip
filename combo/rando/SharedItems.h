@@ -61,6 +61,10 @@ enum SharedFamily {
     SF_BOSSA_NOVA,
     SF_OATH,
     SF_ZELDAS_LULLABY,
+    // OOT spells cast in MM (MM's copy needs MM's matching option).
+    SF_DINS_FIRE,
+    SF_FARORES_WIND,
+    SF_NAYRUS_LOVE,
     SF_COUNT
 };
 // Family bitmask (bit i = SharedFamily i). 64 bits since the cross-game item families (was uint32_t);
@@ -221,6 +225,15 @@ inline const SharedFamilyDef* SharedFamilyTable() {
         { SF_ZELDAS_LULLABY, "songZeldaLullaby", "gCombo.Rando.Shared.SongZeldaLullaby", "Shared Zelda's Lullaby",
           "One Zelda's Lullaby counts for both games. Requires MM's Zelda's Lullaby (Ocarina of Time Gear).",
           "Zelda's Lullaby", "Zelda's Lullaby", 1, false, true, false },
+        { SF_DINS_FIRE, "spellFire", "gCombo.Rando.Shared.SpellFire", "Shared Din's Fire",
+          "One Din's Fire counts for both games. Requires MM's Din's Fire (Ocarina of Time Gear).", "Din's Fire",
+          "Din's Fire", 1, false, true, false },
+        { SF_FARORES_WIND, "spellWind", "gCombo.Rando.Shared.SpellWind", "Shared Farore's Wind",
+          "One Farore's Wind counts for both games. Requires MM's Farore's Wind (Ocarina of Time Gear).",
+          "Farore's Wind", "Farore's Wind", 1, false, true, false },
+        { SF_NAYRUS_LOVE, "spellLove", "gCombo.Rando.Shared.SpellLove", "Shared Nayru's Love",
+          "One Nayru's Love counts for both games. Requires MM's Nayru's Love (Ocarina of Time Gear).", "Nayru's Love",
+          "Nayru's Love", 1, false, true, false },
     };
     return table;
 }

@@ -3762,6 +3762,9 @@ static void GiveItemForOracle(RandoItemId ri) {
         case RI_MASK_GERUDO:
         case RI_MASK_SKULL:
         case RI_MASK_SPOOKY:
+        case RI_SPELL_FIRE:
+        case RI_SPELL_WIND:
+        case RI_SPELL_LOVE:
             Rando::CrossGearGive(ri);
             break;
         case RI_SONG_ZELDA: // ComboShip (cross-game items)
@@ -4315,6 +4318,12 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
             return CHECK_QUEST_ITEM(QUEST_SONG_OATH) ? 1 : 0;
         case ComboRando::SF_ZELDAS_LULLABY:
             return Flags_GetRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA) ? 1 : 0;
+        case ComboRando::SF_DINS_FIRE:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_FIRE) ? 1 : 0;
+        case ComboRando::SF_FARORES_WIND:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_WIND) ? 1 : 0;
+        case ComboRando::SF_NAYRUS_LOVE:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE) ? 1 : 0;
         case ComboRando::SF_BLAST_MASK:
             return INV_CONTENT(ITEM_MASK_BLAST) != ITEM_NONE ? 1 : 0;
         case ComboRando::SF_STONE_MASK:
@@ -4460,6 +4469,15 @@ extern "C" COMBO_EXPORT void MM_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_ZELDAS_LULLABY:
                 base = RI_SONG_ZELDA;
+                break;
+            case ComboRando::SF_DINS_FIRE:
+                base = RI_SPELL_FIRE;
+                break;
+            case ComboRando::SF_FARORES_WIND:
+                base = RI_SPELL_WIND;
+                break;
+            case ComboRando::SF_NAYRUS_LOVE:
+                base = RI_SPELL_LOVE;
                 break;
             case ComboRando::SF_BLAST_MASK:
                 base = RI_MASK_BLAST;
