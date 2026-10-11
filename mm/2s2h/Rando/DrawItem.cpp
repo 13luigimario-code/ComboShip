@@ -784,6 +784,30 @@ void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* 
             // rupee on any failure). The originating check identity is passed straight through.
             MM_DrawComboForeign(randoCheckId);
             break;
+        // ComboShip (cross-game items): MM's copies of OOT gear draw OOT's own get-item models.
+        case RI_BOOTS_IRON:
+        case RI_BOOTS_HOVER:
+        case RI_TUNIC_GORON:
+        case RI_TUNIC_ZORA:
+        case RI_PROGRESSIVE_SCALE:
+        case RI_SCALE_SILVER:
+        case RI_SCALE_GOLDEN:
+        case RI_PROGRESSIVE_STRENGTH:
+        case RI_STRENGTH_GORONS_BRACELET:
+        case RI_STRENGTH_SILVER_GAUNTLETS:
+        case RI_STRENGTH_GOLDEN_GAUNTLETS:
+        case RI_MASK_GERUDO:
+        case RI_MASK_SKULL:
+        case RI_MASK_SPOOKY: {
+            RandoItemId concrete = randoItemId;
+            if ((randoItemId == RI_PROGRESSIVE_SCALE) || (randoItemId == RI_PROGRESSIVE_STRENGTH)) {
+                concrete = Rando::ConvertItem(randoItemId, randoCheckId); // the tier this copy will give
+            }
+            if (!MM_DrawOOTItemByName(Rando::CrossGearOOTItemName(concrete))) {
+                GetItem_Draw(gPlayState, GID_RUPEE_BLUE); // OOT not resident yet: never draw blank
+            }
+            break;
+        }
 #endif
         default:
             GetItem_Draw(gPlayState, Rando::StaticData::Items[randoItemId].drawId);

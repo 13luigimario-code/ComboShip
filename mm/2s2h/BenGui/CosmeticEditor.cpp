@@ -1121,53 +1121,82 @@ Gfx humanTunic[] = {
     gsSPEndDisplayList(),
 };
 
-static RegisterShipInitFunc humanTunicPatch(
-    []() {
-        if (!IsCustomHumanModelActive() && CVarGetInteger(kHumanTunicOption.colorChangedCvar, 0)) {
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanWaistDL", "setPrim", 5,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanRightThighDL", "setPrim", 10,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanLeftThighDL", "setPrim", 10,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanHeadDL", "setPrim", 92,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanHatDL", "setPrim", 10,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanCollarDL", "setPrim", 5,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanLeftShoulderDL", "setPrim1", 10,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanLeftShoulderDL", "setPrim2", 65,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanRightShoulderDL", "setPrim1", 10,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanRightShoulderDL", "setPrim2", 65,
-                                       gsSPDisplayList(humanTunic));
-            ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanTorsoDL", "setPrim", 5,
-                                       gsSPDisplayList(humanTunic));
-        } else {
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanWaistDL", "setPrim");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanRightThighDL", "setPrim");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanLeftThighDL", "setPrim");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanHeadDL", "setPrim");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanHatDL", "setPrim");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanCollarDL", "setPrim");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanLeftShoulderDL", "setPrim1");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanLeftShoulderDL", "setPrim2");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanRightShoulderDL", "setPrim1");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanRightShoulderDL", "setPrim2");
-            ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanTorsoDL", "setPrim");
-        }
-    },
-    { kHumanTunicOption.colorChangedCvar });
+#ifdef COMBO_BUILD
+// ComboShip (cross-game items): OOT's Goron/Zora Tunic worn in MM recolors the human tunic through this
+// same display-list patch, overriding the cosmetic color while worn (CrossGear.cpp).
+static bool sComboTunicOverrideActive = false;
+static Color_RGB8 sComboTunicOverrideColor = { 0, 0, 0 };
+#endif
 
-static RegisterShipInitFunc humanTunicColor(
-    []() {
-        Color_RGBA8 changedColor = CVarGetColor(kHumanTunicOption.colorCvar, {});
-        humanTunic[0] = gsDPSetPrimColor(0, 0, changedColor.r, changedColor.g, changedColor.b, 255);
-    },
-    { kHumanTunicOption.colorCvar });
+static void HumanTunicApplyPatch() {
+    bool wantPatch = CVarGetInteger(kHumanTunicOption.colorChangedCvar, 0) != 0;
+#ifdef COMBO_BUILD
+    wantPatch = wantPatch || sComboTunicOverrideActive;
+#endif
+    if (!IsCustomHumanModelActive() && wantPatch) {
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanWaistDL", "setPrim", 5,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanRightThighDL", "setPrim", 10,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanLeftThighDL", "setPrim", 10,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanHeadDL", "setPrim", 92,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanHatDL", "setPrim", 10,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanCollarDL", "setPrim", 5,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanLeftShoulderDL", "setPrim1", 10,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanLeftShoulderDL", "setPrim2", 65,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanRightShoulderDL", "setPrim1", 10,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanRightShoulderDL", "setPrim2", 65,
+                                   gsSPDisplayList(humanTunic));
+        ResourceMgr_PatchGfxByName("objects/object_link_child/gLinkHumanTorsoDL", "setPrim", 5,
+                                   gsSPDisplayList(humanTunic));
+    } else {
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanWaistDL", "setPrim");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanRightThighDL", "setPrim");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanLeftThighDL", "setPrim");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanHeadDL", "setPrim");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanHatDL", "setPrim");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanCollarDL", "setPrim");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanLeftShoulderDL", "setPrim1");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanLeftShoulderDL", "setPrim2");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanRightShoulderDL", "setPrim1");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanRightShoulderDL", "setPrim2");
+        ResourceMgr_UnpatchGfxByName("objects/object_link_child/gLinkHumanTorsoDL", "setPrim");
+    }
+}
+
+static void HumanTunicApplyColor() {
+#ifdef COMBO_BUILD
+    if (sComboTunicOverrideActive) {
+        humanTunic[0] = gsDPSetPrimColor(0, 0, sComboTunicOverrideColor.r, sComboTunicOverrideColor.g,
+                                         sComboTunicOverrideColor.b, 255);
+        return;
+    }
+#endif
+    Color_RGBA8 changedColor = CVarGetColor(kHumanTunicOption.colorCvar, {});
+    humanTunic[0] = gsDPSetPrimColor(0, 0, changedColor.r, changedColor.g, changedColor.b, 255);
+}
+
+static RegisterShipInitFunc humanTunicPatch([]() { HumanTunicApplyPatch(); }, { kHumanTunicOption.colorChangedCvar });
+
+static RegisterShipInitFunc humanTunicColor([]() { HumanTunicApplyColor(); }, { kHumanTunicOption.colorCvar });
+
+#ifdef COMBO_BUILD
+extern "C" void CosmeticEditor_SetHumanTunicOverride(const Color_RGB8* color) {
+    sComboTunicOverrideActive = (color != nullptr);
+    if (color != nullptr) {
+        sComboTunicOverrideColor = *color;
+    }
+    HumanTunicApplyPatch();
+    HumanTunicApplyColor();
+}
+#endif
 
 // Player.HumanHair
 

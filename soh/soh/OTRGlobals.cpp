@@ -3341,6 +3341,19 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
         case ComboRando::SF_PRELUDE_OF_LIGHT:
             // QUEST_SONG_MINUET..PRELUDE and the SF_ rows are both contiguous in OOT warp-index order.
             return CHECK_QUEST_ITEM(QUEST_SONG_MINUET + (family - ComboRando::SF_MINUET_OF_FOREST)) ? 1 : 0;
+        // Cross-game items: OOT's own equipment/upgrade values.
+        case ComboRando::SF_IRON_BOOTS:
+            return CHECK_OWNED_EQUIP(EQUIP_TYPE_BOOTS, EQUIP_INV_BOOTS_IRON) ? 1 : 0;
+        case ComboRando::SF_HOVER_BOOTS:
+            return CHECK_OWNED_EQUIP(EQUIP_TYPE_BOOTS, EQUIP_INV_BOOTS_HOVER) ? 1 : 0;
+        case ComboRando::SF_GORON_TUNIC:
+            return CHECK_OWNED_EQUIP(EQUIP_TYPE_TUNIC, EQUIP_INV_TUNIC_GORON) ? 1 : 0;
+        case ComboRando::SF_ZORA_TUNIC:
+            return CHECK_OWNED_EQUIP(EQUIP_TYPE_TUNIC, EQUIP_INV_TUNIC_ZORA) ? 1 : 0;
+        case ComboRando::SF_SCALES:
+            return CUR_UPG_VALUE(UPG_SCALE);
+        case ComboRando::SF_STRENGTH:
+            return CUR_UPG_VALUE(UPG_STRENGTH);
         default:
             return 0;
     }
@@ -3434,6 +3447,24 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_PRELUDE_OF_LIGHT:
                 rg = RG_PRELUDE_OF_LIGHT;
+                break;
+            case ComboRando::SF_IRON_BOOTS:
+                rg = RG_IRON_BOOTS;
+                break;
+            case ComboRando::SF_HOVER_BOOTS:
+                rg = RG_HOVER_BOOTS;
+                break;
+            case ComboRando::SF_GORON_TUNIC:
+                rg = RG_GORON_TUNIC;
+                break;
+            case ComboRando::SF_ZORA_TUNIC:
+                rg = RG_ZORA_TUNIC;
+                break;
+            case ComboRando::SF_SCALES:
+                rg = cur == 0 ? RG_SILVER_SCALE : RG_GOLDEN_SCALE;
+                break;
+            case ComboRando::SF_STRENGTH:
+                rg = cur == 0 ? RG_GORONS_BRACELET : cur == 1 ? RG_SILVER_GAUNTLETS : RG_GOLDEN_GAUNTLETS;
                 break;
             default:
                 break;

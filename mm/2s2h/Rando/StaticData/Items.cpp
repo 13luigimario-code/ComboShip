@@ -5,7 +5,8 @@
 #include "2s2h/Rando/Rando.h"
 #include "2s2h_assets.h"
 #ifdef COMBO_BUILD
-#include "2s2h/Rando/MiscBehavior/MiscBehavior.h" // ComboShip: MM_LookupForeign for foreign-item name substitution
+#include "2s2h/Rando/MiscBehavior/MiscBehavior.h"    // ComboShip: MM_LookupForeign for foreign-item name substitution
+#include "2s2h/Rando/MiscBehavior/CrossItemAssets.h" // ComboShip: OOT icons for cross-game items
 #endif
 
 extern "C" {
@@ -282,6 +283,23 @@ std::map<RandoItemId, RandoStaticItem> Items = {
     // mailbox. The spoilerName ("RI_COMBO_FOREIGN", via the #id macro) is what the combo generator
     // writes into the MM placement payload (GetItemIdFromName -> RI_COMBO_FOREIGN).
     RI(RI_COMBO_FOREIGN,              "",     "Combo Foreign Item",         RITYPE_JUNK,            ITEM_NONE,                       GI_RUPEE_BLUE,               GID_RUPEE_BLUE),
+    // ComboShip (cross-game items): OOT gear usable in MM (MiscBehavior/CrossGear.cpp). No MM GetItem/draw
+    // ids: DrawItem renders OOT's model by name, GiveItem sets RandoInf flags + the trade slot. Boots and
+    // tunics carry their ITEM_COMBO_* id (pause-menu cycle + C-button use); scales/strength are passive.
+    RI(RI_BOOTS_IRON,                 "the",  "Iron Boots",                 RITYPE_MAJOR,           ITEM_COMBO_BOOTS_IRON,           GI_NONE,                     GID_NONE),
+    RI(RI_BOOTS_HOVER,                "the",  "Hover Boots",                RITYPE_MAJOR,           ITEM_COMBO_BOOTS_HOVER,          GI_NONE,                     GID_NONE),
+    RI(RI_TUNIC_GORON,                "a",    "Goron Tunic",                RITYPE_MAJOR,           ITEM_COMBO_TUNIC_GORON,          GI_NONE,                     GID_NONE),
+    RI(RI_TUNIC_ZORA,                 "a",    "Zora Tunic",                 RITYPE_MAJOR,           ITEM_COMBO_TUNIC_ZORA,           GI_NONE,                     GID_NONE),
+    RI(RI_PROGRESSIVE_SCALE,          "a",    "Progressive Scale",          RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_SCALE_SILVER,               "the",  "Silver Scale",               RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_SCALE_GOLDEN,               "the",  "Golden Scale",               RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_PROGRESSIVE_STRENGTH,       "a",    "Strength Upgrade",           RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_STRENGTH_GORONS_BRACELET,   "the",  "Goron's Bracelet",           RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_STRENGTH_SILVER_GAUNTLETS,  "the",  "Silver Gauntlets",           RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_STRENGTH_GOLDEN_GAUNTLETS,  "the",  "Golden Gauntlets",           RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_MASK_GERUDO,                "the",  "Gerudo Mask",                RITYPE_MAJOR,           ITEM_COMBO_MASK_GERUDO,          GI_NONE,                     GID_NONE),
+    RI(RI_MASK_SKULL,                 "the",  "Skull Mask",                 RITYPE_MAJOR,           ITEM_COMBO_MASK_SKULL,           GI_NONE,                     GID_NONE),
+    RI(RI_MASK_SPOOKY,                "the",  "Spooky Mask",                RITYPE_MAJOR,           ITEM_COMBO_MASK_SPOOKY,          GI_NONE,                     GID_NONE),
 };
 
 std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
@@ -319,6 +337,11 @@ std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
           RI_FROG_BLUE, RI_FROG_CYAN,   RI_FROG_PINK,   RI_FROG_WHITE,
           RI_TIME_DAY_1, RI_TIME_NIGHT_1, RI_TIME_DAY_2, RI_TIME_NIGHT_2, RI_TIME_DAY_3, RI_TIME_NIGHT_3, RI_TIME_PROGRESSIVE,
           RI_OCARINA_BUTTON_A, RI_OCARINA_BUTTON_C_DOWN, RI_OCARINA_BUTTON_C_RIGHT, RI_OCARINA_BUTTON_C_LEFT, RI_OCARINA_BUTTON_C_UP,
+#ifdef COMBO_BUILD
+          // ComboShip (cross-game items)
+          RI_BOOTS_IRON, RI_BOOTS_HOVER, RI_TUNIC_GORON, RI_TUNIC_ZORA, RI_PROGRESSIVE_SCALE, RI_PROGRESSIVE_STRENGTH,
+          RI_MASK_GERUDO, RI_MASK_SKULL, RI_MASK_SPOOKY,
+#endif
         } }, 
 };
 
@@ -326,6 +349,9 @@ std::map<RandoItemId, u8> MaxStartingItemsMap = {
     { RI_PROGRESSIVE_SWORD, 3 }, { RI_PROGRESSIVE_BOMB_BAG, 3 }, { RI_PROGRESSIVE_WALLET, 2 },
     { RI_PROGRESSIVE_BOW, 3 },   { RI_PROGRESSIVE_LULLABY, 2 },  { RI_PROGRESSIVE_MAGIC, 2 },
     { RI_TIME_PROGRESSIVE, 6 },
+#ifdef COMBO_BUILD
+    { RI_PROGRESSIVE_SCALE, 2 }, { RI_PROGRESSIVE_STRENGTH, 3 }, // ComboShip (cross-game items)
+#endif
 };
 // clang-format on
 
@@ -435,6 +461,35 @@ u8 GetIconForZMessage(RandoItemId randoItemId) {
 
 const char* GetIconTexturePath(RandoItemId randoItemId) {
     switch (randoItemId) {
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT icons ("@oot:" routed, CrossItemAssets.h).
+        case RI_BOOTS_IRON:
+            return gComboIconBootsIronTex;
+        case RI_BOOTS_HOVER:
+            return gComboIconBootsHoverTex;
+        case RI_TUNIC_GORON:
+            return gComboIconTunicGoronTex;
+        case RI_TUNIC_ZORA:
+            return gComboIconTunicZoraTex;
+        case RI_PROGRESSIVE_SCALE:
+        case RI_SCALE_SILVER:
+            return gComboIconScaleSilverTex;
+        case RI_SCALE_GOLDEN:
+            return gComboIconScaleGoldenTex;
+        case RI_PROGRESSIVE_STRENGTH:
+        case RI_STRENGTH_GORONS_BRACELET:
+            return gComboIconGoronsBraceletTex;
+        case RI_STRENGTH_SILVER_GAUNTLETS:
+            return gComboIconSilverGauntletsTex;
+        case RI_STRENGTH_GOLDEN_GAUNTLETS:
+            return gComboIconGoldenGauntletsTex;
+        case RI_MASK_GERUDO:
+            return gComboIconMaskGerudoTex;
+        case RI_MASK_SKULL:
+            return gComboIconMaskSkullTex;
+        case RI_MASK_SPOOKY:
+            return gComboIconMaskSpookyTex;
+#endif
         case RI_BOMBCHU:
         case RI_BOMBCHU_5:
             return (const char*)gItemIcons[ITEM_BOMBCHU];

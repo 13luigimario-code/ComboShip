@@ -48,6 +48,12 @@ inline constexpr SkeletonKeyCount skeletonKeyCounts[] = {
 #ifdef COMBO_BUILD
 // ComboShip: set while GiveItem delivers into a dormant MM save (gPlayState==NULL).
 extern bool gComboDormantGive;
+// ComboShip (cross-game items): OOT's English item name for an MM copy of OOT gear (MiscBehavior/CrossGear.cpp),
+// used to draw OOT's model; nullptr for any other item. Progressive ids must be converted first.
+const char* CrossGearOOTItemName(RandoItemId randoItemId);
+// Grant/remove for those items (RandoInf flags + trade-slot entry); dormant-safe, never touches gPlayState.
+bool CrossGearGive(RandoItemId randoItemId);
+bool CrossGearRemove(RandoItemId randoItemId);
 #endif
 void RemoveItem(RandoItemId randoItemId);
 RandoItemId CurrentJunkItem(RandoCheckId randoCheckId = RC_UNKNOWN);

@@ -3747,6 +3747,23 @@ static void GiveItemForOracle(RandoItemId ri) {
         case RI_ABILITY_SWIM:
             Flags_SetRandoInf(RANDO_INF_OBTAINED_SWIM);
             break;
+        // ComboShip (cross-game items): OOT gear in MM - pure RandoInf/trade-slot writes, headless-safe.
+        case RI_BOOTS_IRON:
+        case RI_BOOTS_HOVER:
+        case RI_TUNIC_GORON:
+        case RI_TUNIC_ZORA:
+        case RI_PROGRESSIVE_SCALE:
+        case RI_SCALE_SILVER:
+        case RI_SCALE_GOLDEN:
+        case RI_PROGRESSIVE_STRENGTH:
+        case RI_STRENGTH_GORONS_BRACELET:
+        case RI_STRENGTH_SILVER_GAUNTLETS:
+        case RI_STRENGTH_GOLDEN_GAUNTLETS:
+        case RI_MASK_GERUDO:
+        case RI_MASK_SKULL:
+        case RI_MASK_SPOOKY:
+            Rando::CrossGearGive(ri);
+            break;
 
         // ComboShip: owl-warp statues. Logic gates nearly every exit from the root region on
         // CAN_OWL_WARP, the primary entry into each cardinal cluster. The default case below would set
@@ -4265,6 +4282,24 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
                        (RandoInf)(RANDO_INF_OBTAINED_SONG_MINUET + (family - ComboRando::SF_MINUET_OF_FOREST)))
                        ? 1
                        : 0;
+        // Cross-game items: OOT gear owned in MM (RandoInf-backed, MiscBehavior/CrossGear.cpp).
+        case ComboRando::SF_IRON_BOOTS:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOTS_IRON) ? 1 : 0;
+        case ComboRando::SF_HOVER_BOOTS:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOTS_HOVER) ? 1 : 0;
+        case ComboRando::SF_GORON_TUNIC:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_TUNIC_GORON) ? 1 : 0;
+        case ComboRando::SF_ZORA_TUNIC:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_TUNIC_ZORA) ? 1 : 0;
+        case ComboRando::SF_SCALES:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_SCALE_GOLDEN)   ? 2
+                   : Flags_GetRandoInf(RANDO_INF_OBTAINED_SCALE_SILVER) ? 1
+                                                                        : 0;
+        case ComboRando::SF_STRENGTH:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_STRENGTH_GOLDEN_GAUNTLETS)   ? 3
+                   : Flags_GetRandoInf(RANDO_INF_OBTAINED_STRENGTH_SILVER_GAUNTLETS) ? 2
+                   : Flags_GetRandoInf(RANDO_INF_OBTAINED_STRENGTH_GORONS_BRACELET)  ? 1
+                                                                                     : 0;
         default:
             return 0;
     }
@@ -4358,6 +4393,24 @@ extern "C" COMBO_EXPORT void MM_RaiseSharedTier(int family, int tier) try {
             case ComboRando::SF_PRELUDE_OF_LIGHT:
                 // RI_SONG_MINUET..PRELUDE are contiguous in the same order as the SF_ rows.
                 base = (RandoItemId)(RI_SONG_MINUET + (family - ComboRando::SF_MINUET_OF_FOREST));
+                break;
+            case ComboRando::SF_IRON_BOOTS:
+                base = RI_BOOTS_IRON;
+                break;
+            case ComboRando::SF_HOVER_BOOTS:
+                base = RI_BOOTS_HOVER;
+                break;
+            case ComboRando::SF_GORON_TUNIC:
+                base = RI_TUNIC_GORON;
+                break;
+            case ComboRando::SF_ZORA_TUNIC:
+                base = RI_TUNIC_ZORA;
+                break;
+            case ComboRando::SF_SCALES:
+                base = RI_PROGRESSIVE_SCALE;
+                break;
+            case ComboRando::SF_STRENGTH:
+                base = RI_PROGRESSIVE_STRENGTH;
                 break;
             default:
                 break;

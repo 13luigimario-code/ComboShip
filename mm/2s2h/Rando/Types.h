@@ -2958,6 +2958,25 @@ typedef enum {
     // recognizes it and diverts the real (foreign) item through the cross-world mailbox instead of
     // granting locally. Appended before the terminators so existing RI values (and save data) are unchanged.
     RI_COMBO_FOREIGN,
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items, OoTMM "X (MM)" settings): OOT equipment usable in MM. Appended so
+    // existing RI values are unchanged. Gameplay: 2s2h/Rando/MiscBehavior/CrossGear.cpp.
+    RI_BOOTS_IRON,
+    RI_BOOTS_HOVER,
+    RI_TUNIC_GORON,
+    RI_TUNIC_ZORA,
+    RI_PROGRESSIVE_SCALE,
+    RI_SCALE_SILVER,
+    RI_SCALE_GOLDEN,
+    RI_PROGRESSIVE_STRENGTH,
+    RI_STRENGTH_GORONS_BRACELET,
+    RI_STRENGTH_SILVER_GAUNTLETS,
+    RI_STRENGTH_GOLDEN_GAUNTLETS,
+    // OOT masks human Link can wear in MM (OoTMM "Gerudo/Skull/Spooky Mask (MM)").
+    RI_MASK_GERUDO,
+    RI_MASK_SKULL,
+    RI_MASK_SPOOKY,
+#endif
     RI_MAX_TRAP, // Just used for ice trap ice cube model
     RI_MAX,
 } RandoItemId;
@@ -3357,6 +3376,18 @@ typedef enum {
     RO_TRAP_AMOUNT,
     RO_TRIFORCE_PIECES_MAX,
     RO_TRIFORCE_PIECES_REQUIRED,
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OoTMM's "Iron Boots (MM)" etc. Appended (save arrays are positional).
+    RO_CROSS_BOOTS_IRON,
+    RO_CROSS_BOOTS_HOVER,
+    RO_CROSS_TUNIC_GORON,
+    RO_CROSS_TUNIC_ZORA,
+    RO_CROSS_SCALES,
+    RO_CROSS_STRENGTH,
+    RO_CROSS_MASK_GERUDO,
+    RO_CROSS_MASK_SKULL,
+    RO_CROSS_MASK_SPOOKY,
+#endif
     RO_MAX,
 } RandoOptionId;
 
@@ -3506,6 +3537,29 @@ typedef enum {
     RANDO_INF_OBTAINED_SONG_REQUIEM,
     RANDO_INF_OBTAINED_SONG_NOCTURNE,
     RANDO_INF_OBTAINED_SONG_PRELUDE,
+#endif
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): ownership of OOT equipment in MM, then what Link is wearing.
+    // Appended; saves written before this load with these clear (BenJsonConversions tolerant read).
+    RANDO_INF_OBTAINED_BOOTS_IRON,
+    RANDO_INF_OBTAINED_BOOTS_HOVER,
+    RANDO_INF_OBTAINED_TUNIC_GORON,
+    RANDO_INF_OBTAINED_TUNIC_ZORA,
+    RANDO_INF_OBTAINED_SCALE_SILVER,
+    RANDO_INF_OBTAINED_SCALE_GOLDEN,
+    RANDO_INF_OBTAINED_STRENGTH_GORONS_BRACELET,
+    RANDO_INF_OBTAINED_STRENGTH_SILVER_GAUNTLETS,
+    RANDO_INF_OBTAINED_STRENGTH_GOLDEN_GAUNTLETS,
+    RANDO_INF_COMBO_WEARING_BOOTS_IRON,
+    RANDO_INF_COMBO_WEARING_BOOTS_HOVER,
+    RANDO_INF_COMBO_WEARING_TUNIC_GORON,
+    RANDO_INF_COMBO_WEARING_TUNIC_ZORA,
+    RANDO_INF_OBTAINED_MASK_GERUDO,
+    RANDO_INF_OBTAINED_MASK_SKULL,
+    RANDO_INF_OBTAINED_MASK_SPOOKY,
+    RANDO_INF_COMBO_WEARING_MASK_GERUDO,
+    RANDO_INF_COMBO_WEARING_MASK_SKULL,
+    RANDO_INF_COMBO_WEARING_MASK_SPOOKY,
 #endif
     RANDO_INF_MAX,
 } RandoInf;

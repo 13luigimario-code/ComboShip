@@ -637,12 +637,44 @@ inline void OOT_DrawForeignSimple(PlayState* play, const ComboForeignDrawInfo* i
 // Draw a foreign (MM-bound) item's real MM model at the current model matrix. Any resolution
 // failure falls back to the sentinel (the RG_COMBO_FOREIGN entry's blue rupee), so we never draw
 // blank. Mirror of MM_DrawComboForeign (combo/menu/ComboForeignDrawMM.h).
+// ComboShip (cross-game items): MM's copies of OOT gear (Iron Boots (MM), ...) have no MM model; OOT draws its
+// own. Names are MM's combo names for those items (MiscBehavior/CrossGear.cpp); a progressive copy draws its
+// first tier (the tier MM grants depends on MM's dormant save). RG_NONE for any other item.
+inline RandomizerGet ComboCrossGearNativeOOT(const std::string& mmName) {
+    static const std::unordered_map<std::string, RandomizerGet> kMap = {
+        { "Iron Boots", RG_IRON_BOOTS },
+        { "Hover Boots", RG_HOVER_BOOTS },
+        { "Goron Tunic", RG_GORON_TUNIC },
+        { "Zora Tunic", RG_ZORA_TUNIC },
+        { "Progressive Scale", RG_SILVER_SCALE },
+        { "Silver Scale", RG_SILVER_SCALE },
+        { "Golden Scale", RG_GOLDEN_SCALE },
+        { "Strength Upgrade", RG_GORONS_BRACELET },
+        { "Goron's Bracelet", RG_GORONS_BRACELET },
+        { "Silver Gauntlets", RG_SILVER_GAUNTLETS },
+        { "Golden Gauntlets", RG_GOLDEN_GAUNTLETS },
+    };
+    auto it = kMap.find(mmName);
+    return (it == kMap.end()) ? RG_NONE : it->second;
+}
+
 inline void OOT_DrawComboForeign(PlayState* play, GetItemEntry* getItemEntry) {
     RandomizerCheck rc = (RandomizerCheck)getItemEntry->comboForeignCheck;
     if (rc == RC_UNKNOWN_CHECK) {
         // Defensive: entries not built via GetFinalGIEntry carry no check; the queued get-item
         // check is the only other identity source.
         rc = OOT_GetQueuedDrawCheck();
+    }
+
+    if (rc != RC_UNKNOWN_CHECK) {
+        const ComboRando::ForeignItem* fi = OOT_LookupForeignByCheck(rc);
+        if (fi != nullptr && fi->itemGame == ComboRando::GAME_MM) {
+            RandomizerGet native = ComboCrossGearNativeOOT(fi->HasDisguise() ? fi->fakeItemName : fi->itemName);
+            if (native != RG_NONE) {
+                GetItemEntry_Draw(play, Rando::StaticData::RetrieveItem(native).GetGIEntry_Copy());
+                return;
+            }
+        }
     }
 
     const ComboForeignDrawInfo* info = (rc != RC_UNKNOWN_CHECK) ? ComboResolveForeignDrawInfo(rc) : nullptr;

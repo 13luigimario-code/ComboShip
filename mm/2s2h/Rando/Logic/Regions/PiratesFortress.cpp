@@ -285,6 +285,10 @@ static RegisterShipInitFunc initFunc([]() {
             // Outside of using Stones Mask you have to deal with this guard in some way.
             CONNECTION(RR_PIRATES_FORTRESS_PLAZA_TOWER, (
                 (HAS_ITEM(ITEM_DEKU_NUT) || HAS_ITEM(ITEM_BOW) || HAS_ITEM(ITEM_HOOKSHOT) || HAS_ITEM(ITEM_MASK_STONE)) ||
+#ifdef COMBO_BUILD
+                // ComboShip (cross-game items): OOT's Gerudo Mask gets past this guard (OoTMM can_evade_gerudo).
+                HAS_COMBO_MASK_GERUDO ||
+#endif
                 (CAN_BE_DEKU && HAS_MAGIC) || CAN_BE_ZORA
             )),
         },

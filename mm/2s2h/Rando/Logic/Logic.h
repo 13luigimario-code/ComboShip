@@ -26,6 +26,10 @@ extern "C" {
 #endif
 
 #ifdef COMBO_BUILD
+// ComboShip (cross-game items): OOT masks MM logic credits, like OoTMM's can_enter_deku_palace (Skull Mask)
+// and can_evade_gerudo (Gerudo Mask). Owned = RandoInf flag (set by GiveItem and the combo oracle alike).
+#define HAS_COMBO_MASK_SKULL (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SKULL))
+#define HAS_COMBO_MASK_GERUDO (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_GERUDO))
 // ComboShip (teleport songs): 1 while the combined fill's oracle knows OOT can play Song of Soaring.
 extern "C" int gMMComboOracleOotSoaring;
 #define CAN_SOAR_TO_OWL (CAN_PLAY_SONG(SOARING) || gMMComboOracleOotSoaring != 0)

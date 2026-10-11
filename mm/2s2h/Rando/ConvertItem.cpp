@@ -23,6 +23,9 @@ typedef struct GetItemEntry {
 extern "C" {
 #include "variables.h"
 #include "functions.h"
+#ifdef COMBO_BUILD
+#include "Rando/MiscBehavior/CrossGear.h" // ComboShip: cross-game items (OOT gear in MM)
+#endif
 
 extern GetItemEntry sGetItemTable[GI_MAX - 1];
 }
@@ -238,6 +241,37 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
     switch (randoItemId) {
         case RI_UNKNOWN:
             return false;
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT gear in MM. A copy already owned converts to junk.
+        case RI_BOOTS_IRON:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOTS_IRON);
+        case RI_BOOTS_HOVER:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOTS_HOVER);
+        case RI_TUNIC_GORON:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_TUNIC_GORON);
+        case RI_TUNIC_ZORA:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_TUNIC_ZORA);
+        case RI_PROGRESSIVE_SCALE:
+            return !hasObtainedCheck && (Combo_Gear_GetScale() < 2);
+        case RI_SCALE_SILVER:
+            return Combo_Gear_GetScale() < 1;
+        case RI_SCALE_GOLDEN:
+            return Combo_Gear_GetScale() < 2;
+        case RI_PROGRESSIVE_STRENGTH:
+            return !hasObtainedCheck && (Combo_Gear_GetStrength() < 3);
+        case RI_STRENGTH_GORONS_BRACELET:
+            return Combo_Gear_GetStrength() < 1;
+        case RI_STRENGTH_SILVER_GAUNTLETS:
+            return Combo_Gear_GetStrength() < 2;
+        case RI_STRENGTH_GOLDEN_GAUNTLETS:
+            return Combo_Gear_GetStrength() < 3;
+        case RI_MASK_GERUDO:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_GERUDO);
+        case RI_MASK_SKULL:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SKULL);
+        case RI_MASK_SPOOKY:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SPOOKY);
+#endif
         case RI_PROGRESSIVE_WALLET:
             if (hasObtainedCheck) {
                 return false;
@@ -713,6 +747,17 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
 RandoItemId Rando::ConvertItem(RandoItemId randoItemId, RandoCheckId randoCheckId) {
     if (IsItemObtainable(randoItemId, randoCheckId)) {
         switch (randoItemId) {
+#ifdef COMBO_BUILD
+            // ComboShip (cross-game items): OOT's scale and strength tiers, owned as RandoInf flags in MM.
+            case RI_PROGRESSIVE_SCALE:
+                return (Combo_Gear_GetScale() == 0) ? RI_SCALE_SILVER : RI_SCALE_GOLDEN;
+            case RI_PROGRESSIVE_STRENGTH: {
+                s32 tier = Combo_Gear_GetStrength();
+                return (tier == 0)   ? RI_STRENGTH_GORONS_BRACELET
+                       : (tier == 1) ? RI_STRENGTH_SILVER_GAUNTLETS
+                                     : RI_STRENGTH_GOLDEN_GAUNTLETS;
+            }
+#endif
             case RI_TIME_PROGRESSIVE: {
                 // Choose the next clock according to mode and current owned half-days
                 int mode = RANDO_SAVE_OPTIONS[RO_CLOCK_SHUFFLE_PROGRESSIVE];

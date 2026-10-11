@@ -11,6 +11,25 @@ extern "C" {
 
 void Rando::RemoveItem(RandoItemId randoItemId) {
     switch (randoItemId) {
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT gear usable in MM (MiscBehavior/CrossGear.cpp).
+        case RI_BOOTS_IRON:
+        case RI_BOOTS_HOVER:
+        case RI_TUNIC_GORON:
+        case RI_TUNIC_ZORA:
+        case RI_PROGRESSIVE_SCALE:
+        case RI_SCALE_SILVER:
+        case RI_SCALE_GOLDEN:
+        case RI_PROGRESSIVE_STRENGTH:
+        case RI_STRENGTH_GORONS_BRACELET:
+        case RI_STRENGTH_SILVER_GAUNTLETS:
+        case RI_STRENGTH_GOLDEN_GAUNTLETS:
+        case RI_MASK_GERUDO:
+        case RI_MASK_SKULL:
+        case RI_MASK_SPOOKY:
+            Rando::CrossGearRemove(randoItemId);
+            break;
+#endif
         case RI_CLOCK_TOWN_STRAY_FAIRY:
             CLEAR_WEEKEVENTREG(WEEKEVENTREG_08_80);
             break;

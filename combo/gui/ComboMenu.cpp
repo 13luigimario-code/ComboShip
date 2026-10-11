@@ -1719,7 +1719,8 @@ void ComboMenu::DrawComboPanel() {
     ImGui::TextDisabled("One item counts for both games. Applied at generation. Masks need Ocarina of\n"
                         "Time's Shuffle Masks on. Shared Wallets turns off Shuffle Child Wallet.\n"
                         "Song of Soaring needs Ocarina of Time's Song of Soaring setting; Warp Songs need\n"
-                        "Majora's Mask's OoT Warp Songs.");
+                        "Majora's Mask's OoT Warp Songs. Boots, tunics, scales and strength need the matching\n"
+                        "Majora's Mask Ocarina of Time Gear option.");
     ImGui::Separator();
 
     // Cosmetics (#169): each game randomizes on its own by default; sync makes MM take OOT's colors.

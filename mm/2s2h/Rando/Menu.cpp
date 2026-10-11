@@ -455,6 +455,17 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_TRAP_AMOUNT",
                                                                    "gRando.Options.RO_TRIFORCE_PIECES_MAX",
                                                                    "gRando.Options.RO_TRIFORCE_PIECES_REQUIRED",
+#ifdef COMBO_BUILD
+                                                                   "gRando.Options.RO_CROSS_BOOTS_IRON",
+                                                                   "gRando.Options.RO_CROSS_BOOTS_HOVER",
+                                                                   "gRando.Options.RO_CROSS_TUNIC_GORON",
+                                                                   "gRando.Options.RO_CROSS_TUNIC_ZORA",
+                                                                   "gRando.Options.RO_CROSS_SCALES",
+                                                                   "gRando.Options.RO_CROSS_STRENGTH",
+                                                                   "gRando.Options.RO_CROSS_MASK_GERUDO",
+                                                                   "gRando.Options.RO_CROSS_MASK_SKULL",
+                                                                   "gRando.Options.RO_CROSS_MASK_SPOOKY",
+#endif
                                                                });
 
 // Shop checks that Rando::Logic::GeneratePools always shuffles even with Shops off
@@ -1019,6 +1030,49 @@ static void DrawItemPoolTab() {
                      "Adds the Tycoon's Wallet (5,000 rupees) to the item pool\n"
                      "as a third progressive wallet upgrade.",
                      1);
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OoTMM's "Iron Boots (MM)" etc. - OOT gear human Link can use in Termina.
+    ImGui::SeparatorText("Ocarina of Time Gear");
+    ItemPoolCheckbox("Iron Boots", RO_CROSS_BOOTS_IRON,
+                     "Adds Ocarina of Time's Iron Boots to the item pool. Human Link can wear them in Termina "
+                     "(assign them to a C button from the Room Key / Letter to Mama slot): he sinks in water, "
+                     "walks along the bottom and presses heavy switches.",
+                     1);
+    ItemPoolCheckbox("Hover Boots", RO_CROSS_BOOTS_HOVER,
+                     "Adds Ocarina of Time's Hover Boots to the item pool. Human Link can wear them in Termina "
+                     "(from the Letter to Kafei / Pendant slot) to float briefly off ledges, with no traction.",
+                     1);
+    ItemPoolCheckbox("Goron Tunic", RO_CROSS_TUNIC_GORON,
+                     "Adds Ocarina of Time's Goron Tunic to the item pool. Worn by human Link in Termina, it "
+                     "delays damage from hot floors and keeps him from catching fire.",
+                     1);
+    ItemPoolCheckbox("Zora Tunic", RO_CROSS_TUNIC_ZORA,
+                     "Adds Ocarina of Time's Zora Tunic to the item pool. Worn by human Link in Termina, he can "
+                     "breathe underwater (pair it with the Iron Boots to explore the bottom).",
+                     1);
+    ItemPoolCheckbox("Scales", RO_CROSS_SCALES,
+                     "Adds two Progressive Scales to the item pool (Silver, then Golden). Human Link dives "
+                     "deeper in Termina with each one.",
+                     2);
+    ItemPoolCheckbox("Strength", RO_CROSS_STRENGTH,
+                     "Adds three Strength Upgrades to the item pool (Goron's Bracelet, Silver Gauntlets, Golden "
+                     "Gauntlets). Silver lets human Link push heavy blocks like Zora Link; Golden lets him lift "
+                     "boulders and Powder Kegs like Goron Link.",
+                     3);
+    ItemPoolCheckbox("Gerudo Mask", RO_CROSS_MASK_GERUDO,
+                     "Adds Ocarina of Time's Gerudo Mask to the item pool (Moon's Tear / Title Deed slot). Worn "
+                     "by human Link in Termina, Pirates' Fortress guards don't spot him up close.",
+                     1);
+    ItemPoolCheckbox("Skull Mask", RO_CROSS_MASK_SKULL,
+                     "Adds Ocarina of Time's Skull Mask to the item pool (Room Key / Letter to Mama slot). Worn by "
+                     "human Link in Termina, the Deku Palace guards let him in, and Keese, Guays and Bad Bats "
+                     "leave him alone (like the Stone Mask).",
+                     1);
+    ItemPoolCheckbox("Spooky Mask", RO_CROSS_MASK_SPOOKY,
+                     "Adds Ocarina of Time's Spooky Mask to the item pool (Letter to Kafei / Pendant slot). "
+                     "Human Link can wear it in Termina.",
+                     1);
+#endif
     CVarCheckbox("Repeatable Rupee Purchases", Rando::StaticData::Options[RO_PURCHASE_INFINITE_RUPEES].cvar,
                  CheckboxOptions({ { .tooltip = "Shops can end up selling rupees as their randomized stock (e.g. a "
                                                 "Silver Rupee for 1 rupee). When enabled, those rupees can be "

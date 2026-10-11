@@ -152,6 +152,29 @@ static std::shared_ptr<Ship::ResourceManager> ActiveResMgr() {
     return Ship::Context::GetRawInstance()->GetResourceManager();
 }
 
+// ComboShip (cross-game items): a TEXTURE path of the form "__OTR__@<game>:<path>" loads from that
+// game's ResourceManager, mirroring the DL route marker handled in gfx_dl_otr_filepath_handler_custom.
+// This lets one game's static icon/name tables point straight at the other game's textures (e.g. MM's
+// Hover Boots icon -> OOT's gItemIconBootsHoverTex) without a G_COMBO_RM_PUSH bracket at every draw
+// site. Unknown game or unrouted path: falls through to ActiveResMgr(), so behavior is unchanged for
+// every existing path.
+static std::shared_ptr<Ship::IResource> LoadTextureResourceRouted(const char* path) {
+    static constexpr char kOtrPrefix[] = "__OTR__";
+    constexpr size_t kPrefixLen = sizeof(kOtrPrefix) - 1;
+    if (path != nullptr && strncmp(path, kOtrPrefix, kPrefixLen) == 0 && path[kPrefixLen] == '@') {
+        const char* gameStart = path + kPrefixLen + 1;
+        const char* colon = strchr(gameStart, ':');
+        if (colon != nullptr) {
+            std::shared_ptr<Ship::ResourceManager> rm =
+                Ship::CrossRMRegistry::Get(std::string(gameStart, colon - gameStart));
+            if (rm != nullptr) {
+                return rm->LoadResourceProcess(std::string(kOtrPrefix) + (colon + 1));
+            }
+        }
+    }
+    return ActiveResMgr()->LoadResourceProcess(path);
+}
+
 constexpr size_t MAX_TRI_BUFFER = 256;
 
 Interpreter::Interpreter() {
@@ -3165,7 +3188,7 @@ void Interpreter::Gfxs2dexBgCopy(F3DuObjBg* bg) {
 
     if ((bool)gfx_check_image_signature((char*)data)) {
         std::shared_ptr<Fast::Texture> tex = std::static_pointer_cast<Fast::Texture>(
-            ActiveResMgr()->LoadResourceProcess((char*)data));
+            LoadTextureResourceRouted((char*)data));
         texFlags = tex->Flags;
         rawTexMetadata.width = tex->Width;
         rawTexMetadata.height = tex->Height;
@@ -3202,7 +3225,7 @@ void Interpreter::Gfxs2dexBg1cyc(F3DuObjBg* bg) {
 
     if ((bool)gfx_check_image_signature((char*)data)) {
         std::shared_ptr<Fast::Texture> tex = std::static_pointer_cast<Fast::Texture>(
-            ActiveResMgr()->LoadResourceProcess((char*)data));
+            LoadTextureResourceRouted((char*)data));
         texFlags = tex->Flags;
         rawTexMetadata.width = tex->Width;
         rawTexMetadata.height = tex->Height;
@@ -4191,7 +4214,7 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
     if ((i & 1) != 1) {
         if (gfx_check_image_signature(imgData) == 1) {
             std::shared_ptr<Fast::Texture> tex = std::static_pointer_cast<Fast::Texture>(
-                ActiveResMgr()->LoadResourceProcess(imgData));
+                LoadTextureResourceRouted(imgData));
 
             if (tex == nullptr) {
                 (*cmd0)++;
@@ -4292,7 +4315,7 @@ bool gfx_set_timg_otr_filepath_handler_custom(F3DGfx** cmd0) {
     RawTexMetadata rawTexMetadata = {};
 
     std::shared_ptr<Fast::Texture> texture = std::static_pointer_cast<Fast::Texture>(
-        ActiveResMgr()->LoadResourceProcess(fileName));
+        LoadTextureResourceRouted(fileName));
     if (texture != nullptr) {
         Interpreter* gfx = mInstance.lock().get();
         texFlags = texture->Flags;

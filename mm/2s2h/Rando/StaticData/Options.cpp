@@ -88,6 +88,18 @@ std::map<RandoOptionId, RandoStaticOption> Options = {
     RO(RO_TRAP_AMOUNT,                 5),
     RO(RO_TRIFORCE_PIECES_MAX,         DEFAULT_TRIFORCE_PIECES_MAX),
     RO(RO_TRIFORCE_PIECES_REQUIRED,    DEFAULT_TRIFORCE_PIECES_MAX),
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OoTMM's "Iron Boots (MM)" etc.
+    RO(RO_CROSS_BOOTS_IRON,            RO_GENERIC_OFF),
+    RO(RO_CROSS_BOOTS_HOVER,           RO_GENERIC_OFF),
+    RO(RO_CROSS_TUNIC_GORON,           RO_GENERIC_OFF),
+    RO(RO_CROSS_TUNIC_ZORA,            RO_GENERIC_OFF),
+    RO(RO_CROSS_SCALES,                RO_GENERIC_OFF),
+    RO(RO_CROSS_STRENGTH,              RO_GENERIC_OFF),
+    RO(RO_CROSS_MASK_GERUDO,           RO_GENERIC_OFF),
+    RO(RO_CROSS_MASK_SKULL,            RO_GENERIC_OFF),
+    RO(RO_CROSS_MASK_SPOOKY,           RO_GENERIC_OFF),
+#endif
 };
 // clang-format on
 

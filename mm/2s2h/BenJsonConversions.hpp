@@ -66,12 +66,32 @@ inline void to_json(json& j, const RandoSaveInfo& rando) {
 #endif
 }
 
+#ifdef COMBO_BUILD
+// ComboShip (cross-game items): randoInf and randoSaveOptions grow when ComboShip appends flags/options.
+// A save written before the append has a shorter array; nlohmann's fixed-array get_to would throw on the
+// missing tail and fail the whole load. Read what is there and zero the rest (new flags start unset,
+// new options start at 0 == RO_GENERIC_OFF/NO).
+template <typename T, size_t N> inline void ComboGetArrayTolerant(const json& arr, T (&out)[N]) {
+    for (size_t i = 0; i < N; i++) {
+        out[i] = (arr.is_array() && i < arr.size()) ? arr.at(i).get<T>() : T{};
+    }
+}
+#endif
+
 inline void from_json(const json& j, RandoSaveInfo& rando) {
+#ifdef COMBO_BUILD
+    ComboGetArrayTolerant(j.at("randoInf"), rando.randoInf);
+#else
     j.at("randoInf").get_to(rando.randoInf);
+#endif
     j.at("randoEvents").get_to(rando.randoEvents);
     j.at("randoSaveChecks").get_to(rando.randoSaveChecks);
     j.at("finalSeed").get_to(rando.finalSeed);
+#ifdef COMBO_BUILD
+    ComboGetArrayTolerant(j.at("randoSaveOptions"), rando.randoSaveOptions);
+#else
     j.at("randoSaveOptions").get_to(rando.randoSaveOptions);
+#endif
     j.at("randoStartingItems").get_to(rando.randoStartingItems);
     j.at("foundDungeonKeys").get_to(rando.foundDungeonKeys);
     j.at("foundTriforcePieces").get_to(rando.foundTriforcePieces);

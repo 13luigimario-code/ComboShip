@@ -302,6 +302,41 @@ void GeneratePools(RandoSaveInfo& saveInfo, std::vector<RandoCheckId>& checkPool
     }
 #endif
 
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OOT gear usable in MM. Only the combined fill places these, and
+    // MM's logic never requires them (they open no new MM checks yet), so they fill as non-required majors.
+    if (saveInfo.randoSaveOptions[RO_CROSS_BOOTS_IRON] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_BOOTS_IRON);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_BOOTS_HOVER] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_BOOTS_HOVER);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_TUNIC_GORON] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_TUNIC_GORON);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_TUNIC_ZORA] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_TUNIC_ZORA);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_SCALES] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_PROGRESSIVE_SCALE);
+        itemPool.push_back(RI_PROGRESSIVE_SCALE);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_STRENGTH] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_PROGRESSIVE_STRENGTH);
+        itemPool.push_back(RI_PROGRESSIVE_STRENGTH);
+        itemPool.push_back(RI_PROGRESSIVE_STRENGTH);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_MASK_GERUDO] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_MASK_GERUDO);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_MASK_SKULL] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_MASK_SKULL);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_MASK_SPOOKY] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_MASK_SPOOKY);
+    }
+#endif
+
     // Tycoon's Wallet
     if (saveInfo.randoSaveOptions[RO_SHUFFLE_TYCOON_WALLET] == RO_GENERIC_YES) {
         itemPool.push_back(RI_PROGRESSIVE_WALLET);

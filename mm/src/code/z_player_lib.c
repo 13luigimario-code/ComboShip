@@ -4,6 +4,9 @@
  */
 
 #include "global.h"
+#ifdef COMBO_BUILD
+#include "2s2h/Rando/MiscBehavior/CrossGear.h" // ComboShip: cross-game items (OOT gear in MM)
+#endif
 #include "2s2h/GameInteractor/GameInteractor.h"
 
 #include "objects/gameplay_keep/gameplay_keep.h"
@@ -655,6 +658,10 @@ void func_80123140(PlayState* play, Player* player) {
     }
 
     Actor_SetScale(&player->actor, scale);
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OOT Iron/Hover Boots override the boot index + physics regs.
+    Combo_Gear_ApplyBootData(play, player);
+#endif
 }
 
 // #region 2S2H [Port] Determine if we're using a custom model for link
@@ -1675,6 +1682,16 @@ bool Player_IsBurningStickInRange(PlayState* play, Vec3f* pos, f32 xzRange, f32 
 }
 
 u8 Player_GetStrength(void) {
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OOT gauntlets raise human Link's strength (Silver = Zora's heavy-block
+    // pushing, Golden = Goron's boulder/keg lifting), like OoTMM's Strength (MM). Never lowers it.
+    if (GET_PLAYER_FORM == PLAYER_FORM_HUMAN) {
+        u8 comboStrength = (u8)Combo_Gear_GetStrength();
+        if (comboStrength > sPlayerStrengths[PLAYER_FORM_HUMAN]) {
+            return comboStrength;
+        }
+    }
+#endif
     return sPlayerStrengths[GET_PLAYER_FORM];
 }
 
@@ -2114,6 +2131,13 @@ void Player_DrawImpl(PlayState* play, void** skeleton, Vec3s* jointTable, s32 dL
     }
     sPlayerLod = lod;
     SkelAnime_DrawFlexLod(play, skeleton, jointTable, dListCount, overrideLimbDraw, postLimbDraw, actor, lod);
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OOT boots on human Link's feet. Segment 0x0D still holds this
+    // skeleton's limb matrices, which the boot display lists load (like OoTMM's MM boot meshes).
+    if ((actor != NULL) && (actor->id == ACTOR_PLAYER) && (playerForm == PLAYER_FORM_HUMAN)) {
+        Combo_Gear_DrawBoots(play, (Player*)actor);
+    }
+#endif
 
     CLOSE_DISPS(play->state.gfxCtx);
 }

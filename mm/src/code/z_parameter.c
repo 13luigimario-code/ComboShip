@@ -1,4 +1,7 @@
 #include "global.h"
+#ifdef COMBO_BUILD
+#include "2s2h/Rando/MiscBehavior/CrossGear.h" // ComboShip: cross-game items (OOT gear in MM)
+#endif
 #include "PR/gs2dex.h"
 #include "sys_cfb.h"
 #include "z64malloc.h"
@@ -63,7 +66,12 @@ static const char* emptyCButtonArrows[] = {
     gEmptyCRightArrowTex,
 };
 
+#ifdef COMBO_BUILD
+// ComboShip (cross-game items): widened so the ITEM_COMBO_* ids (z64item.h) index in bounds.
+u8 gPlayerFormItemRestrictions[PLAYER_FORM_MAX][ITEM_COMBO_TABLE_SIZE] = {
+#else
 u8 gPlayerFormItemRestrictions[PLAYER_FORM_MAX][114] = {
+#endif
     // PLAYER_FORM_FIERCE_DEITY
     {
         false, // ITEM_OCARINA_OF_TIME
@@ -648,6 +656,22 @@ u8 gPlayerFormItemRestrictions[PLAYER_FORM_MAX][114] = {
         false, // ITEM_HEART_CONTAINER
         false, // ITEM_HEART_PIECE
         false, // ITEM_71
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT items are Human-only, like OoTMM.
+        [ITEM_COMBO_BOOTS_IRON] = true,
+        [ITEM_COMBO_BOOTS_HOVER] = true,
+        [ITEM_COMBO_TUNIC_GORON] = true,
+        [ITEM_COMBO_TUNIC_ZORA] = true,
+        [ITEM_COMBO_MASK_GERUDO] = true,
+        [ITEM_COMBO_MASK_SKULL] = true,
+        [ITEM_COMBO_MASK_SPOOKY] = true,
+        [ITEM_COMBO_SPELL_FIRE] = true,
+        [ITEM_COMBO_SPELL_WIND] = true,
+        [ITEM_COMBO_SPELL_LOVE] = true,
+        [ITEM_COMBO_HAMMER] = true,
+        [ITEM_COMBO_BOOMERANG] = true,
+        [ITEM_COMBO_SLINGSHOT] = true,
+#endif
     },
 };
 // #endregion
@@ -9710,11 +9734,23 @@ void Interface_Update(PlayState* play) {
         if (GET_CUR_EQUIP_VALUE(EQUIP_TYPE_TUNIC) == EQUIP_VALUE_TUNIC_GORON) {
             sEnvHazard = PLAYER_ENV_HAZARD_NONE;
         }
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT's Goron Tunic worn in MM (this OOT check is still here).
+        if (Combo_Gear_GetTunic(GET_PLAYER(play)) == COMBO_TUNIC_GORON) {
+            sEnvHazard = PLAYER_ENV_HAZARD_NONE;
+        }
+#endif
     } else if ((Player_GetEnvironmentalHazard(play) >= PLAYER_ENV_HAZARD_UNDERWATER_FLOOR) &&
                (Player_GetEnvironmentalHazard(play) <= PLAYER_ENV_HAZARD_UNDERWATER_FREE)) {
         if (GET_CUR_EQUIP_VALUE(EQUIP_TYPE_TUNIC) == EQUIP_VALUE_TUNIC_ZORA) {
             sEnvHazard = PLAYER_ENV_HAZARD_NONE;
         }
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT's Zora Tunic lets human Link breathe underwater.
+        if (Combo_Gear_GetTunic(GET_PLAYER(play)) == COMBO_TUNIC_ZORA) {
+            sEnvHazard = PLAYER_ENV_HAZARD_NONE;
+        }
+#endif
     }
 
     LifeMeter_UpdateColors(play);

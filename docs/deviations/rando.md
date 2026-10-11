@@ -2133,3 +2133,91 @@ wins if both are present):
 Before applying, every `GetAllOptions()` CVar is cleared (and `ExcludedLocations` emptied), so a key an
 older spoiler lacks reads as the default, not the local machine's value. A user's `comboship.json`
 keeps its stale leaf keys (no clash); those settings fall back to defaults.
+
+## Cross-game items: Ocarina of Time gear in Majora's Mask (2026-10-11)
+
+**Why:** OoTMM's "Cross-Game" item settings — `bootsIronMm`, `bootsHoverMm`, `tunicGoronMm`, `tunicZoraMm`,
+`scalesMm`, `strengthMm` and their `shared*` twins. Human Link can wear/use OOT equipment in Termina. Opt-in
+MM seed options (Item Pool tab, "Ocarina of Time Gear"): `RO_CROSS_BOOTS_IRON`, `RO_CROSS_BOOTS_HOVER`,
+`RO_CROSS_TUNIC_GORON`, `RO_CROSS_TUNIC_ZORA`, `RO_CROSS_SCALES`, `RO_CROSS_STRENGTH` (all default off, so
+existing seeds and settings are unchanged). Gameplay is ported from OoTMM's MM Player patches (MIT,
+`packages/generator/src/mm/actors/Player.c`) onto 2ship's decomp names; the address → function map used
+is: `func_80123140` (Player_SetBootData), `Player_GetStrength`, `Player_UseItem`, `func_808430E0`
+(hover update), `func_8083827C` (fall start), `func_8083EA44` (step sfx), `func_80844784` (ground
+movement), `func_80834600` (floor damage), `Player_UpdateBodyBurn`, `Player_Action_24`,
+`Player_ActionHandler_2` (lift / underwater pickup), `Player_Action_59` + `Player_UpdateInterface` (dive).
+
+**State:** ownership and what is worn are `RandoInf` flags (`RANDO_INF_OBTAINED_BOOTS_IRON`..,
+`RANDO_INF_COMBO_WEARING_*`), appended before `RANDO_INF_MAX`. The rando save arrays are positional JSON,
+so `BenJsonConversions.hpp` reads `randoInf` and `randoSaveOptions` tolerantly (`ComboGetArrayTolerant`:
+shorter arrays from older saves load with the new tail zeroed instead of throwing). New `RI_*` ids are
+appended after `RI_COMBO_FOREIGN`; new `RO_*` ids before `RO_MAX`.
+
+**Item ids (`mm/include/z64item.h`, guarded):** `ITEM_COMBO_*` reuse unused `ItemId` values `0xB8..0xC4`
+(only `z_message.c`'s textbox-icon table names them, never as inventory). `0xB5..0xB7` are skipped on
+purpose: kaleido uses them as transient magic-arrow equip ids. Every table that can be indexed by them is
+widened to `ITEM_COMBO_TABLE_SIZE` (externs in `variables.h` too):
+- `gItemSlots` (`z_inventory.c`): the gap up to `ITEM_COMBO_MIN` is **explicit `SLOT_NONE`**. Callers test
+  `itemId < ARRAY_COUNT(gItemSlots) && gItemSlots[itemId] != SLOT_NONE`; a zero-filled gap would read as
+  `SLOT_OCARINA` and write e.g. a sword over the ocarina. (MSVC C has no range designators.)
+- `gItemIcons` (`z_inventory.c`): the gap is `gEmptyTexture` (what callers drew before for ids past the
+  end); `LoadGuiTextures` skips it.
+- `gPlayerFormItemRestrictions` (`z_parameter.c`): the human row allows the combo ids.
+- `Kaleido_LoadItemNameStatic`: OOT name textures for the combo ids.
+- `Player_ItemToItemAction`: combo ids return `PLAYER_IA_NONE` (past `sItemItemActions`).
+
+**OOT textures in MM (libultraship, guarded by being ComboShip-only code):** texture paths of the form
+`"__OTR__@oot:<path>"` load from OOT's ResourceManager — `LoadTextureResourceRouted` in
+`fast/interpreter.cpp` (raw `G_SETTIMG`, `G_SETTIMG_OTR_FILEPATH`, BG) and `Fast3dGui::LoadGuiTexture`
+(ImGui; also null-checks the resource now). Paths live in `mm/2s2h/Rando/MiscBehavior/CrossItemAssets.h`
+as `ALIGN_ASSET(2)` arrays: the interpreter only treats an even pointer as a path.
+
+**UX:** Iron Boots + Goron Tunic join the Room Key / Letter to Mama cycle, Hover Boots + Zora Tunic the
+Letter to Kafei / Pendant cycle (`KaleidoItemPage.cpp`, like OoTMM's trade slots); using one from a C button
+toggles it (`Combo_CrossItem_TryUse`, top of `Player_UseItem`). Boots are drawn on Link with OoTMM's
+child-sized meshes (`CrossGearBoots.c`, after `SkelAnime_DrawFlexLod` in `Player_DrawImpl` while segment
+0x0D still holds the limb matrices). Tunic color reuses the cosmetic editor's human-tunic DL patch through
+`CosmeticEditor_SetHumanTunicOverride`.
+
+**Effects:** Iron Boots use MM's Goron boot index (every `currentBoots >= PLAYER_BOOTS_ZORA_UNDERWATER` path
+sinks Link and walks him on the bottom) with OoTMM's child boot regs and press heavy switches; Hover Boots
+port OOT's hover timer (`gComboHoverBootsTimer`, reset on jump / hookshot / jump attack like OOT), ledge
+float, hover hum and no traction; Goron Tunic delays hot-floor damage (OOT's 120/60 frames, via the unused
+`floorTypeTimer`/`prevFloorType` remnants), burns like Goron Link and clears hot-room hazards; Zora Tunic
+clears the underwater hazard (MM still carries OOT's tunic checks in `Interface_Update`); scales raise
+human Link's dive depth 120 → 240 → 360 (OoTMM's table, 8-step dive counter); Silver Gauntlets give human
+Link Zora strength (heavy blocks), Golden give Goron strength (boulders, kegs via `Player_GetStrength`).
+
+**Logic:** none yet. MM's logic never requires these items (no new MM routes), so the fill places them as
+non-required majors. OoTMM's MM logic uses them heavily (hover routes, `underwater_walking`,
+`can_lift_*`); porting those to 2ship's regions is follow-up work.
+
+**Cross-game presentation:** MM's copies draw OOT's model by OOT item name (`MM_DrawOOTItemByName`, a by-name
+resolver split out of `ComboFillForeignDrawInfoOOT`); found in OOT, they draw OOT's native model
+(`ComboCrossGearNativeOOT` in `ComboForeignDrawOOT.h`), since MM has no model to describe.
+
+**Shared Items:** six families (`SF_IRON_BOOTS`..`SF_STRENGTH`, keys `bootsIron` `bootsHover` `tunicGoron`
+`tunicZora` `scales` `strength`). MM's copy only exists with the matching MM option on; otherwise the
+family logs "MM pool has none" and stays unshared. `SF_COUNT` is now 30 of the mask's 32 bits
+(`static_assert`); the next batch of families must widen the mask first.
+
+### OOT masks in MM: Gerudo, Skull, Spooky (2026-10-11)
+
+OoTMM's `gerudoMaskMm`, `skullMaskMm`, `spookyMaskMm`. MM options `RO_CROSS_MASK_GERUDO/SKULL/SPOOKY`; items
+`RI_MASK_GERUDO/SKULL/SPOOKY` (`ITEM_COMBO_MASK_*`), owned/worn as `RANDO_INF_OBTAINED_MASK_*` /
+`RANDO_INF_COMBO_WEARING_MASK_*`. They join the item page's trade cycles (Gerudo: Moon's Tear/Deeds, Skull:
+Room Key/Letter to Mama, Spooky: Letter to Kafei/Pendant — kaleido's cycle UI is item-page only) and toggle
+from a C button. An OOT mask is exclusive with MM's own masks: putting one on clears `currentMask`
+(`equippedMask` too), and any MM mask or transformation going on clears the OOT mask (`Combo_Gear_OnPlayerUpdate`).
+Drawn after the skeleton with the head limb matrix (`0x0D0001C0`, OoTMM's `prepareMask`) and OOT's
+`gLinkChild*MaskDL` through `"@oot:"` routing.
+
+**Actor effects (vendored, guarded, one hook each):** `EnDns` (`func_8092CC68`) and `EnGuardNuts` let a
+Skull-Masked human Link into Deku Palace; `EnLookNuts`, `EnFirefly`, `EnCrow`, `EnBat` see the Skull Mask as
+the Stone Mask (file-local `Player_GetMask` macro → `Combo_Gear_GetMaskSkullAsStone`); `EnGe2_DetectPlayer`
+ignores proximity for the Gerudo Mask. Spooky has no effect (OoTMM uses it only for night gibdos in logic).
+
+**Logic:** `HAS_COMBO_MASK_SKULL` opens `RR_DEKU_PALACE_INSIDE_LOWER` (OoTMM `can_enter_deku_palace`: the
+lower palace, throne room and bean grotto are all child-reachable there); `HAS_COMBO_MASK_GERUDO` joins the
+Pirates' Fortress plaza-tower guard alternatives (OoTMM `can_evade_gerudo`). Shared variants wait for the
+Shared Items mask to be widened past 32 bits.

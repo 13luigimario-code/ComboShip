@@ -46,6 +46,9 @@
 #include "objects/object_link_child/object_link_child.h"
 
 #include "2s2h/BenPort.h"
+#ifdef COMBO_BUILD
+#include "2s2h/Rando/MiscBehavior/CrossGear.h" // ComboShip: cross-game items (OOT gear in MM)
+#endif
 #include "2s2h/GameInteractor/GameInteractor.h"
 #include "2s2h/CustomMessage/CustomMessage.h"
 #include <libultraship/bridge/consolevariablebridge.h>
@@ -3105,6 +3108,13 @@ s8 sItemItemActions[] = {
 };
 
 PlayerItemAction Player_ItemToItemAction(Player* this, ItemId item) {
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): ITEM_COMBO_* ids are past sItemItemActions; Player_UseItem handles them
+    // (Combo_CrossItem_TryUse) before any item action is taken.
+    if (IS_COMBO_CROSS_ITEM(item)) {
+        return PLAYER_IA_NONE;
+    }
+#endif
     if (item >= ITEM_FD) {
         return PLAYER_IA_NONE;
     } else if (item == ITEM_FC) {
@@ -4624,6 +4634,12 @@ void func_80831944(PlayState* play, Player* this) {
 }
 
 void Player_UseItem(PlayState* play, Player* this, ItemId item) {
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OOT boots/tunics toggle on use, like OoTMM.
+    if (Combo_CrossItem_TryUse(play, this, item)) {
+        return;
+    }
+#endif
     PlayerItemAction itemAction = Player_ItemToItemAction(this, item);
 
     if ((((this->heldItemAction == this->itemAction) &&
@@ -4809,6 +4825,9 @@ bool Player_UpdateUpperBody(Player* this, PlayState* play) {
         func_8082DAD4(this);
         this->yaw = this->actor.shape.rot.y;
         this->actor.bgCheckFlags &= ~BGCHECKFLAG_GROUND;
+#ifdef COMBO_BUILD
+        gComboHoverBootsTimer = 0; // ComboShip: OOT clears the hover timer when the hookshot pulls Link
+#endif
         this->unk_AA6_rotFlags |= UNKAA6_ROT_FOCUS_X | UNKAA6_ROT_FOCUS_Y | UNKAA6_ROT_UPPER_X;
         Player_AnimSfx_PlayVoice(this, NA_SE_VO_LI_LASH);
         return true;
@@ -6076,7 +6095,12 @@ s32 Player_UpdateBodyBurn(PlayState* play, Player* this) {
             func_80834140(play, this, &gPlayerAnim_link_derth_rebirth);
         }
     } else {
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): the Goron Tunic burns out as fast as Goron Link (OoTMM).
+        if ((this->transformation == PLAYER_FORM_GORON) || (Combo_Gear_GetTunic(this) == COMBO_TUNIC_GORON)) {
+#else
         if (this->transformation == PLAYER_FORM_GORON) {
+#endif
             var_v1 = 20;
         } else {
             var_v1 = (s32)(this->speedXZ * 0.4f) + 1;
@@ -6281,6 +6305,17 @@ s32 func_80834600(Player* this, PlayState* play) {
                 goto label;
             }
         }
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT's Goron Tunic delays damage from a hot floor (120/60 frames,
+        // OOT's floor-damage delay), resetting the floor timer each time it does hurt.
+        if (!var_a1 && (sp58 >= 0) && !isSurfaceWallDamage && !(this->actor.depthInWater > 0.0f) &&
+            (Combo_Gear_GetTunic(this) == COMBO_TUNIC_GORON)) {
+            if (this->floorTypeTimer < Combo_Gear_FloorDamageDelay(sp58)) {
+                return false;
+            }
+            this->floorTypeTimer = 0;
+        }
+#endif
         var_v1_2 = var_a1 ? this->actor.wallBgId : this->actor.floorBgId;
         if (((this->transformation == PLAYER_FORM_DEKU) || (this->transformation == PLAYER_FORM_ZORA)) &&
             ((sp58 >= 0) && !isSurfaceWallDamage && !(this->stateFlags1 & PLAYER_STATE1_8000000) &&
@@ -6306,6 +6341,9 @@ s32 func_80834600(Player* this, PlayState* play) {
 void func_80834CD0(Player* this, f32 arg1, u16 sfxId) {
     this->actor.velocity.y = arg1 * sWaterSpeedFactor;
     this->actor.bgCheckFlags &= ~BGCHECKFLAG_GROUND;
+#ifdef COMBO_BUILD
+    gComboHoverBootsTimer = 0; // ComboShip: OOT clears the hover timer on every jump
+#endif
 
     if (sfxId != NA_SE_NONE) {
         Player_AnimSfx_PlayFloorJump(this);
@@ -7651,6 +7689,14 @@ void func_8083827C(Player* this, PlayState* play) {
             return;
         }
 
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT Hover Boots - walking off a ledge floats instead of falling.
+        if ((gComboHoverBootsTimer != 0) && (Combo_Gear_GetBoots(this) == COMBO_BOOTS_HOVER)) {
+            this->actor.velocity.y = 1.0f;
+            sPrevFloorProperty = FLOOR_PROPERTY_9;
+            return;
+        }
+#endif
         temp_t0 = BINANG_SUB(this->yaw, this->actor.shape.rot.y);
         Player_SetAction(play, this, Player_Action_25, 1);
         func_8082DD2C(play, this);
@@ -8254,6 +8300,9 @@ void func_808395F0(PlayState* play, Player* this, PlayerMeleeWeaponAnimation mel
     this->yaw = this->actor.shape.rot.y;
     this->actor.velocity.y = yVelocity;
     this->actor.bgCheckFlags &= ~BGCHECKFLAG_GROUND;
+#ifdef COMBO_BUILD
+    gComboHoverBootsTimer = 0; // ComboShip: OOT clears the hover timer on a jump attack
+#endif
     Player_AnimSfx_PlayFloorJump(this);
     Player_AnimSfx_PlayVoice(this, NA_SE_VO_LI_SWORD_L);
 }
@@ -9600,6 +9649,10 @@ s32 Player_ActionHandler_2(Player* this, PlayState* play) {
                         func_80838830(this, giEntry->objectId);
 
                         if (!(this->stateFlags2 & PLAYER_STATE2_400) ||
+#ifdef COMBO_BUILD
+                            // ComboShip (cross-game items): Iron Boots walk underwater like Zora Link.
+                            (Combo_Gear_GetBoots(this) == COMBO_BOOTS_IRON) ||
+#endif
                             (this->currentBoots == PLAYER_BOOTS_ZORA_UNDERWATER)) {
                             Player_StopCutscene(this);
                             Player_SetupWaitForPutAwayWithCs(play, this, func_80837C78,
@@ -9680,7 +9733,13 @@ s32 Player_ActionHandler_2(Player* this, PlayState* play) {
                         if ((this->heldActor == NULL) || Player_IsHoldingHookshot(this)) {
                             EnBom* bomb = (EnBom*)interactRangeActor;
 
+#ifdef COMBO_BUILD
+                            // ComboShip (cross-game items): Golden Gauntlets give human Link Goron strength
+                            // for kegs and big rocks (Player_GetStrength), like OoTMM's patch here.
+                            if (((Player_GetStrength() < PLAYER_STRENGTH_GORON) &&
+#else
                             if (((this->transformation != PLAYER_FORM_GORON) &&
+#endif
                                  (((bomb->actor.id == ACTOR_EN_BOM) && bomb->isPowderKeg) ||
                                   ((interactRangeActor->id == ACTOR_EN_ISHI) && (interactRangeActor->params & 1)) ||
                                   (interactRangeActor->id == ACTOR_EN_MM)))) {
@@ -10158,7 +10217,14 @@ void func_8083EA44(Player* this, f32 arg1) {
 
     sp24 = func_8083E9C4(this->unk_B38, arg1, 29.0f, 10.0f);
 
-    if (sp24 || func_8083E9C4(this->unk_B38, arg1, 29.0f, 24.0f)) {
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OOT plays the hover hum instead of footsteps while hovering.
+    if ((Combo_Gear_GetBoots(this) == COMBO_BOOTS_HOVER) && !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) &&
+        (gComboHoverBootsTimer != 0)) {
+        Actor_PlaySfx_Flagged2(&this->actor, NA_SE_PL_HOBBERBOOTS_LV - SFX_FLAG);
+    } else
+#endif
+        if (sp24 || func_8083E9C4(this->unk_B38, arg1, 29.0f, 24.0f)) {
         Player_AnimSfx_PlayFloorWalk(this, this->speedXZ);
         if (this->speedXZ > 4.0f) {
             this->stateFlags2 |= PLAYER_STATE2_8;
@@ -11704,10 +11770,19 @@ void Player_UpdateInterface(PlayState* play, Player* this) {
         } else if (this->stateFlags2 & PLAYER_STATE2_10000) {
             doActionA = DO_ACTION_GRAB;
         } else if (this->stateFlags2 & PLAYER_STATE2_800) {
+#ifdef COMBO_BUILD
+            // ComboShip (cross-game items): deeper scale dives count down from a larger number (OOT/OoTMM).
+            static u8 D_8085D354[] = { DO_ACTION_1, DO_ACTION_2, DO_ACTION_3, DO_ACTION_4,
+                                       DO_ACTION_5, DO_ACTION_6, DO_ACTION_7, DO_ACTION_8 };
+            s32 var_v0;
+
+            var_v0 = ((Combo_Gear_MaxDiveDepth() - this->actor.depthInWater) / 40.0f);
+#else
             static u8 D_8085D354[] = { DO_ACTION_1, DO_ACTION_2 };
             s32 var_v0;
 
             var_v0 = ((120.0f - this->actor.depthInWater) / 40.0f);
+#endif
             var_v0 = CLAMP(var_v0, 0, ARRAY_COUNT(D_8085D354) - 1);
 
             doActionA = D_8085D354[var_v0];
@@ -11789,6 +11864,22 @@ s32 func_808430E0(Player* this) {
         func_8083784C(this)) {
         this->actor.bgCheckFlags &= ~BGCHECKFLAG_GROUND;
     }
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OOT's Player_UpdateHoverBoots. Hovering over water/void floors keeps
+    // Link airborne while the timer runs; the timer refills on solid ground.
+    Combo_Gear_UpdateHoverTimer(this, (Combo_Gear_GetBoots(this) == COMBO_BOOTS_HOVER) &&
+                                          ((this->actor.depthInWater >= 0.0f) ||
+                                           (func_808340AC(sPlayerFloorType) >= 0) || func_808340D4(sPlayerFloorType)));
+    // OOT's floor-type timer (unused remnant fields in MM), read by the Goron Tunic's floor-damage delay.
+    if (this->prevFloorType == sPlayerFloorType) {
+        if (this->floorTypeTimer < 0xFF) {
+            this->floorTypeTimer++;
+        }
+    } else {
+        this->prevFloorType = sPlayerFloorType;
+        this->floorTypeTimer = 0;
+    }
+#endif
     if (this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) {
         return false;
     }
@@ -12426,8 +12517,14 @@ void func_80844784(PlayState* play, Player* this) {
     s16 temp_v0;
     f32 temp_fv0_2;
 
-    if ((this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (sPlayerFloorType == FLOOR_TYPE_5) &&
-        (this->currentBoots < PLAYER_BOOTS_ZORA_UNDERWATER)) {
+    if (((this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (sPlayerFloorType == FLOOR_TYPE_5) &&
+         (this->currentBoots < PLAYER_BOOTS_ZORA_UNDERWATER))
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT Hover Boots have no traction (OOT: same branch as ice).
+        || ((Combo_Gear_GetBoots(this) == COMBO_BOOTS_HOVER) &&
+            !(this->stateFlags1 & (PLAYER_STATE1_8000000 | PLAYER_STATE1_20000000)))
+#endif
+    ) {
         var_a3 = this->yaw;
         var_fv0 = this->speedXZ;
         temp_v0 = this->actor.world.rot.y - var_a3;
@@ -13121,6 +13218,9 @@ void Player_Update(Actor* thisx, PlayState* play) {
         goto skipUpdate;
     }
 
+#ifdef COMBO_BUILD
+    Combo_Gear_OnPlayerUpdate(play, this); // ComboShip (cross-game items): tunic color, worn-gear sanity
+#endif
     this->stateFlags3 &= ~PLAYER_STATE3_10;
 
     // This block is a leftover dog-following mechanic from OoT
@@ -15532,7 +15632,13 @@ AnimSfxEntry D_8085D60C[] = {
 };
 
 void Player_Action_24(Player* this, PlayState* play) {
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): the Goron Tunic keeps Link from catching fire here, like Goron Link.
+    if ((this->transformation != PLAYER_FORM_GORON) && (Combo_Gear_GetTunic(this) != COMBO_TUNIC_GORON) &&
+        (this->actor.depthInWater <= 0.0f)) {
+#else
     if ((this->transformation != PLAYER_FORM_GORON) && (this->actor.depthInWater <= 0.0f)) {
+#endif
         if ((play->roomCtx.curRoom.environmentType == ROOM_ENV_HOT) || (sPlayerFloorType == FLOOR_TYPE_9) ||
             ((func_808340AC(sPlayerFloorType) >= 0) &&
              !SurfaceType_IsWallDamage(&play->colCtx, this->actor.floorPoly, this->actor.floorBgId))) {
@@ -17553,7 +17659,13 @@ void Player_Action_59(Player* this, PlayState* play) {
             this->unk_AAA = 0x3E80;
 
             if (CHECK_BTN_ALL(sPlayerControlInput->cur.button, BTN_A) && !Player_ActionHandler_2(this, play) &&
+#ifdef COMBO_BUILD
+                // ComboShip (cross-game items): OOT scales let human Link dive deeper.
+                !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) &&
+                (this->actor.depthInWater < Combo_Gear_MaxDiveDepth())) {
+#else
                 !(this->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && (this->actor.depthInWater < 120.0f)) {
+#endif
                 func_808481CC(play, this, -2.0f);
             } else {
                 this->av1.actionVar1++;

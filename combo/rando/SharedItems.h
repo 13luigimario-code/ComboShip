@@ -37,8 +37,17 @@ enum SharedFamily {
     SF_REQUIEM_OF_SPIRIT,
     SF_NOCTURNE_OF_SHADOW,
     SF_PRELUDE_OF_LIGHT,
+    // Cross-game items: OOT gear usable in MM (MM's "Iron Boots (MM)" etc., mm/2s2h/Rando/MiscBehavior/CrossGear.cpp).
+    SF_IRON_BOOTS,
+    SF_HOVER_BOOTS,
+    SF_GORON_TUNIC,
+    SF_ZORA_TUNIC,
+    SF_SCALES,
+    SF_STRENGTH,
     SF_COUNT
 };
+// The family mask is a uint32_t (spoiler "sharedItems", CVar mask ABI): widen it before passing 32 rows.
+static_assert(SF_COUNT <= 32, "Shared Items mask is 32 bits wide");
 
 struct SharedFamilyDef {
     SharedFamily family;
@@ -122,6 +131,26 @@ inline const SharedFamilyDef* SharedFamilyTable() {
           kSharedWarpSongsTooltip, "Nocturne of Shadow", "Nocturne of Shadow", 1, false, true, false },
         { SF_PRELUDE_OF_LIGHT, "preludeOfLight", kSharedWarpSongsCVar, kSharedWarpSongsLabel, kSharedWarpSongsTooltip,
           "Prelude of Light", "Prelude of Light", 1, false, true, false },
+        // Cross-game items: MM's copy only exists with MM's matching Ocarina of Time Gear option on (otherwise
+        // the family logs "MM pool has none" and stays unshared).
+        { SF_IRON_BOOTS, "bootsIron", "gCombo.Rando.Shared.BootsIron", "Shared Iron Boots",
+          "One Iron Boots counts for both games. Requires MM's Iron Boots (Ocarina of Time Gear).", "Iron Boots",
+          "Iron Boots", 1, false, true, false },
+        { SF_HOVER_BOOTS, "bootsHover", "gCombo.Rando.Shared.BootsHover", "Shared Hover Boots",
+          "One Hover Boots counts for both games. Requires MM's Hover Boots (Ocarina of Time Gear).", "Hover Boots",
+          "Hover Boots", 1, false, true, false },
+        { SF_GORON_TUNIC, "tunicGoron", "gCombo.Rando.Shared.TunicGoron", "Shared Goron Tunic",
+          "One Goron Tunic counts for both games. Requires MM's Goron Tunic (Ocarina of Time Gear).", "Goron Tunic",
+          "Goron Tunic", 1, false, true, false },
+        { SF_ZORA_TUNIC, "tunicZora", "gCombo.Rando.Shared.TunicZora", "Shared Zora Tunic",
+          "One Zora Tunic counts for both games. Requires MM's Zora Tunic (Ocarina of Time Gear).", "Zora Tunic",
+          "Zora Tunic", 1, false, true, false },
+        { SF_SCALES, "scales", "gCombo.Rando.Shared.Scales", "Shared Scales",
+          "One Progressive Scale counts for both games. Requires MM's Scales (Ocarina of Time Gear).",
+          "Progressive Scale", "Progressive Scale", 2, false, true, false },
+        { SF_STRENGTH, "strength", "gCombo.Rando.Shared.Strength", "Shared Strength",
+          "One Strength Upgrade counts for both games. Requires MM's Strength (Ocarina of Time Gear).",
+          "Strength Upgrade", "Strength Upgrade", 3, false, true, false },
     };
     return table;
 }
