@@ -3277,15 +3277,15 @@ extern "C" COMBO_EXPORT void SOH_RefreshComboStartingGameUI(void) {
 
 // ComboShip: Shared Items (OoTMM-style) — see combo/rando/SharedItems.h. gComboSharedMask shapes the
 // gen-time wallet force (settings.cpp); the ABI below reconciles tiers between OOT and MM at runtime.
-extern "C" int gComboSharedMask = 0;
-extern "C" COMBO_EXPORT void SOH_SetComboSharedItems(uint32_t mask) {
-    gComboSharedMask = static_cast<int>(mask);
+extern "C" uint64_t gComboSharedMask = 0; // ComboRando::SharedMask (64-bit since the cross-game item families)
+extern "C" COMBO_EXPORT void SOH_SetComboSharedItems(ComboRando::SharedMask mask) {
+    gComboSharedMask = mask;
 }
-extern "C" COMBO_EXPORT uint32_t SOH_ReadComboSharedCVars(void) {
-    uint32_t mask = 0;
+extern "C" COMBO_EXPORT ComboRando::SharedMask SOH_ReadComboSharedCVars(void) {
+    ComboRando::SharedMask mask = 0;
     for (int i = 0; i < ComboRando::SF_COUNT; ++i) {
         if (CVarGetInteger(ComboRando::SharedFamilyByIndex(i).cvar, 0)) {
-            mask |= (1u << i);
+            mask |= ComboRando::SharedBit(i);
         }
     }
     return mask;
@@ -3354,6 +3354,16 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
             return CUR_UPG_VALUE(UPG_SCALE);
         case ComboRando::SF_STRENGTH:
             return CUR_UPG_VALUE(UPG_STRENGTH);
+        case ComboRando::SF_GERUDO_MASK:
+            return Flags_GetRandomizerInf(RAND_INF_CHILD_TRADES_HAS_MASK_GERUDO) ? 1 : 0;
+        case ComboRando::SF_SKULL_MASK:
+            return Flags_GetRandomizerInf(RAND_INF_CHILD_TRADES_HAS_MASK_SKULL) ? 1 : 0;
+        case ComboRando::SF_SPOOKY_MASK:
+            return Flags_GetRandomizerInf(RAND_INF_CHILD_TRADES_HAS_MASK_SPOOKY) ? 1 : 0;
+        case ComboRando::SF_SUNS_SONG:
+            return CHECK_QUEST_ITEM(QUEST_SONG_SUN) ? 1 : 0;
+        case ComboRando::SF_SARIAS_SONG:
+            return CHECK_QUEST_ITEM(QUEST_SONG_SARIA) ? 1 : 0;
         default:
             return 0;
     }
@@ -3465,6 +3475,21 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_STRENGTH:
                 rg = cur == 0 ? RG_GORONS_BRACELET : cur == 1 ? RG_SILVER_GAUNTLETS : RG_GOLDEN_GAUNTLETS;
+                break;
+            case ComboRando::SF_GERUDO_MASK:
+                rg = RG_GERUDO_MASK;
+                break;
+            case ComboRando::SF_SKULL_MASK:
+                rg = RG_SKULL_MASK;
+                break;
+            case ComboRando::SF_SPOOKY_MASK:
+                rg = RG_SPOOKY_MASK;
+                break;
+            case ComboRando::SF_SUNS_SONG:
+                rg = RG_SUNS_SONG;
+                break;
+            case ComboRando::SF_SARIAS_SONG:
+                rg = RG_SARIAS_SONG;
                 break;
             default:
                 break;

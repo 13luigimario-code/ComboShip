@@ -4221,9 +4221,9 @@ extern "C" COMBO_EXPORT void MM_SetComboGoal(int hunt, int required, int pieces)
 // gMMComboSharedMask mirrors the loaded slot's effective mask (SOH_SetComboSharedItems's MM twin) —
 // vendored pokes (Bomb Bag / Bombchu Bag) read it through Combo_MM_BombchuBagShared so they never
 // need the family header.
-extern "C" int gMMComboSharedMask = 0;
-extern "C" COMBO_EXPORT void MM_SetComboSharedItems(uint32_t mask) {
-    gMMComboSharedMask = static_cast<int>(mask);
+extern "C" uint64_t gMMComboSharedMask = 0; // ComboRando::SharedMask
+extern "C" COMBO_EXPORT void MM_SetComboSharedItems(ComboRando::SharedMask mask) {
+    gMMComboSharedMask = mask;
 }
 extern "C" int Combo_MM_BombchuBagShared(void) {
     return (gMMComboSharedMask >> ComboRando::SF_BOMBCHU_BAG) & 1;
@@ -4300,6 +4300,16 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
                    : Flags_GetRandoInf(RANDO_INF_OBTAINED_STRENGTH_SILVER_GAUNTLETS) ? 2
                    : Flags_GetRandoInf(RANDO_INF_OBTAINED_STRENGTH_GORONS_BRACELET)  ? 1
                                                                                      : 0;
+        case ComboRando::SF_GERUDO_MASK:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_GERUDO) ? 1 : 0;
+        case ComboRando::SF_SKULL_MASK:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SKULL) ? 1 : 0;
+        case ComboRando::SF_SPOOKY_MASK:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SPOOKY) ? 1 : 0;
+        case ComboRando::SF_SUNS_SONG:
+            return CHECK_QUEST_ITEM(QUEST_SONG_SUN) ? 1 : 0;
+        case ComboRando::SF_SARIAS_SONG:
+            return CHECK_QUEST_ITEM(QUEST_SONG_SARIA) ? 1 : 0;
         default:
             return 0;
     }
@@ -4411,6 +4421,21 @@ extern "C" COMBO_EXPORT void MM_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_STRENGTH:
                 base = RI_PROGRESSIVE_STRENGTH;
+                break;
+            case ComboRando::SF_GERUDO_MASK:
+                base = RI_MASK_GERUDO;
+                break;
+            case ComboRando::SF_SKULL_MASK:
+                base = RI_MASK_SKULL;
+                break;
+            case ComboRando::SF_SPOOKY_MASK:
+                base = RI_MASK_SPOOKY;
+                break;
+            case ComboRando::SF_SUNS_SONG:
+                base = RI_SONG_SUN;
+                break;
+            case ComboRando::SF_SARIAS_SONG:
+                base = RI_SONG_SARIA;
                 break;
             default:
                 break;

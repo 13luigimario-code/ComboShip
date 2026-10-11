@@ -253,7 +253,7 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
                                                  ComboRando::ComboGenProgress* progress = nullptr,
                                                  const std::string& forcedOotJson = "",
                                                  OotAccess ootAccess = OotAccess::ALL_REACHABLE, CwGoal goal = {},
-                                                 GameId startingGame = GAME_OOT, uint32_t sharedMask = 0) {
+                                                 GameId startingGame = GAME_OOT, SharedMask sharedMask = 0) {
     CombinedFillResult result;
     result.success = false;
 
@@ -440,7 +440,7 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
 
     // Shared Items (OoTMM-style): trim MM's copies of each effective family; the fixpoint below
     // mirrors the OOT-owned count back onto MM's oracle. See deviations/rando.md.
-    uint32_t effectiveSharedMask = 0;
+    SharedMask effectiveSharedMask = 0;
     // Shared items OOT starts with (MM names); MM logic starts with them too.
     std::vector<std::string> sharedStartingMm;
     if (sharedMask != 0) {
@@ -454,7 +454,7 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
                     ootStarting.push_back(n.get<std::string>());
         } catch (...) {}
         for (int i = 0; i < SF_COUNT; ++i) {
-            if (!(sharedMask & (1u << i)))
+            if (!(sharedMask & SharedBit(i)))
                 continue;
             const auto& def = SharedFamilyByIndex(i);
             if (def.isMask && !maskQuestShuffle) {
@@ -482,7 +482,7 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
                     sharedStartingMm.push_back(def.mmName);
             if (!def.mmHasItem) {
                 // MM has no pool copy of this item — nothing to trim, just mark the family effective.
-                effectiveSharedMask |= (1u << i);
+                effectiveSharedMask |= SharedBit(i);
                 std::cout << "[ComboShip] Shared " << def.key << ": MM has no item, not trimmed\n";
                 continue;
             }
@@ -504,14 +504,14 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
                           << "', not shared\n";
                 continue;
             }
-            effectiveSharedMask |= (1u << i);
+            effectiveSharedMask |= SharedBit(i);
             std::cout << "[ComboShip] Shared " << def.key << ": trimmed " << removed << " MM '" << def.mmName
                       << "' (balancer will pad with junk)\n";
         }
         // Keep only the families that ended up effective (a bail-out above may follow the push).
         std::erase_if(sharedStartingMm, [&](const std::string& mmName) {
             for (int i = 0; i < SF_COUNT; ++i)
-                if ((effectiveSharedMask & (1u << i)) && mmName == SharedFamilyByIndex(i).mmName)
+                if ((effectiveSharedMask & SharedBit(i)) && mmName == SharedFamilyByIndex(i).mmName)
                     return false;
             return true;
         });
@@ -794,7 +794,7 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
                 portalOpen = ootOracle.GetPortalOpen() != 0;
             if (effectiveSharedMask != 0) {
                 for (int i = 0; i < SF_COUNT; ++i) {
-                    if (!(effectiveSharedMask & (1u << i)))
+                    if (!(effectiveSharedMask & SharedBit(i)))
                         continue;
                     const auto& def = SharedFamilyByIndex(i);
                     if (!def.mmHasItem)

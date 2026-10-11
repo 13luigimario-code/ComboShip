@@ -22,7 +22,7 @@ extern "C" int gComboGoalPieces;
 // ComboShip (#135): 1 when the resolved starting game is MM, which forces age/forest/exclusions below.
 extern "C" int gComboStartingGameMM;
 // ComboShip: Shared Items bitmask (combo/rando/SharedItems.h), pushed by SOH_SetComboSharedItems.
-extern "C" int gComboSharedMask;
+extern "C" uint64_t gComboSharedMask;
 static constexpr bool kComboOwnsWincon = true;
 // ComboShip (#136): OOT's half of the combo-owned pool, for the menu-side dependent-count ranges.
 // Mirrors CwOotPieces in combo/rando/CrossWorldRando.h — the two splits must stay identical.
@@ -2781,7 +2781,7 @@ void Context::FinalizeSettings(const std::set<RandomizerCheck>& excludedLocation
         }
     }
     // ComboShip: Shared Wallets has no MM equivalent for Child Wallet, so force it off (see deviations/rando.md).
-    if (gComboSharedMask & (1 << ComboRando::SF_WALLET)) {
+    if (gComboSharedMask & ComboRando::SharedBit(ComboRando::SF_WALLET)) {
         mOptions[RSK_SHUFFLE_CHILD_WALLET].Set(RO_GENERIC_OFF);
     }
 #endif

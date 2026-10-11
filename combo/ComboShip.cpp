@@ -828,8 +828,8 @@ static bool g_startingGameMM = false;
 
 // Shared Items (OoTMM-style, combo/rando/SharedItems.h). SOH_SetComboSharedItems is OOT-only — it
 // shapes OOT's gen-time wallet force (settings.cpp); nothing on the MM side depends on the mask.
-typedef void (*FnSetComboSharedItems)(uint32_t mask);
-typedef uint32_t (*FnReadComboSharedCVars)(void);
+typedef void (*FnSetComboSharedItems)(ComboRando::SharedMask mask);
+typedef ComboRando::SharedMask (*FnReadComboSharedCVars)(void);
 typedef int (*FnGetSharedTier)(int family);
 typedef void (*FnRaiseSharedTier)(int family, int tier);
 typedef void (*FnSetSharedChangedCb)(void (*)(int, int));
@@ -847,7 +847,7 @@ static FnSetSharedChangedCb MM_SetSharedChangedCb = nullptr;
 static FnSetSharedTickCb SOH_SetSharedTickCb = nullptr;
 static FnSetSharedTickCb MM_SetSharedTickCb = nullptr;
 // Shared-items mask of the LOADED slot (seed-bound, like g_goalHunt/g_startingGameMM). Absent key = 0.
-static uint32_t g_sharedMask = 0;
+static ComboRando::SharedMask g_sharedMask = 0;
 static bool g_sharedReconcilePending = false;
 
 // ComboShip (teleport songs): OOT's Song of Soaring reads MM's owl-statue flags and arrival entrances.
@@ -1497,7 +1497,7 @@ static void Combo_SharedReconcileNow() try {
     if (g_sharedMask == 0 || !SOH_GetSharedTier || !MM_GetSharedTier || !SOH_RaiseSharedTier || !MM_RaiseSharedTier)
         return;
     for (int i = 0; i < ComboRando::SF_COUNT; ++i) {
-        if (!(g_sharedMask & (1u << i)))
+        if (!(g_sharedMask & ComboRando::SharedBit(i)))
             continue;
         const auto& def = ComboRando::SharedFamilyByIndex(i);
         const int o = SOH_GetSharedTier(i);
@@ -1597,7 +1597,7 @@ static void WriteComboPlaythrough(const std::string& spoilerJson, const ComboRan
                                   const ComboRando::OracleFns& mmOracle, const std::string& seedLabel,
                                   nlohmann::json* playthroughOut = nullptr, const std::string& sohDump = "",
                                   const std::string& mmDump = "", ComboRando::CwGoal goal = {}, bool mmStart = false,
-                                  uint32_t sharedMask = 0);
+                                  ComboRando::SharedMask sharedMask = 0);
 
 static void FailComboFill(ComboRando::ComboGenProgress* progress, const char* msg) {
     if (progress) {
@@ -1652,7 +1652,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
     bool pinStartOot = false; // Random: after an MM-start attempt fails, fall back silently to OOT
     bool resolvedMmStart = false;
     // Shared Items: read via soh.dll — the launcher has no CVar access.
-    const uint32_t sharedMask = SOH_ReadComboSharedCVars ? SOH_ReadComboSharedCVars() : 0;
+    const ComboRando::SharedMask sharedMask = SOH_ReadComboSharedCVars ? SOH_ReadComboSharedCVars() : 0;
 
     std::string sohDump, mmDump, spoiler, lastFillError, sohHintDump;
     bool usedCombinedFill = false;
@@ -1983,7 +1983,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         // Shared Items: the EFFECTIVE mask (families actually trimmed this fill) — a family with no OOT
         // copies was left alone (see CrossWorldRando.h).
         const nlohmann::json sharedItemsJson = j.value("sharedItems", nlohmann::json::array());
-        const uint32_t effectiveSharedMask = ComboRando::SharedMaskFromKeys(sharedItemsJson);
+        const ComboRando::SharedMask effectiveSharedMask = ComboRando::SharedMaskFromKeys(sharedItemsJson);
         // ComboShip: suffix cross-game item-name collisions (e.g. "Mirror Shield") in the human-readable
         // placements so the consolidated file / plandomizer read unambiguously; each game strips its own
         // "(OOT)"/"(MM)" on apply. Foreign checks are skipped (carried by foreign[]). Shared families are
@@ -2196,7 +2196,7 @@ static int RunComboGenTest(int numSeeds, uint32_t seedBase) {
 static void WriteComboPlaythrough(const std::string& spoilerJson, const ComboRando::OracleFns& ootOracle,
                                   const ComboRando::OracleFns& mmOracle, const std::string& seedLabel,
                                   nlohmann::json* playthroughOut, const std::string& sohDump, const std::string& mmDump,
-                                  ComboRando::CwGoal goal, bool mmStart, uint32_t sharedMask) {
+                                  ComboRando::CwGoal goal, bool mmStart, ComboRando::SharedMask sharedMask) {
     // Thin wrapper over the shared traversal (combo/rando/ComboPlaythrough.h); passes this build's
     // MM oracle-restore pointer. A playthroughOut here means the spoiler's playthrough section, which
     // lists progression only; the text-log path and the headless validator keep every step.

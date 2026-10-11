@@ -44,10 +44,20 @@ enum SharedFamily {
     SF_ZORA_TUNIC,
     SF_SCALES,
     SF_STRENGTH,
+    SF_GERUDO_MASK,
+    SF_SKULL_MASK,
+    SF_SPOOKY_MASK,
+    SF_SUNS_SONG,
+    SF_SARIAS_SONG,
     SF_COUNT
 };
-// The family mask is a uint32_t (spoiler "sharedItems", CVar mask ABI): widen it before passing 32 rows.
-static_assert(SF_COUNT <= 32, "Shared Items mask is 32 bits wide");
+// Family bitmask (bit i = SharedFamily i). 64 bits since the cross-game item families (was uint32_t);
+// spoilers store family KEYS, never the integer, so the width is not a save/seed format.
+using SharedMask = uint64_t;
+inline constexpr SharedMask SharedBit(int family) {
+    return SharedMask{ 1 } << family;
+}
+static_assert(SF_COUNT <= 64, "Shared Items mask is 64 bits wide");
 
 struct SharedFamilyDef {
     SharedFamily family;
@@ -151,6 +161,25 @@ inline const SharedFamilyDef* SharedFamilyTable() {
         { SF_STRENGTH, "strength", "gCombo.Rando.Shared.Strength", "Shared Strength",
           "One Strength Upgrade counts for both games. Requires MM's Strength (Ocarina of Time Gear).",
           "Strength Upgrade", "Strength Upgrade", 3, false, true, false },
+        { SF_GERUDO_MASK, "maskGerudo", "gCombo.Rando.Shared.MaskGerudo", "Shared Gerudo Mask",
+          "One Gerudo Mask counts for both games. Requires OOT Shuffle Masks and MM's Gerudo Mask (Ocarina of "
+          "Time Gear).",
+          "Gerudo Mask", "Gerudo Mask", 1, true, true, false },
+        { SF_SKULL_MASK, "maskSkull", "gCombo.Rando.Shared.MaskSkull", "Shared Skull Mask",
+          "One Skull Mask counts for both games. Requires OOT Shuffle Masks and MM's Skull Mask (Ocarina of "
+          "Time Gear).",
+          "Skull Mask", "Skull Mask", 1, true, true, false },
+        { SF_SPOOKY_MASK, "maskSpooky", "gCombo.Rando.Shared.MaskSpooky", "Shared Spooky Mask",
+          "One Spooky Mask counts for both games. Requires OOT Shuffle Masks and MM's Spooky Mask (Ocarina of "
+          "Time Gear).",
+          "Spooky Mask", "Spooky Mask", 1, true, true, false },
+        { SF_SUNS_SONG, "songSun", "gCombo.Rando.Shared.SongSun", "Shared Sun's Song",
+          "One Sun's Song counts for both games. Requires MM's Sun's Song shuffle.", "Sun's Song", "Sun's Song", 1,
+          false, true, false },
+        { SF_SARIAS_SONG, "songSaria", "gCombo.Rando.Shared.SongSaria", "Shared Saria's Song",
+          "One Saria's Song counts for both games. Requires MM's Saria's Song shuffle (its copies are replaced "
+          "by the shared one).",
+          "Saria's Song", "Saria's Song", 1, false, true, false },
     };
     return table;
 }
@@ -159,8 +188,8 @@ inline const SharedFamilyDef& SharedFamilyByIndex(int i) {
     return SharedFamilyTable()[i];
 }
 
-inline uint32_t SharedMaskFromKeys(const nlohmann::json& keys) {
-    uint32_t mask = 0;
+inline SharedMask SharedMaskFromKeys(const nlohmann::json& keys) {
+    SharedMask mask = 0;
     if (!keys.is_array())
         return mask;
     for (const auto& k : keys) {
@@ -169,20 +198,20 @@ inline uint32_t SharedMaskFromKeys(const nlohmann::json& keys) {
         const std::string s = k.get<std::string>();
         for (int i = 0; i < SF_COUNT; ++i)
             if (s == SharedFamilyTable()[i].key)
-                mask |= (1u << i);
+                mask |= SharedBit(i);
     }
     return mask;
 }
 
-inline uint32_t SharedMaskAll() {
-    return (SF_COUNT >= 32) ? 0xFFFFFFFFu : ((1u << SF_COUNT) - 1u);
+inline SharedMask SharedMaskAll() {
+    return (SF_COUNT >= 64) ? ~SharedMask{ 0 } : (SharedBit(SF_COUNT) - 1);
 }
 
 // Names to leave untagged by SuffixCrossGameItems: both games' pool name for every effective family.
-inline std::set<std::string> SharedUntaggedNames(uint32_t mask) {
+inline std::set<std::string> SharedUntaggedNames(SharedMask mask) {
     std::set<std::string> out;
     for (int i = 0; i < SF_COUNT; ++i) {
-        if (!(mask & (1u << i)))
+        if (!(mask & SharedBit(i)))
             continue;
         out.insert(SharedFamilyTable()[i].ootName);
         if (SharedFamilyTable()[i].mmHasItem)
@@ -191,10 +220,10 @@ inline std::set<std::string> SharedUntaggedNames(uint32_t mask) {
     return out;
 }
 
-inline std::vector<std::string> SharedKeysFromMask(uint32_t mask) {
+inline std::vector<std::string> SharedKeysFromMask(SharedMask mask) {
     std::vector<std::string> out;
     for (int i = 0; i < SF_COUNT; ++i)
-        if (mask & (1u << i))
+        if (mask & SharedBit(i))
             out.push_back(SharedFamilyTable()[i].key);
     return out;
 }

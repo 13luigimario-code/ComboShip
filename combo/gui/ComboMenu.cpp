@@ -1090,7 +1090,8 @@ void PlandoSavePlay() {
     }
     // Shared Items: the loaded seed's own effective mask — plando doesn't change which families are
     // shared, only where items land.
-    const uint32_t plandoSharedMask = ComboRando::SharedMaskFromKeys(j.value("sharedItems", nlohmann::json::array()));
+    const ComboRando::SharedMask plandoSharedMask =
+        ComboRando::SharedMaskFromKeys(j.value("sharedItems", nlohmann::json::array()));
     // Native cross-game name collisions get their own-game suffix; foreign checks are skipped (their
     // real item travels in foreign[]). Exactly the generator's write path.
     ComboRando::SuffixCrossGameItems(ootPl, mmPl, foreignRaw, sPlando.sohDump, sPlando.mmDump,

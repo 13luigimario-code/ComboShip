@@ -2221,3 +2221,14 @@ ignores proximity for the Gerudo Mask. Spooky has no effect (OoTMM uses it only 
 lower palace, throne room and bean grotto are all child-reachable there); `HAS_COMBO_MASK_GERUDO` joins the
 Pirates' Fortress plaza-tower guard alternatives (OoTMM `can_evade_gerudo`). Shared variants wait for the
 Shared Items mask to be widened past 32 bits.
+
+### Shared Items mask widened to 64 bits (2026-10-11)
+
+`ComboRando::SharedMask` (`uint64_t`) + `SharedBit(i)` replace the `uint32_t` mask and `1u << i` everywhere
+(`SharedItems.h`, `CrossWorldRando.h`, `CrossForeign.h`, `CrossHints.h`, `ComboPlaythrough.h`, launcher,
+validator, menu). The ABIs moved with it: `SOH_SetComboSharedItems` / `MM_SetComboSharedItems` take, and
+`SOH_ReadComboSharedCVars` returns, a `SharedMask`; `gComboSharedMask` (soh, read by `settings.cpp`'s wallet
+force) and `gMMComboSharedMask` are `uint64_t`. Spoilers store family keys, so no seed/save format change.
+New families: `maskGerudo`, `maskSkull`, `maskSpooky` (need OOT Shuffle Masks + MM's matching OOT-mask
+option), `songSun`, `songSaria` (need MM's Sun's/Saria's Song shuffle; sharing Saria's replaces MM's
+hint-charge copies with the one shared song, as OoTMM).
