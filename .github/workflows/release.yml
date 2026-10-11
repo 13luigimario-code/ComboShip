@@ -3,7 +3,8 @@ name: Release
 # Cut a stable release from a v* tag (pushed on the main branch): runs the SAME reusable build
 # pipelines as nightly (build.yml, build-linux.yml, build-macos.yml — no gate, this is
 # already-merged code), then publishes a DRAFT GitHub Release with the packaged Windows ZIP, Linux
-# AppImage and macOS DMG attached.
+# AppImage and macOS DMG attached. macOS does not hold the release back: if its build fails, the
+# draft is published without the DMG.
 # Draft so you can review/edit notes before publishing. See docs/UPSTREAM_MERGES.md.
 
 on:
@@ -25,6 +26,7 @@ jobs:
 
   publish:
     needs: [windows, linux, macos]
+    if: ${{ !cancelled() && needs.windows.result == 'success' && needs.linux.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write # create the GitHub Release
@@ -42,6 +44,7 @@ jobs:
           path: dist
 
       - name: Download macOS DMG
+        if: needs.macos.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: ComboShip-macos
@@ -55,13 +58,17 @@ jobs:
           mv "$zip" "dist/ComboShip-${GITHUB_REF_NAME}-windows.zip"
           appimage=$(ls dist/ComboShip-*-linux-x86_64.AppImage | head -1)
           mv "$appimage" "dist/ComboShip-${GITHUB_REF_NAME}-linux-x86_64.AppImage"
-          dmg=$(ls dist/*.dmg | head -1)
-          mv "$dmg" "dist/ComboShip-${GITHUB_REF_NAME}-macos.dmg"
+          shopt -s nullglob
+          dmgs=(dist/*.dmg)
+          if ((${#dmgs[@]})); then
+            mv "${dmgs[0]}" "dist/ComboShip-${GITHUB_REF_NAME}-macos.dmg"
+          fi
 
       - name: Publish draft release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          fail_on_unmatched_files: false # the DMG is absent when the macOS build failed
           generate_release_notes: true
           files: |
             dist/ComboShip-${{ github.ref_name }}-windows.zip
