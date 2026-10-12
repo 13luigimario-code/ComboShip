@@ -79,15 +79,21 @@ const OotSheath kOotSheaths[] = {
 };
 
 void* sKokiriIcon = nullptr; // OOT's own gItemIcons[ITEM_SWORD_KOKIRI], restored at tier 0
+// Link's tunic color this frame (VB_APPLY_TUNIC_COLOR). MM's sword and sheath display lists set their own environment
+// color, which OOT's tunic is shaded with: limbs drawn after them (right arm, torso) would turn black or blue.
+Color_RGB8 sTunicColor = { 30, 105, 27 };
 
-// Display lists submitted through the runtime gSPDisplayList, which turns an "@mm:" path into a routed call.
+// Display lists submitted through the runtime gSPDisplayList, which turns an "@mm:" path into a routed call. OOT's
+// tunic color is put back afterwards for the limbs drawn later.
 Gfx* CallLists(PlayState* play, const char* first, const char* second) {
-    Gfx* buf = (Gfx*)Graph_Alloc(play->state.gfxCtx, 3 * sizeof(Gfx));
+    Gfx* buf = (Gfx*)Graph_Alloc(play->state.gfxCtx, 5 * sizeof(Gfx));
     Gfx* p = buf;
     gSPDisplayList(p++, (Gfx*)first);
     if (second != nullptr) {
         gSPDisplayList(p++, (Gfx*)second);
     }
+    gDPPipeSync(p++);
+    gDPSetEnvColor(p++, sTunicColor.r, sTunicColor.g, sTunicColor.b, 0);
     gSPEndDisplayList(p++);
     return buf;
 }
@@ -184,6 +190,13 @@ static void RegisterComboChildSwords() {
         }
         *should = true;
         memcpy(gPlayState->pauseCtx.nameSegment, kName[tier - 1], strlen(kName[tier - 1]) + 1);
+    });
+    COND_VB_SHOULD(VB_APPLY_TUNIC_COLOR, on, {
+        va_arg(args, void*); // the skeleton's draw data
+        Color_RGB8* color = va_arg(args, Color_RGB8*);
+        if (color != nullptr) {
+            sTunicColor = *color;
+        }
     });
     COND_HOOK(OnGameFrameUpdate, true, UpdateIcon); // also restores OOT's icon outside rando
 }
