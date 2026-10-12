@@ -22,6 +22,14 @@ int Combo_AgeReq_CanUseItem(int item);
 // Link may use his strength upgrades at his current age (Goron's Bracelet / Silver / Golden Gauntlets).
 int Combo_AgeReq_StrengthAllowed(void);
 
+// ---- Logic (Logic.h: HAS_ITEM, HAS_TRADE_ITEM) ----
+// The age MM's logic is evaluating: -1 = Link's actual age (check tracker), 0 = child, 1 = adult (the combo oracle runs
+// one pass per age).
+extern int gComboLogicAge;
+// The save's requirement for this MM ItemId lets the logic's age use it. Reads the save's options directly (they are
+// "any age" whenever MM has no adult Link).
+int Combo_AgeReq_LogicAllowsItem(int item);
+
 #ifdef __cplusplus
 }
 

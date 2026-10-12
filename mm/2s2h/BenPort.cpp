@@ -3538,11 +3538,26 @@ extern "C" COMBO_EXPORT const char* MM_DumpRandoStaticData(void) {
         junkPool.push_back(Rando::StaticData::GetItemDisplayName(id));
     }
 
+    // ComboShip (Cross-Games Age): some MM item may be for adult Link only (or Random), so the seed may need him in
+    // Termina; the combo fill names that when it fails without ever getting him there.
+    bool needsAdult = false;
+    if (Combo_AdultLink_AgeSystemOn()) {
+#define AGE_REQ(suffix, label, ootmmId, item, poolOption)                                    \
+    {                                                                                        \
+        const auto& opt = Rando::StaticData::Options[RO_AGE_REQ_##suffix];                   \
+        const int value = CVarGetInteger(opt.cvar, opt.defaultValue);                        \
+        needsAdult = needsAdult || (value == RO_AGE_ADULT_ONLY) || (value == RO_AGE_RANDOM); \
+    }
+#include "2s2h/Rando/MiscBehavior/AgeReqList.h"
+#undef AGE_REQ
+    }
+
     cached = nlohmann::json{
         { "checks", std::move(checks) },   { "pool", std::move(pool) },
         { "fixed", std::move(fixed) },     { "items", std::move(items) },
         { "prices", std::move(prices) },   { "locationHints", std::move(locationHints) },
-        { "options", std::move(options) }, { "junkPool", std::move(junkPool) }
+        { "options", std::move(options) }, { "junkPool", std::move(junkPool) },
+        { "ageNeedsAdult", needsAdult }
     }.dump();
     return cached.c_str();
 }
@@ -3551,6 +3566,8 @@ extern "C" COMBO_EXPORT const char* MM_DumpRandoStaticData(void) {
 // these to query "given owned items, which checks are reachable?"
 
 static SaveContext sMM_OracleSavedContext;
+// ComboShip (Cross-Games Age): adult Link can soar into Termina from Hyrule (CrossWarpLogic.h), for the next search.
+static bool sMMComboOracleAdultIn = false;
 static uint64_t sMM_OracleSavedRegionTime;
 // ComboShip: Reset runs once PER REACHABILITY QUERY (dozens per fill) but Restore only once at the
 // end of the whole fill. Without this flag the second Reset snapshots the already-zeroed context,
@@ -4007,8 +4024,9 @@ static void GiveItemForOracle(RandoItemId ri) {
 extern "C" COMBO_EXPORT void Combo_MM_Rando_Reset(void) {
     // ComboShip: MM's region graph + static data are built by the eager boot
     // (MM_BootForCombo -> ShipInit::InitAll), so the oracle needs no lazy init here.
-    gMMComboOracleOotSoaring = 0; // ComboShip (teleport songs): the input belongs to one query
-    if (!sMM_OracleActive) {      // snapshot the REAL live context only on the first Reset of a fill
+    gMMComboOracleOotSoaring = 0;  // ComboShip (teleport songs): the input belongs to one query
+    sMMComboOracleAdultIn = false; // ComboShip (Cross-Games Age): likewise
+    if (!sMM_OracleActive) {       // snapshot the REAL live context only on the first Reset of a fill
         memcpy(&sMM_OracleSavedContext, &gSaveContext, sizeof(SaveContext));
         sMM_OracleSavedRegionTime = gCurrentRegionTime;
         sMM_OracleActive = true;
@@ -4041,6 +4059,9 @@ extern "C" COMBO_EXPORT void Combo_MM_Rando_Reset(void) {
         gSaveContext.save.shipSaveInfo.rando.randoSaveOptions[id] =
             (uint32_t)CVarGetInteger(opt.cvar, opt.defaultValue);
     }
+    // ComboShip (Cross-Games Age): the same "Random" age requirements the save will get (MM_InitRandoSaveFile).
+    Rando::AgeReq::Resolve((uint32_t)sMMComboRandoSeed, gSaveContext.save.shipSaveInfo.rando.randoSaveOptions,
+                           Combo_AdultLink_AgeSystemOn() != 0);
     // ComboShip (#136): combo owns the goal, so the hidden CVars above must not decide it here either.
     gSaveContext.save.shipSaveInfo.rando.randoSaveOptions[RO_SHUFFLE_TRIFORCE_PIECES] =
         gMMComboGoalHunt ? RO_GENERIC_YES : RO_GENERIC_NO;
@@ -4134,6 +4155,10 @@ extern "C" COMBO_EXPORT void Combo_MM_Rando_SetOwnedItems(const char* itemNamesJ
         for (const auto& name : items) {
             if (name.get<std::string>() == ComboRando::kCwOotSoaring) {
                 gMMComboOracleOotSoaring = 1;
+                continue;
+            }
+            if (name.get<std::string>() == ComboRando::kCwOotAdultSoaring) { // Cross-Games Age
+                sMMComboOracleAdultIn = true;
                 continue;
             }
             auto it = nameToId.find(name.get<std::string>());
@@ -4688,59 +4713,106 @@ extern "C" COMBO_EXPORT void MM_TriggerTriforceCredits(int dormant) try {
 extern "C" COMBO_EXPORT const char* Combo_MM_Rando_GetReachableChecks(void) {
     static std::string buf;
 
-    std::set<RandoRegionId> reachable = { RR_MAX };
-    auto timeStates = Rando::Logic::InitializeRegionTimeStates(RR_MAX);
-
     // ComboShip: mirror GlitchlessLogic's reachability fixpoint (Rando/Logic/GlitchlessLogic.cpp).
     // Crawling region connections alone isn't enough — MM's logic is event-gated (raising Woodfall,
     // opening dungeon entrances, cutscenes). Those events must be applied (RANDO_EVENTS[event]++) as
     // their regions become reachable, which then unlocks the connections and checks that depend on
     // them. Without it the oracle saw only the event-free overworld and the fill dead-ended. Loop
     // until regions and events both stabilize (each can unlock the other).
+    //
+    // ComboShip (Cross-Games Age): MM is explored once per age Link can be in it, like OoTMM's pathfinder
+    // explores per age. Child always; adult when the age system is on, adult Link can soar in from Hyrule and an
+    // owl statue is active to land on (after which a reload keeps him in Termina). Regions are per age, events
+    // are shared (the world remembers them), and HAS_ITEM follows gComboLogicAge (the age requirements).
+    struct AgePass {
+        int age;
+        std::set<RandoRegionId> reachable = { RR_MAX };
+        decltype(Rando::Logic::InitializeRegionTimeStates(RR_MAX)) timeStates =
+            Rando::Logic::InitializeRegionTimeStates(RR_MAX);
+    };
+    std::vector<AgePass> passes;
+    passes.push_back(AgePass{ 0 });
+    const bool ageSystem = Combo_AdultLink_AgeSystemOn() != 0;
+    auto anyOwlActive = [] { return (gSaveContext.save.saveInfo.playerData.owlActivationFlags & 0x3FF) != 0; };
+    auto tryAddAdultPass = [&] {
+        if ((passes.size() == 1) && sMMComboOracleAdultIn && ageSystem && anyOwlActive()) {
+            passes.push_back(AgePass{ 1 });
+            return true;
+        }
+        return false;
+    };
+    tryAddAdultPass();
+    // Cross-Games Age: unshuffled owl statues aren't items, so the oracle never owns one. Like hitting it in game,
+    // an owl is active once its statue's check is reachable (at either age), which gives adult Link somewhere to land.
+    const bool owlsByStatue = ageSystem && (RANDO_SAVE_OPTIONS[RO_SHUFFLE_OWL_STATUES] == RO_GENERIC_NO);
+    std::set<RandoCheckId> owlsActivated;
+
     std::set<std::pair<RandoEvent, std::function<bool()>>*> eventsInLogic;
     bool changed = true;
     while (changed) {
         changed = false;
-        size_t prevSize = reachable.size();
-        for (auto regionId : std::set<RandoRegionId>(reachable)) {
-            Rando::Logic::FindReachableRegions(regionId, reachable, timeStates);
-        }
-        if (reachable.size() != prevSize)
-            changed = true;
+        for (AgePass& pass : passes) {
+            gComboLogicAge = pass.age;
+            size_t prevSize = pass.reachable.size();
+            for (auto regionId : std::set<RandoRegionId>(pass.reachable)) {
+                Rando::Logic::FindReachableRegions(regionId, pass.reachable, pass.timeStates);
+            }
+            if (pass.reachable.size() != prevSize)
+                changed = true;
 
-        for (RandoRegionId regionId : reachable) {
+            for (RandoRegionId regionId : pass.reachable) {
+                auto regIt = Rando::Logic::Regions.find(regionId);
+                if (regIt == Rando::Logic::Regions.end())
+                    continue;
+                Rando::Logic::SetCurrentRegionTime(pass.timeStates, regionId);
+                for (auto& randoEvent : regIt->second.events) {
+                    if (!eventsInLogic.contains(&randoEvent) && randoEvent.second()) {
+                        RANDO_EVENTS[randoEvent.first]++;
+                        eventsInLogic.insert(&randoEvent);
+                        changed = true;
+                    }
+                }
+                if (owlsByStatue) {
+                    for (auto& [checkId, checkLogic] : regIt->second.checks) {
+                        const auto& staticCheck = Rando::StaticData::Checks[checkId];
+                        if ((staticCheck.randoCheckType == RCTYPE_OWL) && !owlsActivated.contains(checkId) &&
+                            checkLogic.first()) {
+                            GiveItemForOracle(staticCheck.randoItemId); // its own owl: Sram_ActivateOwl
+                            owlsActivated.insert(checkId);
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+        if (tryAddAdultPass()) {
+            changed = true;
+        }
+    }
+
+    std::set<std::string> seen;
+    nlohmann::json out = nlohmann::json::array();
+    for (AgePass& pass : passes) {
+        gComboLogicAge = pass.age;
+        for (RandoRegionId regionId : pass.reachable) {
             auto regIt = Rando::Logic::Regions.find(regionId);
             if (regIt == Rando::Logic::Regions.end())
                 continue;
-            Rando::Logic::SetCurrentRegionTime(timeStates, regionId);
-            for (auto& randoEvent : regIt->second.events) {
-                if (!eventsInLogic.contains(&randoEvent) && randoEvent.second()) {
-                    RANDO_EVENTS[randoEvent.first]++;
-                    eventsInLogic.insert(&randoEvent);
-                    changed = true;
+            auto& region = regIt->second;
+
+            Rando::Logic::SetCurrentRegionTime(pass.timeStates, regionId);
+
+            for (auto& [checkId, checkLogic] : region.checks) {
+                if (checkLogic.first()) {
+                    // ComboShip: emit the friendly combo-spoiler name the fill/oracle key on.
+                    const std::string& n = Rando::StaticData::GetCheckDisplayName(checkId);
+                    if (!n.empty() && seen.insert(n).second)
+                        out.push_back(n);
                 }
             }
         }
     }
-
-    nlohmann::json out = nlohmann::json::array();
-    for (RandoRegionId regionId : reachable) {
-        auto regIt = Rando::Logic::Regions.find(regionId);
-        if (regIt == Rando::Logic::Regions.end())
-            continue;
-        auto& region = regIt->second;
-
-        Rando::Logic::SetCurrentRegionTime(timeStates, regionId);
-
-        for (auto& [checkId, checkLogic] : region.checks) {
-            if (checkLogic.first()) {
-                // ComboShip: emit the friendly combo-spoiler name the fill/oracle key on.
-                const std::string& n = Rando::StaticData::GetCheckDisplayName(checkId);
-                if (!n.empty())
-                    out.push_back(n);
-            }
-        }
-    }
+    gComboLogicAge = -1;
 
     // ComboShip (teleport songs): OOT warp songs this owned-set can play, and whether any owl is active.
     sMMComboCrossOut = 0;
@@ -4767,6 +4839,8 @@ extern "C" COMBO_EXPORT const char* Combo_MM_Rando_GetReachableChecks(void) {
         }
         if ((gSaveContext.save.saveInfo.playerData.owlActivationFlags & 0x3FF) != 0)
             sMMComboCrossOut |= ComboRando::CW_MM_OUT_OWL;
+        if (Combo_AdultLink_AgeSystemOn()) // Cross-Games Age: ask the OOT side for adult access
+            sMMComboCrossOut |= ComboRando::CW_MM_OUT_AGE;
     }
     gMMComboOracleOotSoaring = 0;
 

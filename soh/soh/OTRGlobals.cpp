@@ -5736,6 +5736,15 @@ extern "C" COMBO_EXPORT const char* Combo_SOH_Rando_GetReachableChecks(void) {
                              logic->HasItem(RG_OCARINA_C_DOWN_BUTTON) && logic->HasItem(RG_OCARINA_C_LEFT_BUTTON) &&
                              logic->HasItem(RG_OCARINA_C_UP_BUTTON);
         sComboCrossOut = canSoar ? ComboRando::CW_OOT_OUT_CAN_SOAR : 0u;
+        // ComboShip (Cross-Games Age): ... as adult Link, who then lands in Termina as adult. Soaring works at
+        // either age in OOT; adult Link is reachable once any region is reached as adult (the spawn, or beyond the
+        // Door of Time after time travel).
+        const bool adultReachable = RegionTable(RR_ROOT)->Adult() || RegionTable(RR_ROOT_EXITS)->Adult() ||
+                                    RegionTable(RR_ADULT_SPAWN)->Adult() ||
+                                    RegionTable(RR_TOT_BEYOND_DOOR_OF_TIME)->Adult();
+        if (canSoar && adultReachable) {
+            sComboCrossOut |= ComboRando::CW_OOT_OUT_ADULT_SOAR;
+        }
     }
     gComboOracleCrossIn = 0;
 #endif

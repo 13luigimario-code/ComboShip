@@ -77,6 +77,9 @@ const std::vector<Dependency> kDependencies = {
     { RO_AGE_REQ_MASK_GORON, { RO_AGE_REQ_POWDER_KEG, RO_AGE_REQ_DEED_MOUNTAIN } },
     { RO_AGE_REQ_MASK_ZORA, { RO_AGE_REQ_DEED_OCEAN } },
     { RO_AGE_REQ_STRENGTH, { RO_AGE_REQ_POWDER_KEG } },
+    // ComboShip addition: elemental arrows are only usable with the Bow at the same age (OoTMM can roll a child Bow
+    // with adult Light Arrows, which no age can shoot).
+    { RO_AGE_REQ_BOW, { RO_AGE_REQ_ARROW_FIRE, RO_AGE_REQ_ARROW_ICE, RO_AGE_REQ_ARROW_LIGHT } },
 };
 
 bool IsController(RandoOptionId option) {
@@ -242,6 +245,53 @@ void Rando::AgeReq::Resolve(uint32_t seed, uint32_t* options, bool ageSystemOn) 
     }
 }
 
+extern "C" int gComboLogicAge = -1;
+
+namespace {
+// The option for an MM ItemId (RO_MAX: none). ComboShip keeps OOT's Fairy Ocarina and Short Hookshot in the Ocarina of
+// Time / Hookshot slots, so those follow whichever one Link has; elemental arrows show as bow-and-arrow while drawn.
+RandoOptionId OptionForItem(int item) {
+    if (item == ITEM_OCARINA_OF_TIME) {
+        return Combo_Upgrades_OcarinaIsFairy() ? RO_AGE_REQ_OCARINA_FAIRY : RO_AGE_REQ_OCARINA_OF_TIME;
+    }
+    if (item == ITEM_HOOKSHOT) {
+        return Combo_Upgrades_HookshotIsShort() ? RO_AGE_REQ_HOOKSHOT_SHORT : RO_AGE_REQ_HOOKSHOT;
+    }
+    if (item == ITEM_BOW_FIRE) {
+        item = ITEM_ARROW_FIRE;
+    } else if (item == ITEM_BOW_ICE) {
+        item = ITEM_ARROW_ICE;
+    } else if (item == ITEM_BOW_LIGHT) {
+        item = ITEM_ARROW_LIGHT;
+    }
+    // ItemId -> option, built once (HAS_ITEM asks on every item test during the fill).
+    static const auto kTable = [] {
+        std::array<RandoOptionId, 256> table;
+        table.fill(RO_MAX);
+        for (const AgeReqItem& entry : kItems) {
+            if ((entry.item != ITEM_NONE) && (entry.item >= 0) && (entry.item < 256)) {
+                table[entry.item] = entry.option;
+            }
+        }
+        return table;
+    }();
+    return ((item >= 0) && (item < 256)) ? kTable[item] : RO_MAX;
+}
+
+bool AllowsAge(u32 requirement, bool adult) {
+    return !((requirement == RO_AGE_CHILD_ONLY) && adult) && !((requirement == RO_AGE_ADULT_ONLY) && !adult);
+}
+} // namespace
+
+extern "C" int Combo_AgeReq_LogicAllowsItem(int item) {
+    const RandoOptionId option = OptionForItem(item);
+    if ((option == RO_MAX) || (RANDO_SAVE_OPTIONS[option] == RO_AGE_ANY)) {
+        return 1; // the common case: no requirement (always so without an adult Link)
+    }
+    const bool adult = (gComboLogicAge >= 0) ? (gComboLogicAge != 0) : (Combo_AdultLink_IsAdultAge() != 0);
+    return AllowsAge(RANDO_SAVE_OPTIONS[option], adult);
+}
+
 extern "C" int Combo_AgeReq_Active(void) {
     return IS_RANDO && Combo_AdultLink_AgeSystemOn();
 }
@@ -250,29 +300,8 @@ extern "C" int Combo_AgeReq_CanUseItem(int item) {
     if ((item == ITEM_NONE) || !Combo_AgeReq_Active()) {
         return 1;
     }
-    // ComboShip keeps OOT's Fairy Ocarina and Short Hookshot in the Ocarina of Time / Hookshot slots.
-    if (item == ITEM_OCARINA_OF_TIME) {
-        return AgeAllows(
-            Requirement(Combo_Upgrades_OcarinaIsFairy() ? RO_AGE_REQ_OCARINA_FAIRY : RO_AGE_REQ_OCARINA_OF_TIME));
-    }
-    if (item == ITEM_HOOKSHOT) {
-        return AgeAllows(
-            Requirement(Combo_Upgrades_HookshotIsShort() ? RO_AGE_REQ_HOOKSHOT_SHORT : RO_AGE_REQ_HOOKSHOT));
-    }
-    // Elemental arrows show as the bow-and-arrow item while drawn.
-    if (item == ITEM_BOW_FIRE) {
-        item = ITEM_ARROW_FIRE;
-    } else if (item == ITEM_BOW_ICE) {
-        item = ITEM_ARROW_ICE;
-    } else if (item == ITEM_BOW_LIGHT) {
-        item = ITEM_ARROW_LIGHT;
-    }
-    for (const AgeReqItem& entry : kItems) {
-        if (entry.item == item) {
-            return AgeAllows(Requirement(entry.option));
-        }
-    }
-    return 1;
+    const RandoOptionId option = OptionForItem(item);
+    return (option == RO_MAX) || AgeAllows(Requirement(option));
 }
 
 extern "C" int Combo_AgeReq_StrengthAllowed(void) {

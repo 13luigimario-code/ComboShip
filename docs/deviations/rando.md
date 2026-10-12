@@ -2519,4 +2519,35 @@ menu). The module is `AgeRequirements.{h,cpp}`.
   and `z_en_fu.c`).
 - **Not ported yet:** OoTMM also refuses Romani's ranch defense, Cremia's cart escort and Koume's boat archery at the
   wrong bow age (these lend Link the bow, so they need new dialogue), and drops no arrows or seeds when the Bow or
-  Slingshot belongs to the other age. The fill logic doesn't know about age yet (Cross-Games Age part 4).
+  Slingshot belongs to the other age.
+- **Random dependency added by ComboShip:** elemental arrows share the Bow's age (OoTMM can roll a child Bow with adult
+  Light Arrows, which no age can shoot).
+
+### Cross-Games Age: age-aware MM logic (2026-10-12)
+
+The combined fill's MM oracle (`Combo_MM_Rando_GetReachableChecks`, `mm/2s2h/BenPort.cpp`) now explores Termina once
+per age Link can be in it, as OoTMM's pathfinder does:
+
+- **Child** always (the Happy Mask Shop link is child-only in OOT, as in OoTMM). **Adult** when MM can have an adult
+  Link, OOT reports that adult Link can play the Song of Soaring (`CW_OOT_OUT_ADULT_SOAR`: Soaring owned and an adult
+  region reached; fed to MM as `kCwOotAdultSoaring`, `combo/rando/CrossWarpLogic.h`) and an owl statue is active to
+  land on. That is OoTMM's only adult route too (`"MM SOARING"` from OOT's `GLOBAL` area).
+- Regions and their times are tracked per age; MM events are shared (the world remembers them); a check counts when
+  either age reaches it. `HAS_ITEM`, the trade-item flags (`HAS_TRADE_ITEM`) and the OOT masks in MM logic only count
+  an item at an age its requirement allows (`gComboLogicAge`, `Combo_AgeReq_LogicAllowsItem`; an O(1) table, since
+  `HAS_ITEM` runs on every item test). Outside the fill, `gComboLogicAge` is -1 and Link's real age is used.
+- **Owls:** unshuffled owl statues aren't items, so the oracle never owned one. With the age system on, an owl is
+  activated in the search once its statue's check is reachable (at either age), like hitting it in game, and the
+  adult pass starts as soon as one is. The oracle's save state is wiped per query, so this never leaks between
+  searches.
+- **Same "Random" as the save:** the oracle resolves the age requirements with the attempt's combo seed
+  (`Rando::AgeReq::Resolve` in `Combo_MM_Rando_Reset`), the same call `MM_InitRandoSaveFile` makes.
+- **Failure hint:** the MM dump carries `ageNeedsAdult` (some item is adult-only or Random); if the fill then fails
+  without ever getting adult Link into Termina, the error says so and names the Song of Soaring routes.
+- Off (no adult Link), every requirement is "Any age", no adult pass runs and the owned lists and memo keys are
+  unchanged, so existing seeds generate as before.
+
+Tested headless: off and all-"Any age" pass; Bow/Hookshot/Gibdo Mask adult-only passes (the adult pass runs); the
+same with OOT's Song of Soaring removed fails with the hint; a Random subset (non-transformation masks, Bow, Hookshot,
+Bombchu) passes 3/3. Randomizing every item at once usually can't be beaten (e.g. both ocarinas child-only leaves
+adult Link no songs), as in OoTMM.

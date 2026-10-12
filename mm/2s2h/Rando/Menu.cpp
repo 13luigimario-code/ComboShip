@@ -1046,7 +1046,8 @@ static void DrawAgeRequirementsCard() {
     ImGui::TextWrapped(
         "Which age of Link may use each item in Termina. An item for the other age is greyed out like an "
         "item your form can't use. Random picks child or adult from the seed, keeping each form's mask "
-        "with what that form needs (its title deed; the Powder Keg with the Goron Mask or Strength).");
+        "with what that form needs (its title deed; the Powder Keg with the Goron Mask or Strength) and "
+        "elemental arrows with the Bow.");
     auto setAll = [](int32_t value) {
         for (const Row& row : kRows) {
             CVarSetInteger(Rando::StaticData::Options[row.option].cvar, value);
