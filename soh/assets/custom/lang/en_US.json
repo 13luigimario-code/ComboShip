@@ -1544,6 +1544,90 @@
                     "the upgrades are not considered by logic."
                 ]
             },
+            "combo_ageless_swords": {
+                "name": "Ageless Swords",
+                "description": [
+                    "Child Link can use the Master Sword and the Biggoron Sword, and adult Link the Kokiri Sword. Child Link holds them with his own sword model. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_shields": {
+                "name": "Ageless Shields",
+                "description": [
+                    "Adult Link can use the Deku Shield and child Link the Mirror Shield. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_tunics": {
+                "name": "Ageless Tunics",
+                "description": [
+                    "Child Link can wear the Goron and Zora Tunics, with their heat and underwater protection. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_boots": {
+                "name": "Ageless Boots",
+                "description": [
+                    "Child Link can wear the Iron Boots and the Hover Boots. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_sticks": {
+                "name": "Ageless Sticks",
+                "description": [
+                    "Adult Link can use Deku Sticks. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_boomerang": {
+                "name": "Ageless Boomerang",
+                "description": [
+                    "Adult Link can use the Boomerang. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_hammer": {
+                "name": "Ageless Hammer",
+                "description": [
+                    "Child Link can use the Megaton Hammer. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_hookshot": {
+                "name": "Ageless Hookshot",
+                "description": [
+                    "Child Link can use the Hookshot and the Longshot. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_slingshot": {
+                "name": "Ageless Slingshot",
+                "description": [
+                    "Adult Link can use the Fairy Slingshot. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_bow": {
+                "name": "Ageless Bow",
+                "description": [
+                    "Child Link can use the Fairy Bow and the magic arrows. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_child_trade": {
+                "name": "Ageless Child Trade",
+                "description": [
+                    "Adult Link can use the child trade items: the Weird Egg, Cucco, Zelda's Letter and the masks. ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
+            "combo_ageless_strength": {
+                "name": "Ageless Strength",
+                "description": [
+                    "Child Link can use the Silver and Golden Gauntlets (otherwise he only gets the Goron's Bracelet's strength). ",
+                    "Item placement logic will respect this option, so it might be required to use this to progress."
+                ]
+            },
             "slingbow_break_beehives": {
                 "name": "Slingshot/Bow Can Break Beehives",
                 "description": "Allows Slingshot and Bow to break beehives when Beehive Shuffle is turned on."

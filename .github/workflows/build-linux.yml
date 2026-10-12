@@ -98,7 +98,10 @@ jobs:
           cvars = cfg.setdefault("CVars", {})
           oot = cvars.setdefault("gRandoSettings", {})
           for key in ["ComboMaskBlast", "ComboMaskStone", "ComboMaskKamaro", "ComboMmSongs",
-                      "ComboSongOfSoaring", "ComboChildSwords", "ShuffleMasks"]:
+                      "ComboSongOfSoaring", "ComboChildSwords", "ShuffleMasks",
+                      "ComboAgelessSwords", "ComboAgelessShields", "ComboAgelessTunics", "ComboAgelessBoots",
+                      "ComboAgelessSticks", "ComboAgelessBoomerang", "ComboAgelessHammer", "ComboAgelessHookshot",
+                      "ComboAgelessSlingshot", "ComboAgelessBow", "ComboAgelessChildTrade", "ComboAgelessStrength"]:
               oot[key] = 1
           mm = cvars.setdefault("gRando", {}).setdefault("Options", {})
           for key in ["RO_CROSS_BOOTS_IRON", "RO_CROSS_BOOTS_HOVER", "RO_CROSS_TUNIC_GORON",

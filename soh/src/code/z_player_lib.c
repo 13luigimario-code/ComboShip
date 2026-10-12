@@ -14,6 +14,10 @@
 #include <stdlib.h>
 #include <libultraship/bridge/consolevariablebridge.h>
 
+#ifdef COMBO_BUILD
+int Combo_Ageless_Strength(void); // ComboShip: OoTMM's ageless strength (ComboAgeless.cpp)
+#endif
+
 typedef struct {
     /* 0x00 */ u8 flag;
     /* 0x02 */ u16 textId;
@@ -783,6 +787,12 @@ s32 Player_GetStrength(void) {
         return PLAYER_STR_NONE;
     }
 
+#ifdef COMBO_BUILD
+    // ComboShip: OoTMM's ageless strength - child Link uses the gauntlets too (ComboAgeless.cpp).
+    if (Combo_Ageless_Strength()) {
+        return strengthUpgrade;
+    }
+#endif
     if (GameInteractor_Should(VB_PLAYER_MEETS_AGE_REQ, LINK_IS_ADULT, LINK_AGE_ADULT)) {
         return strengthUpgrade;
     } else if (strengthUpgrade != 0) {

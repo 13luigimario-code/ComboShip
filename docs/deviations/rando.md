@@ -2411,3 +2411,21 @@ off). Gameplay in `mm/2s2h/Rando/MiscBehavior/CrossUpgrades.cpp` (C ABI in `Cros
 `hookshot` now holds two MM tiers: with the Short Hookshot, OOT's Hookshot/Longshot pair with MM's Short Hookshot/
 Hookshot; without it MM's Hookshot comes with the first copy and the second is ignored there. No Shared Ocarinas yet.
 MM's copies placed in OOT draw OOT's own models (`ComboCrossGearNativeOOT`).
+
+## Ageless items (OoTMM `items.ageless`) (2026-10-12)
+
+Twelve OOT options, `RSK_COMBO_AGELESS_SWORDS/SHIELDS/TUNICS/BOOTS/STICKS/BOOMERANG/HAMMER/HOOKSHOT/SLINGSHOT/BOW/
+CHILD_TRADE/STRENGTH` (`ComboAgeless*` CVars, Logic section of the OOT randomizer menu, default off): OoTMM's
+`agelessSwords` ... `agelessStrength`. Each lets Link use that group at either age.
+
+- **In game (`soh/soh/Enhancements/combo/ComboAgeless.cpp`):** SoH's "Timeless Equipment" cheat split per group on
+  the same checks. `VB_ITEM_MEETS_AGE_REQ` / `VB_SLOT_MEETS_AGE_REQ` handlers map item ids / inventory slots to
+  their group (bow covers the magic arrows and quivers, slingshot the bullet bags, child trade the whole child trade
+  slot including masks and the MM masks). `CHECK_AGE_REQ_EQUIP` (`z_kaleido_scope.h`, guarded) also asks
+  `Combo_Ageless_Equip(type)`, since its `VB_PLAYER_MEETS_AGE_REQ` carries only the age; `Player_GetStrength`
+  (guarded) returns the full upgrade with ageless strength. Models are the game's per-age ones, as with the cheat.
+- **Logic (`Logic::CanUse`, guarded):** the `// || HookshotAsChild` placeholders become `|| ctx->GetOption(...)`.
+  Region rules that pair an explicit age with the item (`IsAdult && logic->CanUse(RG_HOOKSHOT)`, ~100 of them) are
+  left alone, so logic under-credits ageless items there rather than assuming a child can make an adult-only reach.
+- **Not ported:** `agelessGFS` (OOT has no Great Fairy's Sword) and `agelessSoaring` (ComboShip's Song of Soaring in
+  OOT already works and is in logic at both ages).
