@@ -150,7 +150,9 @@ Gfx* CutOotDL(CutDL& cut, const char* path, const char* fistTexture, const char*
     }
     cut.gfx.assign(in.begin(), in.begin() + starts[cutAt]);
     if (tail != nullptr) {
-        Gfx call = gsSPDisplayList(tail);
+        // A routed path is called as G_DL_OTR_FILEPATH (what MM's runtime gSPDisplayList emits for one); a plain
+        // G_DL would run the path string itself as commands.
+        Gfx call = gsDma1p(G_DL_OTR_FILEPATH, tail, 0, G_DL_PUSH);
         cut.gfx.push_back(call);
     }
     Gfx end = gsSPEndDisplayList();
