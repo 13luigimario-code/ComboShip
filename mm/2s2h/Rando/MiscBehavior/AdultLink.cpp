@@ -11,6 +11,8 @@
 
 #include "AdultLink.h"
 #include "CrossGear.h"
+#include "2s2h/Rando/Rando.h"
+#include "2s2h/Rando/StaticData/StaticData.h"
 
 #include <cstring>
 #include <map>
@@ -241,12 +243,111 @@ PlayerAgeProperties sAdultAgeProperties;
 
 } // namespace
 
-extern "C" int Combo_AdultLink_AgeSystemOn(void) {
+// Developer override: Link is adult in Termina whatever the save says (testing the model without time travel).
+static bool DevAdult() {
     return CVarGetInteger("gCombo.Dev.MmAdultLink", 0) != 0;
 }
 
+extern "C" int Combo_AdultLink_AgeSystemOn(void) {
+    // The save's (or, in the combo fill's oracle, the seed's) Cross-Games Age option.
+    return DevAdult() || (IS_RANDO && (RANDO_SAVE_OPTIONS[RO_CROSS_GAME_AGE] != RO_GENERIC_OFF));
+}
+
+extern "C" int Combo_AdultLink_AgeSystemConfigured(void) {
+    // The menu's choice, for code that runs before a save exists (the menu, the generator's dump).
+    const auto& option = Rando::StaticData::Options[RO_CROSS_GAME_AGE];
+    return DevAdult() || (CVarGetInteger(option.cvar, option.defaultValue) != RO_GENERIC_OFF);
+}
+
 extern "C" int Combo_AdultLink_IsAdultAge(void) {
-    return Combo_AdultLink_AgeSystemOn(); // the developer toggle makes Link adult
+    if (DevAdult()) {
+        return 1;
+    }
+    return Combo_AdultLink_AgeSystemOn() && (gSaveContext.save.shipSaveInfo.rando.comboLinkAdult != 0);
+}
+
+// ---- Entering Termina at OOT's age ----
+namespace {
+int sEntryAge = -1; // the launcher's OOT age for the next MM entry: -1 none (a resume), 0 child, 1 adult
+
+constexpr u8 kWearIron = 1 << 0, kWearHover = 1 << 1, kWearGoron = 1 << 2, kWearZora = 1 << 3;
+const std::pair<u8, RandoInf> kWearFlags[] = {
+    { kWearIron, RANDO_INF_COMBO_WEARING_BOOTS_IRON },
+    { kWearHover, RANDO_INF_COMBO_WEARING_BOOTS_HOVER },
+    { kWearGoron, RANDO_INF_COMBO_WEARING_TUNIC_GORON },
+    { kWearZora, RANDO_INF_COMBO_WEARING_TUNIC_ZORA },
+};
+
+// OoTMM's Age_SwapEquipmentMm: each age keeps its own C buttons and worn boots/tunic. A first visit at an age starts
+// from the other age's buttons. Masks come off (OoTMM clears the equipped mask on an age change).
+void SwapLoadout(int from, int to) {
+    auto& rando = gSaveContext.save.shipSaveInfo.rando;
+    auto& out = rando.comboAgeLoadout[from];
+    for (int b = EQUIP_SLOT_C_LEFT; b <= EQUIP_SLOT_C_RIGHT; b++) {
+        out.buttonItems[b] = BUTTON_ITEM_EQUIP(0, b);
+        out.cButtonSlots[b] = C_SLOT_EQUIP(0, b);
+    }
+    out.wear = 0;
+    for (const auto& [bit, flag] : kWearFlags) {
+        if (Flags_GetRandoInf(flag)) {
+            out.wear |= bit;
+        }
+    }
+    rando.comboAgeLoadoutSet |= (u8)(1 << from);
+
+    if (rando.comboAgeLoadoutSet & (1 << to)) {
+        const auto& in = rando.comboAgeLoadout[to];
+        for (int b = EQUIP_SLOT_C_LEFT; b <= EQUIP_SLOT_C_RIGHT; b++) {
+            const u8 slot = in.cButtonSlots[b];
+            u8 item = in.buttonItems[b];
+            if ((slot != SLOT_NONE) && (slot < ARRAY_COUNT(gSaveContext.save.saveInfo.inventory.items))) {
+                // Re-read the slot: bottle contents and upgrades may have changed since, or the item may be gone.
+                // The trade slots cycle several items (deeds, letters, OOT's items) and a button may hold one that
+                // isn't the slot's current pick; OOT's items are never used up, so those stay.
+                const bool tradeSlot =
+                    (slot == SLOT_TRADE_DEED) || (slot == SLOT_TRADE_KEY_MAMA) || (slot == SLOT_TRADE_COUPLE);
+                if (!(tradeSlot && IS_COMBO_CROSS_ITEM(item))) {
+                    item = gSaveContext.save.saveInfo.inventory.items[slot];
+                }
+            }
+            BUTTON_ITEM_EQUIP(0, b) = item;
+            C_SLOT_EQUIP(0, b) = (item == ITEM_NONE) ? SLOT_NONE : slot;
+        }
+        for (const auto& [bit, flag] : kWearFlags) {
+            if (in.wear & bit) {
+                Flags_SetRandoInf(flag);
+            } else {
+                Flags_ClearRandoInf(flag);
+            }
+        }
+    }
+    // A transformation is a worn mask too: Link arrives in his own form, so the new age shows.
+    gSaveContext.save.playerForm = PLAYER_FORM_HUMAN;
+    gSaveContext.save.equippedMask = PLAYER_MASK_NONE;
+    Flags_ClearRandoInf(RANDO_INF_COMBO_WEARING_MASK_GERUDO);
+    Flags_ClearRandoInf(RANDO_INF_COMBO_WEARING_MASK_SKULL);
+    Flags_ClearRandoInf(RANDO_INF_COMBO_WEARING_MASK_SPOOKY);
+}
+} // namespace
+
+extern "C" void Combo_AdultLink_SetEntryAge(int ootAdult) {
+    sEntryAge = ootAdult;
+}
+
+extern "C" void Combo_AdultLink_ApplyEntryAge(void) {
+    const int age = sEntryAge;
+    sEntryAge = -1;
+    if (!IS_RANDO || (age < 0) || !Combo_AdultLink_AgeSystemOn()) {
+        return;
+    }
+    auto& rando = gSaveContext.save.shipSaveInfo.rando;
+    const int current = rando.comboLinkAdult ? 1 : 0;
+    if (age == current) {
+        return;
+    }
+    SwapLoadout(current, age);
+    rando.comboLinkAdult = (u8)age;
+    SPDLOG_INFO("[ComboShip] Cross-Games Age: Link enters Termina as {}", age ? "adult" : "child");
 }
 
 extern "C" int Combo_AdultLink_OnPlayerInit(Player* player) {

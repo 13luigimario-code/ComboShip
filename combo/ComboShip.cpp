@@ -210,6 +210,9 @@ static FnMMInvalidateOwlBlob MM_InvalidateOwlBlobSlot = nullptr;
 typedef unsigned char (*FnIsOnFileSelect)();
 static FnVoid SOH_ParkForComboMMResume = nullptr;
 static FnMMInitSave MM_SetComboEntryIsResume = nullptr;
+// Cross-Games Age: OOT Link's age as he leaves Hyrule -> MM's entry age (-1 = resume keeps MM's saved age).
+static FnInt SOH_ComboLinkIsAdult = nullptr;
+static FnMMInitSave MM_SetComboEntryAge = nullptr;
 static FnIsOnFileSelect SOH_IsOnFileSelect = nullptr;
 // OOT slot whose MM save is live in MM's dormant memory (-1 = none). Guards Combo_OnOOTSaveLoad
 // against reloading stale disk state over MM's in-memory progress after round trips.
@@ -2846,6 +2849,8 @@ static void Combo_ResumeMMIfLastSavedThere(int fileNum) {
     std::cout << "[ComboShip] Slot " << fileNum << " was last saved in MM — resuming MM" << std::endl;
     if (MM_SetComboEntryIsResume)
         MM_SetComboEntryIsResume(1); // a real save load: honors MM's Remember Save Location
+    if (MM_SetComboEntryAge)
+        MM_SetComboEntryAge(-1); // Cross-Games Age: a resume keeps the age MM was saved at
     g_PendingMMFileNum = fileNum;
     SOH_ParkForComboMMResume(); // drops out of OOT's game loop; the launcher then enters MM
 }
@@ -2854,6 +2859,9 @@ static void Combo_OnOOTSceneSwitch(int fileNum) {
     std::cout << "[ComboShip] Mask Shop entered — switching to MM, slot " << fileNum << std::endl;
     if (MM_SetComboEntryIsResume)
         MM_SetComboEntryIsResume(0); // portal entry: always arrives in South Clock Town
+    // Cross-Games Age: MM Link takes OOT Link's age (no-op unless the setting is on)
+    if (MM_SetComboEntryAge)
+        MM_SetComboEntryAge(SOH_ComboLinkIsAdult ? SOH_ComboLinkIsAdult() : 0);
     g_PendingMMFileNum = fileNum;
     // OOT game loop is already exiting (gGameState->running = false set by the hook).
 }
@@ -3006,6 +3014,8 @@ int main(int argc, char** argv) {
     SOH_ParkForComboMMResume = (FnVoid)GetSym(sohModule, "SOH_ParkForComboMMResume");
     MM_SetComboEntryIsResume = (FnMMInitSave)GetSym(mmModule, "MM_SetComboEntryIsResume");
     SOH_IsOnFileSelect = (FnIsOnFileSelect)GetSym(sohModule, "SOH_IsOnFileSelect");
+    SOH_ComboLinkIsAdult = (FnInt)GetSym(sohModule, "SOH_ComboLinkIsAdult");
+    MM_SetComboEntryAge = (FnMMInitSave)GetSym(mmModule, "MM_SetComboEntryAge");
     SOH_SetOnSceneSwitchCallback = (FnSetSceneSwitchCallback)GetSym(sohModule, "SOH_SetOnSceneSwitchCallback");
     MM_RunGame = (FnMMRunGame)GetSym(mmModule, "MM_RunGame");
     SOH_Deinit = (FnSOHDeinit)GetSym(sohModule, "SOH_Deinit");

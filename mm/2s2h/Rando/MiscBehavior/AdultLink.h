@@ -5,9 +5,9 @@
 // adult x1.5), with OOT's adult body measurements, and with every limb drawn from OOT's own adult display lists
 // ("@oot:" routing to object_link_boy).
 //
-// For now this is a developer toggle (CVar gCombo.Dev.MmAdultLink, read when the player actor is created); the
-// Cross-Games Age setting will decide it from the OOT save. C ABI so the decomp C files can call it from small
-// COMBO_BUILD-guarded hooks. See docs/deviations/rando.md.
+// Link is adult in Termina when the Cross-Games Age setting is on and he came from Hyrule as adult (comboLinkAdult in
+// the MM save, read when the player actor is created); the developer CVar gCombo.Dev.MmAdultLink forces it. C ABI so
+// the decomp C files can call it from small COMBO_BUILD-guarded hooks. See docs/deviations/rando.md.
 #ifndef COMBO_ADULT_LINK_H
 #define COMBO_ADULT_LINK_H
 
@@ -21,10 +21,17 @@ struct PlayState;
 struct Player;
 struct PlayerAgeProperties;
 
-// MM can have an adult Link at all (for now the developer CVar; the Cross-Games Age setting will decide it).
+// MM can have an adult Link: the loaded save's (or the fill oracle's) Cross-Games Age option, or the developer CVar
+// gCombo.Dev.MmAdultLink (which also forces adult).
 int Combo_AdultLink_AgeSystemOn(void);
-// Link's age in MM is adult (whatever form he is in).
+// The same from the menu's settings, before any save exists (menu, generator dump).
+int Combo_AdultLink_AgeSystemConfigured(void);
+// Link's age in MM is adult (whatever form he is in): the save's comboLinkAdult.
 int Combo_AdultLink_IsAdultAge(void);
+// The launcher, before entering Termina from Hyrule: OOT Link's age (1 adult, 0 child; -1 for a save resume).
+void Combo_AdultLink_SetEntryAge(int ootAdult);
+// title_setup.c, once the MM save is loaded: Link takes that age, swapping each age's C buttons and worn gear.
+void Combo_AdultLink_ApplyEntryAge(void);
 // Player_Init: decides whether this player is adult (human form only). Returns 1 when adult.
 int Combo_AdultLink_OnPlayerInit(struct Player* player);
 // This player is the adult Link set up by the last Player_Init.

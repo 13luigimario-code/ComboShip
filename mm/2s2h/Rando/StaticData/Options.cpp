@@ -112,6 +112,7 @@ std::map<RandoOptionId, RandoStaticOption> Options = {
     RO(RO_CROSS_HOOKSHOT_SHORT,     RO_GENERIC_OFF),
     RO(RO_CROSS_STICKS_NUTS,        RO_GENERIC_OFF),
     RO(RO_CROSS_GAME_FW,            RO_GENERIC_OFF),
+    RO(RO_CROSS_GAME_AGE,           RO_GENERIC_OFF),
 #define AGE_REQ(suffix, label, ootmmId, item, poolOption) RO(RO_AGE_REQ_##suffix, RO_AGE_ANY),
 #include "2s2h/Rando/MiscBehavior/AgeReqList.h"
 #undef AGE_REQ

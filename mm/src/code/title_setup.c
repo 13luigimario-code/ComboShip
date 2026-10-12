@@ -7,7 +7,8 @@
 #include <libultraship/bridge/consolevariablebridge.h> // CVarGetInteger (Remember Save Location)
 // ComboShip (teleport songs): arrival entrance pushed by the launcher (>= 0), consumed once.
 extern int gComboTargetEntrance;
-void Combo_MM_ApplyFwArrival(void); // ComboShip: Cross-Games Farore's Wind (CrossSpells.cpp)
+void Combo_MM_ApplyFwArrival(void);       // ComboShip: Cross-Games Farore's Wind (CrossSpells.cpp)
+void Combo_AdultLink_ApplyEntryAge(void); // ComboShip: Cross-Games Age (AdultLink.cpp)
 extern int gComboCrossArrival;
 #endif
 #include "z64save.h"
@@ -102,6 +103,8 @@ void Setup_InitImpl(SetupState* this) {
             // Cross-Games Farore's Wind: arrive at the warp point itself (CrossSpells.cpp).
             Combo_MM_ApplyFwArrival();
         }
+        // ComboShip (Cross-Games Age): arriving from Hyrule, Link takes OOT Link's age (AdultLink.cpp).
+        Combo_AdultLink_ApplyEntryAge();
         gSaveContext.save.cutsceneIndex = 0;
         // Reset magicLevel like Sram_OpenSave does — re-arms the magic meter grow animation
         // (Interface_Update only steps magicCapacity when magicLevel == 0).

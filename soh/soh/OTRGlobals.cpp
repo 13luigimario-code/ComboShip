@@ -5624,6 +5624,12 @@ extern "C" COMBO_EXPORT uint8_t SOH_IsOnFileSelect(void) {
     return (gPlayState == NULL && gGameState != NULL && gGameState->main == (GameStateFunc)FileChoose_Main) ? 1 : 0;
 }
 
+// ComboShip (Cross-Games Age): OOT Link's age as he leaves Hyrule; the launcher passes it to MM, which
+// takes it on entry when the setting is on (AdultLink.cpp). 1 adult, 0 child.
+extern "C" COMBO_EXPORT int SOH_ComboLinkIsAdult(void) {
+    return gSaveContext.linkAge == LINK_AGE_ADULT ? 1 : 0;
+}
+
 // ComboShip (#89): leave OOT's game loop before its first Play frame so the launcher can enter MM.
 // Clearing init is what ends RunFrame's `while (nextOvl)` (FileChoose queued Play_Init); no save and no
 // OnExitGame here — both would break the resume. See docs/deviations/boot-shutdown.md.

@@ -68,7 +68,7 @@ void Rando::MiscBehavior::OnFileCreate(s16 fileNum) {
 
 #ifdef COMBO_BUILD
                 // ComboShip (Cross-Games Age): "Random" MM age requirements become child or adult from the seed.
-                Rando::AgeReq::Resolve(finalSeed, RANDO_SAVE_OPTIONS, Combo_AdultLink_AgeSystemOn() != 0);
+                Rando::AgeReq::Resolve(finalSeed, RANDO_SAVE_OPTIONS, Combo_AdultLink_AgeSystemConfigured() != 0);
 #endif
 
                 // If Skulltula tokens are not shuffled, use the vanilla requirement

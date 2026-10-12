@@ -3422,7 +3422,8 @@ typedef enum {
     RO_CROSS_OCARINA_FAIRY,
     RO_CROSS_HOOKSHOT_SHORT,
     RO_CROSS_STICKS_NUTS,
-    RO_CROSS_GAME_FW, // OoTMM "Cross-Games Farore's Wind" (needs RO_CROSS_SPELL_WIND)
+    RO_CROSS_GAME_FW,  // OoTMM "Cross-Games Farore's Wind" (needs RO_CROSS_SPELL_WIND)
+    RO_CROSS_GAME_AGE, // OoTMM "Cross-Games Age": Link enters Termina at his age in Hyrule
 // Cross-Games Age: OoTMM's MM age requirements, RO_AGE_REQ_<item> (values: RandoOptionAgeReq).
 #define AGE_REQ(suffix, label, ootmmId, item, poolOption) RO_AGE_REQ_##suffix,
 #include "MiscBehavior/AgeReqList.h"

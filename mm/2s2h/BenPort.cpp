@@ -2704,6 +2704,13 @@ extern "C" COMBO_EXPORT void MM_SetComboEntryIsResume(int isResume) {
     Combo_ClearReturnRequests(); // a stale request would quit the session we're about to start
 }
 
+// ComboShip (Cross-Games Age): OOT Link's age for the next entry (-1 = a resume, which keeps the age MM
+// was saved at). Set by the launcher before each MM_RunGame/MM_ResumeGame; applied in title_setup.c.
+extern "C" void Combo_AdultLink_SetEntryAge(int ootAdult);
+extern "C" COMBO_EXPORT void MM_SetComboEntryAge(int ootAdult) {
+    Combo_AdultLink_SetEntryAge(ootAdult);
+}
+
 // ComboShip (#83): adopt OOT's targeting/audio. MM normally reads these from global.json, which combo
 // never writes (its file select is never reached), leaving SaveContext_Init's defaults — so
 // Z-targeting silently reverted to Switch. Queries soh.dll; no-op if the export is missing.
@@ -3541,7 +3548,7 @@ extern "C" COMBO_EXPORT const char* MM_DumpRandoStaticData(void) {
     // ComboShip (Cross-Games Age): some MM item may be for adult Link only (or Random), so the seed may need him in
     // Termina; the combo fill names that when it fails without ever getting him there.
     bool needsAdult = false;
-    if (Combo_AdultLink_AgeSystemOn()) {
+    if (Combo_AdultLink_AgeSystemConfigured()) {
 #define AGE_REQ(suffix, label, ootmmId, item, poolOption)                                    \
     {                                                                                        \
         const auto& opt = Rando::StaticData::Options[RO_AGE_REQ_##suffix];                   \

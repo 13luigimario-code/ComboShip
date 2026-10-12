@@ -1021,7 +1021,7 @@ static bool ItemPoolCheckbox(const char* label, RandoOptionId optionId, const ch
 // ComboShip (Cross-Games Age): OoTMM's "requires Child/Adult Link" per MM item (AgeReqList.h), shown while MM can have
 // an adult Link.
 static void DrawAgeRequirementsCard() {
-    if (!Combo_AdultLink_AgeSystemOn()) {
+    if (!Combo_AdultLink_AgeSystemConfigured()) {
         return;
     }
     static const std::unordered_map<int32_t, const char*> kAgeReqOptions = {
@@ -1168,6 +1168,11 @@ static void DrawItemPoolTab() {
                      "Adds Ocarina of Time's Nayru's Love to the item pool (Letter to Kafei / Pendant slot). Cast by "
                      "human Link in Termina for 24 magic, nothing can hurt him for about a minute.",
                      1);
+    ItemPoolCheckbox("Cross-Games Age", RO_CROSS_GAME_AGE,
+                     "Link enters Termina at the age he has in Hyrule: as adult Link after time travel (he gets "
+                     "there by playing the Song of Soaring in Hyrule onto an owl statue; the Happy Mask Shop is only "
+                     "open to child Link). Each age keeps its own C buttons and worn boots and tunic. Age "
+                     "Requirements (below) decide which items each age can use.");
     ItemPoolCheckbox("Cross-Games Farore's Wind", RO_CROSS_GAME_FW,
                      "With Farore's Wind above, there is one Farore's Wind point across both games: set it in "
                      "Termina and casting Farore's Wind in Hyrule warps you back to it, or the other way round.",

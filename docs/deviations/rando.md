@@ -2458,11 +2458,34 @@ which is used up.
 Also: MM's `title_setup.c` now includes `consolevariablebridge.h` for its Remember Save Location `CVarGetInteger`
 (an implicit declaration clang rejects).
 
-## Cross-Games Age, in progress: adult Link in MM (2026-10-12)
+## Cross-Games Age (OoTMM `crossAge`) (2026-10-12)
 
-Groundwork for OoTMM's `crossAge` (Majora's Mask played at Ocarina of Time's age). Human Link can be OOT's adult Link
-(`mm/2s2h/Rando/MiscBehavior/AdultLink.{h,cpp}`). For now that is the developer CVar `gCombo.Dev.MmAdultLink`, read
-when the player actor is created (`Player_Init`, human form only); the setting itself will set it from OOT's age.
+Majora's Mask played at Ocarina of Time's age. The setting is the MM option `RO_CROSS_GAME_AGE` (Item Pool tab,
+"Cross-Games Age"); the sections below cover the setting, the adult model, the age requirements and the logic.
+
+### Cross-Games Age: the setting (2026-10-12)
+
+- **Entering Termina:** when Link crosses from Hyrule (the Happy Mask Shop, a teleport song, Cross-Games Farore's
+  Wind), the launcher passes OOT Link's age (`SOH_ComboLinkIsAdult` -> `MM_SetComboEntryAge`) and MM takes it as it
+  loads the save (`Combo_AdultLink_ApplyEntryAge` in `title_setup.c`). Resuming a slot last saved in MM keeps the age
+  MM was saved at (as OoTMM, whose MM save carries the age). The age lives in the MM save
+  (`shipSaveInfo.rando.comboLinkAdult`).
+- **Per-age loadout (OoTMM `Age_SwapEquipmentMm`):** each age keeps its own C buttons and worn OOT boots and tunic
+  (`comboAgeLoadout[2]`). The first visit at an age starts from the other age's buttons. On restore each button
+  re-reads its inventory slot (bottle contents, a traded-away deed), except the OOT items that share MM's cycling
+  trade slots, which are never used up. Masks, OOT masks and transformations come off on an age change.
+- **Logic:** the fill reads the same option (the menu's choice for the dump and file creation; the save's afterwards),
+  so the adult pass and the age requirements switch on with it.
+- The developer CVar `gCombo.Dev.MmAdultLink` still forces adult Link (and the age system) for testing.
+
+Tested in game: entering MM from adult OOT Link draws adult Link; swapping ages restores each age's C buttons (two
+OOT items on the same trade slot stay distinct) and Iron Boots. Headless: on with all "Any age" and with three
+adult-only items passes; the same without OOT's Song of Soaring fails with the hint; off passes as before.
+
+### Cross-Games Age: adult Link in MM (2026-10-12)
+
+Human Link can be OOT's adult Link (`mm/2s2h/Rando/MiscBehavior/AdultLink.{h,cpp}`), read when the player actor is
+created (`Player_Init`, human form only, `Combo_AdultLink_IsAdultAge`).
 
 - **Body:** MM's Fierce Deity skeleton is OOT's adult skeleton limb for limb (FD is drawn at 1.5x), so adult Link runs
   on it at human Link's scale with MM's animations. `Player_Init` (guarded) takes that skeleton and an age-properties
@@ -2498,8 +2521,8 @@ order, are `mm/2s2h/Rando/MiscBehavior/AgeReqList.h` (an X-macro shared by the o
 menu). The module is `AgeRequirements.{h,cpp}`.
 
 - **Only with an adult Link:** the requirements apply, and the menu card (Item Pool tab, "Age Requirements (MM)")
-  shows, only while MM can have an adult Link (`Combo_AdultLink_AgeSystemOn`; for now the developer CVar, later the
-  Cross-Games Age setting). A save created without it stores "Any age" for every item, so no seed can ask for an age
+  shows, only while MM can have an adult Link (the Cross-Games Age setting: `Combo_AdultLink_AgeSystemOn` for a
+  save, `Combo_AdultLink_AgeSystemConfigured` for the menu before one exists). A save created without it stores "Any age" for every item, so no seed can ask for an age
   MM can't reach.
 - **Random:** resolved when the save is created (native `OnFileCreate` and the combo `MM_InitRandoSaveFile`, with the
   seed), with OoTMM's solver (`randomizeMmAgeRequirements`): each random item gets a coin flip for its preferred age,
