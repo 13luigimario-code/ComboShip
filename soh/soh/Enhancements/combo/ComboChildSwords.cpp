@@ -160,7 +160,7 @@ extern "C" f32 Combo_ChildSwordDamage(u32 dmgFlags, f32 damage) {
     if ((dmgFlags & (DMG_SLASH_KOKIRI | DMG_SPIN_KOKIRI | DMG_JUMP_KOKIRI)) == 0) {
         return damage;
     }
-    return damage * (1 + Combo_ChildSwordTier());
+    return damage * (f32)(1 + Combo_ChildSwordTier());
 }
 
 static void RegisterComboChildSwords() {

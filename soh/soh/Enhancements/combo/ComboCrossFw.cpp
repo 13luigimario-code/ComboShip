@@ -140,15 +140,15 @@ extern "C" void Combo_OoT_ApplyFwArrival(void) {
     gSaveContext.entranceIndex = gSaveContext.fw.entranceIndex;
     gSaveContext.respawnFlag = 3; // RESPAWN_MODE_TOP + 1, as OOT's own return
     RespawnData* top = &gSaveContext.respawn[RESPAWN_MODE_TOP];
-    top->pos.x = gSaveContext.fw.pos.x;
-    top->pos.y = gSaveContext.fw.pos.y;
-    top->pos.z = gSaveContext.fw.pos.z;
-    top->yaw = gSaveContext.fw.yaw;
-    top->playerParams = gSaveContext.fw.playerParams;
-    top->entranceIndex = gSaveContext.fw.entranceIndex;
-    top->roomIndex = gSaveContext.fw.roomIndex;
-    top->tempSwchFlags = gSaveContext.fw.tempSwchFlags;
-    top->tempCollectFlags = gSaveContext.fw.tempCollectFlags;
+    top->pos.x = (f32)gSaveContext.fw.pos.x;
+    top->pos.y = (f32)gSaveContext.fw.pos.y;
+    top->pos.z = (f32)gSaveContext.fw.pos.z;
+    top->yaw = (s16)gSaveContext.fw.yaw;
+    top->playerParams = (s16)gSaveContext.fw.playerParams;
+    top->entranceIndex = (s16)gSaveContext.fw.entranceIndex;
+    top->roomIndex = (u8)gSaveContext.fw.roomIndex;
+    top->tempSwchFlags = (u32)gSaveContext.fw.tempSwchFlags;
+    top->tempCollectFlags = (u32)gSaveContext.fw.tempCollectFlags;
     top->data = 0x28;
 }
 #endif
