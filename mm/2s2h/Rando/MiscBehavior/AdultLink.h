@@ -29,8 +29,27 @@ int Combo_AdultLink_Is(struct Player* player);
 struct PlayerAgeProperties* Combo_AdultLink_AgeProperties(const struct PlayerAgeProperties* fierceDeity);
 // Player_DrawImpl: eye/mouth textures (segments 0x08/0x09) and the tunic color for the adult head and body.
 void Combo_AdultLink_SetupDraw(struct PlayState* play, struct Player* player, int eyeIndex, int mouthIndex);
+// After the skeleton draw (segment 0x0D = limb matrices): OOT's Silver/Golden Gauntlet plates.
+void Combo_AdultLink_DrawGear(struct PlayState* play, struct Player* player);
+// Head-limb space: applies the transform that fits MM's (child-sized) masks onto adult Link's face. Push the matrix
+// stack first.
+void Combo_AdultLink_MaskTransform(void);
+// Reach of the held melee weapon for the sword collider (MM's sMeleeWeaponLengths value passed in).
+float Combo_AdultLink_MeleeWeaponLength(struct Player* player, int meleeWeapon, float length);
+// OOT adult Link's bottle glass (translucent; tinted by the environment color).
+void* Combo_AdultLink_BottleDL(void);
+// OOT adult Link's bow string.
+void* Combo_AdultLink_BowStringDL(void);
+// Sheath-limb space: the transform that sizes MM's back shields for adult Link (push the matrix stack first).
+void Combo_AdultLink_GearTransform(void);
+// OOT adult Link's closed fist for a hand limb (near/far by lod).
+void* Combo_AdultLink_ClosedFistDL(int limbIndex, int lod);
+// The player's limb override already gave this hand limb an adult model (a cross-game tool): leave it this frame.
+void Combo_AdultLink_KeepHand(int limbIndex);
 // After the player's limb override: swap whatever MM chose for that limb with OOT's adult display list.
-void Combo_AdultLink_RemapLimb(struct Player* player, int limbIndex, void** dList, int lod);
+// firstPerson: the first-person arms are being drawn (aiming), which OOT draws with their own models.
+void Combo_AdultLink_RemapLimb(struct PlayState* play, struct Player* player, int limbIndex, void** dList, int lod,
+                               int firstPerson);
 
 #ifdef __cplusplus
 }

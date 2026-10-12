@@ -8,6 +8,7 @@
 #ifdef COMBO_BUILD
 
 #include "CrossGear.h"
+#include "AdultLink.h"
 #include "CrossItemAssets.h"
 #include "2s2h/Rando/Rando.h"
 
@@ -620,8 +621,15 @@ extern "C" void Combo_Gear_DrawBoots(PlayState* play, Player* player) {
     if ((boots == COMBO_BOOTS_NONE) && (mask == COMBO_MASK_NONE)) {
         return;
     }
+    const bool adult = Combo_AdultLink_Is(player) != 0; // Cross-Games Age: OOT's own adult meshes
     OPEN_DISPS(play->state.gfxCtx);
-    if (boots == COMBO_BOOTS_IRON) {
+    if (adult && (boots == COMBO_BOOTS_IRON)) {
+        gSPDisplayList(POLY_OPA_DISP++, (Gfx*)gComboLinkAdultLeftIronBootDL);
+        gSPDisplayList(POLY_OPA_DISP++, (Gfx*)gComboLinkAdultRightIronBootDL);
+    } else if (adult && (boots == COMBO_BOOTS_HOVER)) {
+        gSPDisplayList(POLY_OPA_DISP++, (Gfx*)gComboLinkAdultLeftHoverBootDL);
+        gSPDisplayList(POLY_OPA_DISP++, (Gfx*)gComboLinkAdultRightHoverBootDL);
+    } else if (boots == COMBO_BOOTS_IRON) {
         gSPDisplayList(POLY_OPA_DISP++, gComboLinkLeftIronBootDL);
         gSPDisplayList(POLY_OPA_DISP++, gComboLinkRightIronBootDL);
     } else if (boots == COMBO_BOOTS_HOVER) {
@@ -633,6 +641,14 @@ extern "C" void Combo_Gear_DrawBoots(PlayState* play, Player* player) {
                                                 gComboLinkChildSpookyMaskDL };
         // Head limb matrix (OoTMM's prepareMask: 0x0D0001C0), then OOT's own worn-mask mesh.
         gSPMatrix(POLY_OPA_DISP++, 0x0D0001C1, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        if (adult) {
+            // Adult Link's head: the same fit as MM's masks (AdultLink.cpp).
+            Matrix_Push();
+            Matrix_Translate(0.0f, 0.0f, 0.0f, MTXMODE_NEW);
+            Combo_AdultLink_MaskTransform();
+            gSPMatrix(POLY_OPA_DISP++, Matrix_Finalize(play->state.gfxCtx), G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
+            Matrix_Pop();
+        }
         gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kMaskDLs[mask - COMBO_MASK_GERUDO]);
     }
     CLOSE_DISPS(play->state.gfxCtx);

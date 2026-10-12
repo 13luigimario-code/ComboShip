@@ -60,6 +60,12 @@ static const ALIGN_ASSET(2) char gComboIconStoneOfAgonyTex[] =
 static const ALIGN_ASSET(2) char gComboNameFairyOcarinaTex[] = COMBO_OOT_NAME("gFairyOcarinaItemNameENGTex");
 
 // Boot textures for the boots drawn on Link (OoTMM's child-sized boot meshes, CrossGear.cpp).
+// Cross-Games Age: OOT adult Link's own boots (they load OOT adult limb matrices from segment 0x0D, and adult Link in
+// MM runs on the same skeleton).
+static const ALIGN_ASSET(2) char gComboLinkAdultLeftIronBootDL[] = COMBO_OOT_LINK_BOY("gLinkAdultLeftIronBootDL");
+static const ALIGN_ASSET(2) char gComboLinkAdultRightIronBootDL[] = COMBO_OOT_LINK_BOY("gLinkAdultRightIronBootDL");
+static const ALIGN_ASSET(2) char gComboLinkAdultLeftHoverBootDL[] = COMBO_OOT_LINK_BOY("gLinkAdultLeftHoverBootDL");
+static const ALIGN_ASSET(2) char gComboLinkAdultRightHoverBootDL[] = COMBO_OOT_LINK_BOY("gLinkAdultRightHoverBootDL");
 static const ALIGN_ASSET(2) char gComboLinkIronBootTex[] = COMBO_OOT_LINK_BOY("gLinkAdultIronBootTex");
 static const ALIGN_ASSET(2) char gComboLinkIronBootTLUT[] = COMBO_OOT_LINK_BOY("object_link_boyTLUT_00CB40");
 static const ALIGN_ASSET(2) char gComboLinkHoverBootsHeelTex[] = COMBO_OOT_LINK_BOY("gLinkAdultHoverBootsHeelTex");

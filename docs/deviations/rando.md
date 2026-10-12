@@ -2457,3 +2457,35 @@ which is used up.
 
 Also: MM's `title_setup.c` now includes `consolevariablebridge.h` for its Remember Save Location `CVarGetInteger`
 (an implicit declaration clang rejects).
+
+## Cross-Games Age, in progress: adult Link in MM (2026-10-12)
+
+Groundwork for OoTMM's `crossAge` (Majora's Mask played at Ocarina of Time's age). Human Link can be OOT's adult Link
+(`mm/2s2h/Rando/MiscBehavior/AdultLink.{h,cpp}`). For now that is the developer CVar `gCombo.Dev.MmAdultLink`, read
+when the player actor is created (`Player_Init`, human form only); the setting itself will set it from OOT's age.
+
+- **Body:** MM's Fierce Deity skeleton is OOT's adult skeleton limb for limb (FD is drawn at 1.5x), so adult Link runs
+  on it at human Link's scale with MM's animations. `Player_Init` (guarded) takes that skeleton and an age-properties
+  entry built from FD's (OOT adult Link's vectors, voice, surface sounds and animations) with OOT's adult sizes, the
+  same values OoTMM writes. `Player_GetHeight` (z_actor.c) returns OOT's adult 68; the leg IK and foot tables use FD's
+  rows, which equal OOT's adult ones.
+- **Model (z_player_lib.c, guarded):** `Player_DrawImpl` wraps the limb override: whatever MM picks per limb becomes
+  OOT adult Link's display list ("@oot:" routing to `object_link_boy`, near/far by LOD), with OOT's adult eyes and
+  mouth on segments 0x08/0x09 and the tunic as the environment color (Kokiri, Goron, Zora). First-person aiming uses
+  OOT's own first-person arms, including the right forearm MM leaves out.
+- **MM gear:** as on OoTMM's adult Link, he carries MM's own gear. MM's human item hands are a call to the closed fist
+  and calls to the item; they are rebuilt with OOT adult Link's fist and the item 1.25x bigger. Sheaths and back
+  shields are 1.25x bigger too. The Ocarina is OOT's adult hand holding the Ocarina of Time. Sword reach follows
+  OoTMM's adult values (4000 Kokiri/Razor, 5500 Gilded/Great Fairy's Sword). The bow string is OOT's adult one.
+- **Masks:** MM's masks and the OOT masks (Gerudo, Skull, Spooky) are scaled 1.25x in head space, OoTMM's adult mask
+  matrix (`mm_adult_link_mask_mtx.bin`). Under hat-like masks (Bunny Hood, Kafei's Mask, Postman's Hat, Captain's
+  Hat) his long cap is hidden.
+- **OOT gear:** Iron and Hover Boots are OOT's adult boot meshes (same skeleton, same limb matrices). Silver and
+  Golden Gauntlets draw OOT's gauntlet plates (open or closed per hand). Bottles use OOT's adult bottle glass,
+  tinted by its contents.
+- **Cross-game tools:** the Megaton Hammer is OOT adult Link's own hammer hand. The Boomerang, Slingshot, Deku Shield
+  and Fairy Ocarina (child items in OOT) are cut out of OOT child Link's meshes and drawn in adult Link's fist. The
+  Slingshot mesh draws the hand first, so its cut drops only the hand's triangles. In first person the Slingshot uses
+  OOT adult Link's bow hand without the bow (as OoTMM does), and its string stretches up to OoTMM's adult 1.65.
+- **Known gaps:** a held Deku Stick and the transformation-mask cutscene items keep MM's child placement. The
+  All-Night and Kamaro masks fit closely enough that adult Link's face shows through at the edges.

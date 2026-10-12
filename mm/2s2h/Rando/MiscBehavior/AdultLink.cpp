@@ -1,16 +1,29 @@
 // mm/2s2h/Rando/MiscBehavior/AdultLink.cpp
-// ComboShip (Cross-Games Age, part 1): Ocarina of Time's adult Link as human Link in Majora's Mask. See AdultLink.h
-// for the approach and docs/deviations/rando.md.
+// ComboShip (Cross-Games Age): Ocarina of Time's adult Link as human Link in Majora's Mask. See AdultLink.h for the
+// approach and docs/deviations/rando.md.
 //
-// Body measurements are OOT's adult entry of sAgeProperties (z_player.c, OOT decomp); the limb mapping follows OOT's
-// own adult display-list tables (z_player_lib.c, OOT decomp).
+// Body measurements are OOT's adult entry of sAgeProperties (z_player.c, OOT decomp); the body, face, first-person
+// arms, gauntlets and bottle follow OOT's own adult display-list tables (z_player_lib.c, OOT decomp). What he holds and
+// carries is MM's own gear, like OoTMM's adult Link: MM's item meshes in OOT adult Link's fist, and MM's sheaths and
+// back shields, 1.25x bigger (OoTMM's adult mask scale; adult items in OOT are about that much bigger than child ones,
+// and it matches OoTMM's adult sword reach, 3000 -> 4000).
 #ifdef COMBO_BUILD
 
 #include "AdultLink.h"
 #include "CrossGear.h"
 
 #include <cstring>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+#include <fast/resource/ResourceType.h>
+#include <fast/resource/type/DisplayList.h>
 #include <libultraship/bridge/consolevariablebridge.h>
+#include <ship/Context.h>
+#include <ship/resource/ResourceManager.h>
+#include <ship/utils/StrHash64.h>
 
 extern "C" {
 #include "variables.h"
@@ -26,6 +39,9 @@ extern "C" {
 namespace {
 
 Player* sAdultPlayer = nullptr; // the player actor Player_Init last set up as adult
+bool sLeftHandOpen = false;     // this frame's hands, for the gauntlet plates (OOT: sLeftHandType == LH_OPEN)
+bool sRightHandOpen = false;
+int sKeptHand = -1; // hand limb whose model a cross-game tool already set this frame
 
 // ---- Display lists ----
 // Resource paths must sit at even addresses (an odd pointer reads as a segmented address), hence the aligned arrays.
@@ -64,50 +80,15 @@ const LodPair kBody[PLAYER_LIMB_MAX] = {
 };
 
 const LodPair kLeftHandClosed = ADULT_DL(gLinkAdultLeftHandClosed);
-const LodPair kLeftHandSword = ADULT_DL(gLinkAdultLeftHandHoldingMasterSword);
-const LodPair kLeftHandBgs = ADULT_DL(gLinkAdultLeftHandHoldingBgs);
+const LodPair kRightHandClosed = ADULT_DL(gLinkAdultRightHandClosed);
 const LodPair kLeftHandBottle = { COMBO_ADULT("gLinkAdultHandHoldingBottleDL"),
                                   COMBO_ADULT("gLinkAdultHandHoldingBottleDL") };
-const LodPair kRightHandClosed = ADULT_DL(gLinkAdultRightHandClosed);
-const LodPair kRightHandHylian = ADULT_DL(gLinkAdultRightHandHoldingHylianShield);
-const LodPair kRightHandMirror = ADULT_DL(gLinkAdultRightHandHoldingMirrorShield);
-const LodPair kRightHandBow = ADULT_DL(gLinkAdultRightHandHoldingBow);
-const LodPair kRightHandOcarina = ADULT_DL(gLinkAdultRightHandHoldingOot);
-const LodPair kRightHandHookshot = ADULT_DL(gLinkAdultRightHandHoldingHookshot);
-const LodPair kSheathSword = ADULT_DL(gLinkAdultMasterSwordAndSheath);
-const LodPair kSheathHylian = ADULT_DL(gLinkAdultHylianShieldAndSheath);
-const LodPair kSheathHylianSword = ADULT_DL(gLinkAdultHylianShieldSwordAndSheath);
-const LodPair kSheathMirror = ADULT_DL(gLinkAdultMirrorShieldAndSheath);
-const LodPair kSheathMirrorSword = ADULT_DL(gLinkAdultMirrorShieldSwordAndSheath);
+const LodPair kRightHandOcarina = ADULT_DL(gLinkAdultRightHandHoldingOot); // MM's ocarina is the Ocarina of Time too
+// Fallbacks if an MM item list can't be rebuilt.
+const LodPair kLeftHandSword = ADULT_DL(gLinkAdultLeftHandHoldingMasterSword);
 
-// MM's human hand display list -> OOT's adult one. MM's player tables hold resource paths, so these compare by name.
-struct HandMap {
-    const char* human;
-    const LodPair* adult;
-};
-const HandMap kHands[] = {
-    { gLinkHumanLeftHandOpenDL, &kBody[PLAYER_LIMB_LEFT_HAND] },
-    { gLinkHumanLeftHandClosedDL, &kLeftHandClosed },
-    { gLinkHumanLeftHandHoldingKokiriSwordDL, &kLeftHandSword },
-    { gLinkHumanLeftHandHoldingRazorSwordDL, &kLeftHandSword },
-    { gLinkHumanLeftHandHoldingGildedSwordDL, &kLeftHandSword },
-    { gLinkHumanLeftHandHoldingGreatFairysSwordDL, &kLeftHandBgs },
-    { gLinkHumanLeftHandHoldBottleDL, &kLeftHandBottle },
-    { gLinkHumanRightHandOpenDL, &kBody[PLAYER_LIMB_RIGHT_HAND] },
-    { gLinkHumanRightHandClosedDL, &kRightHandClosed },
-    { gLinkHumanRightHandHoldingHerosShieldDL, &kRightHandHylian },
-    { gLinkHumanRightHandHoldingMirrorShieldDL, &kRightHandMirror },
-    { gLinkHumanRightHandHoldingBowDL, &kRightHandBow },
-    { gLinkHumanRightHandHoldingOcarinaDL, &kRightHandOcarina },
-    { gLinkHumanRightHandHoldingHookshotDL, &kRightHandHookshot },
-};
-
-// Human sheath display lists that show a sword in the sheath.
-const char* const kSheathedSwords[] = {
-    gLinkHumanSheathedKokiriSwordDL,
-    gLinkHumanSheathedRazorSwordDL,
-    gLinkHumanSheathedGildedSwordDL,
-};
+// Size of MM's gear on adult Link (see the top of this file).
+constexpr float kGearScale = 1.25f;
 
 bool IsPath(const void* dList, const char* path) {
     const char* str = (const char*)dList;
@@ -118,24 +99,129 @@ const char* Pick(const LodPair& pair, int lod) {
     return (lod == 0) ? pair.nearDL : pair.farDL;
 }
 
-const char* SheathDL(Player* player, void* dList, int lod) {
-    bool sword = false;
-    for (const char* sheathed : kSheathedSwords) {
-        sword = sword || IsPath(dList, sheathed);
-    }
-    // Same test as Player_PostLimbDrawGameplay's back-shield draw (which adult Link skips: OOT's sheath models
-    // include the shield).
-    const bool shieldOnBack =
-        (player->currentShield != PLAYER_SHIELD_NONE) &&
-        ((player->sheathType == PLAYER_MODELTYPE_SHEATH_14) || (player->sheathType == PLAYER_MODELTYPE_SHEATH_15));
-    if (shieldOnBack && (player->currentShield == PLAYER_SHIELD_MIRROR_SHIELD)) {
-        return Pick(sword ? kSheathMirrorSword : kSheathMirror, lod);
-    }
-    if (shieldOnBack) {
-        return Pick(sword ? kSheathHylianSword : kSheathHylian, lod);
-    }
-    return Pick(sword ? kSheathSword : kBody[PLAYER_LIMB_SHEATH], lod);
+// ---- MM's gear on adult Link ----
+// MM's human item hands are a call to the closed fist followed by calls to the item. Rebuilt for adult Link: the fist
+// call becomes OOT adult Link's fist, and the rest is drawn kGearScale bigger. Lists without the fist (sheaths) are
+// drawn bigger whole.
+bool IsTwoWordOpcode(uint8_t op) {
+    return (op == G_SETTIMG_OTR_HASH) || (op == G_DL_OTR_HASH) || (op == G_VTX_OTR_HASH) || (op == G_BRANCH_Z_OTR) ||
+           (op == G_MARKER) || (op == G_MTX_OTR) || (op == G_MOVEMEM_OTR);
 }
+
+struct BuiltList {
+    bool tried = false;
+    std::shared_ptr<Ship::IResource> res; // keeps MM's list (and the strings it points to) alive
+    std::vector<Gfx> gfx;
+};
+std::map<std::pair<std::string, int>, BuiltList> sBuilt;
+Mtx sGearScaleMtx;
+bool sGearScaleMtxReady = false;
+
+// mmPath: "__OTR__objects/..." (MM's own resource). childFist: the fist list to swap ("objects/..."), or nullptr.
+Gfx* AdultGear(const char* mmPath, const char* childFist, const LodPair* adultFist, int lod) {
+    BuiltList& built = sBuilt[{ mmPath, lod }];
+    if (built.tried) {
+        return built.gfx.empty() ? nullptr : built.gfx.data();
+    }
+    built.tried = true;
+    if (!sGearScaleMtxReady) {
+        guScale(&sGearScaleMtx, kGearScale, kGearScale, kGearScale);
+        sGearScaleMtxReady = true;
+    }
+    built.res = Ship::Context::GetRawInstance()->GetResourceManager()->LoadResource(mmPath + 7);
+    if ((built.res == nullptr) ||
+        (built.res->GetInitData()->Type != static_cast<uint32_t>(Fast::ResourceType::DisplayList))) {
+        SPDLOG_ERROR("[ComboShip] adult Link: MM gear list missing: {}", mmPath);
+        return nullptr;
+    }
+    const std::vector<Gfx>& in = std::static_pointer_cast<Fast::DisplayList>(built.res)->Instructions;
+    const uint64_t fistHash = (childFist != nullptr) ? CRC64(childFist) : 0;
+    bool scaled = false;
+    if (childFist == nullptr) {
+        Gfx push = gsSPMatrix(&sGearScaleMtx, G_MTX_PUSH | G_MTX_MUL | G_MTX_MODELVIEW);
+        built.gfx.push_back(push);
+        scaled = true;
+    }
+    bool swapped = (childFist == nullptr);
+    for (size_t i = 0; i < in.size();) {
+        const uint8_t op = (uint8_t)(in[i].words.w0 >> 24);
+        if (op == G_ENDDL) {
+            break;
+        }
+        const size_t words = IsTwoWordOpcode(op) ? 2 : 1;
+        if (!swapped && (op == G_DL_OTR_HASH) && (i + 1 < in.size()) &&
+            ((((uint64_t)(uint32_t)in[i + 1].words.w0 << 32) | (uint64_t)(uint32_t)in[i + 1].words.w1) == fistHash)) {
+            Gfx fist = gsDma1p(G_DL_OTR_FILEPATH, Pick(*adultFist, lod), 0, G_DL_PUSH);
+            Gfx push = gsSPMatrix(&sGearScaleMtx, G_MTX_PUSH | G_MTX_MUL | G_MTX_MODELVIEW);
+            built.gfx.push_back(fist);
+            built.gfx.push_back(push);
+            swapped = scaled = true;
+        } else {
+            built.gfx.insert(built.gfx.end(), in.begin() + i, in.begin() + i + words);
+        }
+        i += words;
+    }
+    if (!swapped) {
+        SPDLOG_ERROR("[ComboShip] adult Link: no fist call in {}", mmPath);
+        built.gfx.clear();
+        return nullptr;
+    }
+    if (scaled) {
+        Gfx pop = gsSPPopMatrix(G_MTX_MODELVIEW);
+        built.gfx.push_back(pop);
+    }
+    Gfx end = gsSPEndDisplayList();
+    built.gfx.push_back(end);
+    return built.gfx.data();
+}
+
+#define CHILD_FIST(name) "objects/object_link_child/" name
+
+// MM's human hand display list -> adult Link's. MM's player tables hold resource paths, so these compare by name.
+struct HandMap {
+    const char* human;
+    const LodPair* adult;  // OOT adult Link's own model, or
+    const char* childFist; // MM's item, in OOT adult Link's fist (adultFist)
+    const LodPair* adultFist;
+};
+const HandMap kHands[] = {
+    { gLinkHumanLeftHandOpenDL, &kBody[PLAYER_LIMB_LEFT_HAND] },
+    { gLinkHumanLeftHandClosedDL, &kLeftHandClosed },
+    { gLinkHumanLeftHandHoldBottleDL, &kLeftHandBottle },
+    { gLinkHumanLeftHandHoldingKokiriSwordDL, nullptr, CHILD_FIST("gLinkHumanLeftHandClosedDL"), &kLeftHandClosed },
+    { gLinkHumanLeftHandHoldingRazorSwordDL, nullptr, CHILD_FIST("gLinkHumanLeftHandClosedDL"), &kLeftHandClosed },
+    { gLinkHumanLeftHandHoldingGildedSwordDL, nullptr, CHILD_FIST("gLinkHumanLeftHandClosedDL"), &kLeftHandClosed },
+    { gLinkHumanLeftHandHoldingGreatFairysSwordDL, nullptr, CHILD_FIST("gLinkHumanLeftHandClosedDL"),
+      &kLeftHandClosed },
+    { gLinkHumanRightHandOpenDL, &kBody[PLAYER_LIMB_RIGHT_HAND] },
+    { gLinkHumanRightHandClosedDL, &kRightHandClosed },
+    { gLinkHumanRightHandHoldingOcarinaDL, &kRightHandOcarina },
+    { gLinkHumanRightHandHoldingHerosShieldDL, nullptr, CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed },
+    { gLinkHumanRightHandHoldingMirrorShieldDL, nullptr, CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed },
+    { gLinkHumanRightHandHoldingBowDL, nullptr, CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed },
+    { gLinkHumanRightHandHoldingHookshotDL, nullptr, CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed },
+};
+
+// Masks worn on top of the head, which adult Link's long cap would poke through.
+bool MaskReplacesCap(u8 mask) {
+    return (mask == PLAYER_MASK_BUNNY) || (mask == PLAYER_MASK_KAFEIS_MASK) || (mask == PLAYER_MASK_POSTMAN) ||
+           (mask == PLAYER_MASK_CAPTAIN);
+}
+
+const ALIGN_ASSET(2) char kAimLeftForearm[] = COMBO_ADULT("gLinkAdultRightArmOutNearDL");
+const ALIGN_ASSET(2) char kAimLeftHand[] = COMBO_ADULT("gLinkAdultRightHandOutNearDL");
+const ALIGN_ASSET(2) char kAimRightShoulder[] = COMBO_ADULT("gLinkAdultRightShoulderNearDL");
+const ALIGN_ASSET(2) char kAimRightForearm[] = COMBO_ADULT("gLinkAdultLeftArmOutNearDL");
+const ALIGN_ASSET(2) char kAimBow[] = COMBO_ADULT("gLinkAdultRightHandHoldingBowFirstPersonDL");
+const ALIGN_ASSET(2) char kAimHookshot[] = COMBO_ADULT("gLinkAdultRightHandHoldingHookshotFarDL");
+const ALIGN_ASSET(2) char kBottle[] = COMBO_ADULT("gLinkAdultBottleDL");
+const ALIGN_ASSET(2) char kBowString[] = COMBO_ADULT("gLinkAdultBowStringDL");
+const ALIGN_ASSET(2) char kGauntletLeft1[] = COMBO_ADULT("gLinkAdultLeftGauntletPlate1DL");
+const ALIGN_ASSET(2) char kGauntletRight1[] = COMBO_ADULT("gLinkAdultRightGauntletPlate1DL");
+const ALIGN_ASSET(2) char kGauntletLeftOpen[] = COMBO_ADULT("gLinkAdultLeftGauntletPlate2DL");
+const ALIGN_ASSET(2) char kGauntletLeftClosed[] = COMBO_ADULT("gLinkAdultLeftGauntletPlate3DL");
+const ALIGN_ASSET(2) char kGauntletRightOpen[] = COMBO_ADULT("gLinkAdultRightGauntletPlate2DL");
+const ALIGN_ASSET(2) char kGauntletRightClosed[] = COMBO_ADULT("gLinkAdultRightGauntletPlate3DL");
 
 // OOT's adult eyes and mouths, in the same index order as MM's (MM kept OOT's face animation data).
 const ALIGN_ASSET(2) char kEyes[PLAYER_EYES_MAX][64] = {
@@ -213,6 +299,7 @@ extern "C" void Combo_AdultLink_SetupDraw(PlayState* play, Player* player, int e
         mouthIndex = 0;
     }
 
+    sKeptHand = -1;
     OPEN_DISPS(play->state.gfxCtx);
     gSPSegment(POLY_OPA_DISP++, 0x08, (uintptr_t)kEyes[eyeIndex]);
     gSPSegment(POLY_OPA_DISP++, 0x09, (uintptr_t)kMouths[mouthIndex]);
@@ -220,24 +307,140 @@ extern "C" void Combo_AdultLink_SetupDraw(PlayState* play, Player* player, int e
     CLOSE_DISPS(play->state.gfxCtx);
 }
 
-extern "C" void Combo_AdultLink_RemapLimb(Player* player, int limbIndex, void** dList, int lod) {
-    if ((dList == nullptr) || (*dList == nullptr) || (limbIndex <= PLAYER_LIMB_NONE) ||
-        (limbIndex >= PLAYER_LIMB_MAX) || !Combo_AdultLink_Is(player)) {
+extern "C" void Combo_AdultLink_DrawGear(PlayState* play, Player* player) {
+    // OOT's Silver and Golden Gauntlets (Player_DrawImpl, OOT decomp): plates over the forearms and the backs of the
+    // hands, tinted by the environment color. Segment 0x0D still holds this skeleton's limb matrices.
+    static const Color_RGB8 kGauntletColors[] = { { 255, 255, 255 }, { 254, 207, 15 } };
+    const int strength = Combo_Gear_GetStrength(); // 2 silver, 3 golden
+    if (!Combo_AdultLink_Is(player) || (strength < 2)) {
+        return;
+    }
+    const Color_RGB8& color = kGauntletColors[(strength >= 3) ? 1 : 0];
+    OPEN_DISPS(play->state.gfxCtx);
+    gDPPipeSync(POLY_OPA_DISP++);
+    gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);
+    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kGauntletLeft1);
+    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kGauntletRight1);
+    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)(sLeftHandOpen ? kGauntletLeftOpen : kGauntletLeftClosed));
+    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)(sRightHandOpen ? kGauntletRightOpen : kGauntletRightClosed));
+    CLOSE_DISPS(play->state.gfxCtx);
+}
+
+extern "C" void Combo_AdultLink_MaskTransform(void) {
+    // OoTMM's own fit for its adult Link (mm_adult_link_mask_mtx.bin): MM's masks scaled by 1.25 in head-limb space.
+    // OOT's adult head is 1.44x child Link's height but only ~1.06-1.10x his width and depth, so a uniform 1.25 keeps
+    // face masks on the face and full-head masks around the head.
+    Matrix_Scale(kGearScale, kGearScale, kGearScale, MTXMODE_APPLY);
+}
+
+extern "C" void Combo_AdultLink_GearTransform(void) {
+    Matrix_Scale(kGearScale, kGearScale, kGearScale, MTXMODE_APPLY);
+}
+
+extern "C" float Combo_AdultLink_MeleeWeaponLength(Player* player, int meleeWeapon, float length) {
+    if (!Combo_AdultLink_Is(player)) {
+        return length;
+    }
+    switch (meleeWeapon) { // OoTMM's adult meleeWeaponLengths
+        case PLAYER_MELEEWEAPON_SWORD_KOKIRI:
+        case PLAYER_MELEEWEAPON_SWORD_RAZOR:
+            return 4000.0f;
+        case PLAYER_MELEEWEAPON_SWORD_GILDED:
+        case PLAYER_MELEEWEAPON_SWORD_TWO_HANDED:
+            return 5500.0f;
+        default:
+            return length;
+    }
+}
+
+extern "C" void* Combo_AdultLink_BottleDL(void) {
+    return (void*)kBottle;
+}
+
+extern "C" void* Combo_AdultLink_BowStringDL(void) {
+    return (void*)kBowString;
+}
+
+extern "C" void* Combo_AdultLink_ClosedFistDL(int limbIndex, int lod) {
+    return (void*)Pick((limbIndex == PLAYER_LIMB_LEFT_HAND) ? kLeftHandClosed : kRightHandClosed, lod);
+}
+
+extern "C" void Combo_AdultLink_KeepHand(int limbIndex) {
+    sKeptHand = limbIndex;
+}
+
+extern "C" void Combo_AdultLink_RemapLimb(PlayState* play, Player* player, int limbIndex, void** dList, int lod,
+                                          int firstPerson) {
+    if ((dList == nullptr) || (limbIndex <= PLAYER_LIMB_NONE) || (limbIndex >= PLAYER_LIMB_MAX) ||
+        !Combo_AdultLink_Is(player)) {
+        return;
+    }
+    if (firstPerson) {
+        // OOT's own first-person arms (Player_OverrideLimbDrawGameplayFirstPerson, OOT decomp; the "Right"/"Left" in
+        // OOT's names are swapped relative to the limbs), including the right forearm MM leaves out.
+        switch (limbIndex) {
+            case PLAYER_LIMB_LEFT_FOREARM:
+                *dList = (void*)kAimLeftForearm;
+                return;
+            case PLAYER_LIMB_LEFT_HAND:
+                *dList = (void*)kAimLeftHand;
+                return;
+            case PLAYER_LIMB_RIGHT_SHOULDER:
+                *dList = (void*)kAimRightShoulder;
+                return;
+            case PLAYER_LIMB_RIGHT_FOREARM:
+                *dList = (void*)kAimRightForearm;
+                return;
+            case PLAYER_LIMB_RIGHT_HAND: {
+                void* slingshot = Combo_Tools_AdultFirstPersonRightHandDL(play, player);
+                *dList = (slingshot != nullptr)             ? slingshot
+                         : Player_IsHoldingHookshot(player) ? (void*)kAimHookshot
+                                                            : (void*)kAimBow;
+                return;
+            }
+            default:
+                return;
+        }
+    }
+    if (*dList == nullptr) {
+        return;
+    }
+    if (limbIndex == sKeptHand) {
+        sKeptHand = -1;
+        ((limbIndex == PLAYER_LIMB_LEFT_HAND) ? sLeftHandOpen : sRightHandOpen) = false;
         return;
     }
     if ((limbIndex == PLAYER_LIMB_LEFT_HAND) || (limbIndex == PLAYER_LIMB_RIGHT_HAND)) {
+        bool& open = (limbIndex == PLAYER_LIMB_LEFT_HAND) ? sLeftHandOpen : sRightHandOpen;
         for (const HandMap& hand : kHands) {
-            if (IsPath(*dList, hand.human)) {
+            if (!IsPath(*dList, hand.human)) {
+                continue;
+            }
+            open = (hand.adult == &kBody[limbIndex]);
+            if (hand.adult != nullptr) {
                 *dList = (void*)Pick(*hand.adult, lod);
                 return;
             }
+            Gfx* gear = AdultGear(hand.human, hand.childFist, hand.adultFist, lod);
+            *dList = (gear != nullptr)
+                         ? (void*)gear
+                         : (void*)Pick((limbIndex == PLAYER_LIMB_LEFT_HAND) ? kLeftHandSword : kRightHandClosed, lod);
+            return;
         }
+        open = false;
         // Anything else (a cross-game tool's hand, a skeleton default) stays as MM/ComboShip chose it.
         if (strncmp((const char*)*dList, "__OTR__", 7) == 0) {
             return;
         }
     } else if (limbIndex == PLAYER_LIMB_SHEATH) {
-        *dList = (void*)SheathDL(player, *dList, lod);
+        // MM's sheath (with or without its sword), bigger; the back shield is drawn after it the same way.
+        if (strncmp((const char*)*dList, "__OTR__", 7) == 0) {
+            Gfx* gear = AdultGear((const char*)*dList, nullptr, nullptr, lod);
+            *dList = (gear != nullptr) ? (void*)gear : (void*)Pick(kBody[PLAYER_LIMB_SHEATH], lod);
+        }
+        return;
+    } else if ((limbIndex == PLAYER_LIMB_HAT) && MaskReplacesCap(player->currentMask)) {
+        *dList = nullptr; // a hat-like mask: OOT's long cap would poke through it (child Link's fits inside)
         return;
     }
     if (kBody[limbIndex].nearDL[0] != '\0') {
