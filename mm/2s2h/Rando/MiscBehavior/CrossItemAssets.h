@@ -34,6 +34,7 @@ static const ALIGN_ASSET(2) char gComboIconNayrusLoveTex[] = COMBO_OOT_ICON("gIt
 static const ALIGN_ASSET(2) char gComboIconHammerTex[] = COMBO_OOT_ICON("gItemIconHammerTex");
 static const ALIGN_ASSET(2) char gComboIconBoomerangTex[] = COMBO_OOT_ICON("gItemIconBoomerangTex");
 static const ALIGN_ASSET(2) char gComboIconSlingshotTex[] = COMBO_OOT_ICON("gItemIconSlingshotTex");
+static const ALIGN_ASSET(2) char gComboIconShieldDekuTex[] = COMBO_OOT_ICON("gItemIconShieldDekuTex");
 
 // Pause-screen item names (128x16 IA4, same format as MM's item_name_static).
 static const ALIGN_ASSET(2) char gComboNameIronBootsTex[] = COMBO_OOT_NAME("gIronBootsItemNameENGTex");

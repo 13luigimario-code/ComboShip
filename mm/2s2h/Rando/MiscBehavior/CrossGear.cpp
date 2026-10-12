@@ -252,6 +252,10 @@ extern "C" int Combo_CrossItem_TryUse(PlayState* play, Player* player, int item)
         case ITEM_COMBO_SPELL_WIND:
         case ITEM_COMBO_SPELL_LOVE:
             return Combo_Spell_Cast(play, player, item);
+        case ITEM_COMBO_HAMMER: // CrossTools.cpp: held items with an item action (Player_ItemToItemAction)
+        case ITEM_COMBO_BOOMERANG:
+        case ITEM_COMBO_SLINGSHOT:
+            return 0;
         default:
             // Cross-game items that aren't usable this way (yet): refuse cleanly, never fall into vanilla
             // item handling with an id past its tables.
@@ -345,6 +349,7 @@ extern "C" void Combo_Gear_OnPlayerUpdate(PlayState* play, Player* player) {
         Flags_ClearRandoInf(RANDO_INF_COMBO_WEARING_MASK_SPOOKY);
     }
     Combo_Spells_OnPlayerUpdate(play, player); // CrossSpells.cpp: Din's Fire / Nayru's Love in progress
+    Combo_Tools_OnPlayerUpdate(play, player);  // CrossTools.cpp: Deku Shield burning
 }
 
 // ---- Rando item plumbing (Rando.h) ----
@@ -400,6 +405,14 @@ const char* Rando::CrossGearOOTItemName(RandoItemId randoItemId) {
             return "Farore's Wind";
         case RI_SPELL_LOVE:
             return "Nayru's Love";
+        case RI_HAMMER:
+            return "Megaton Hammer";
+        case RI_BOOMERANG:
+            return "Boomerang";
+        case RI_SLINGSHOT:
+            return "Fairy Slingshot";
+        case RI_SHIELD_DEKU:
+            return "Deku Shield";
         default:
             return nullptr;
     }
@@ -464,6 +477,23 @@ bool Rando::CrossGearGive(RandoItemId randoItemId) {
         case RI_SPELL_LOVE:
             Flags_SetRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE);
             GrantSlot(ITEM_COMBO_SPELL_LOVE);
+            return true;
+        case RI_HAMMER:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_HAMMER);
+            GrantSlot(ITEM_COMBO_HAMMER);
+            return true;
+        case RI_BOOMERANG:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_BOOMERANG);
+            GrantSlot(ITEM_COMBO_BOOMERANG);
+            return true;
+        case RI_SLINGSHOT:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT);
+            GrantSlot(ITEM_COMBO_SLINGSHOT);
+            Combo_Tools_ChangeSlingshotSeeds(COMBO_SLINGSHOT_MAX_SEEDS); // comes with a full bag, like OOT's
+            return true;
+        case RI_SHIELD_DEKU:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_SHIELD_DEKU);
+            Combo_Tools_EquipDekuShield();
             return true;
         case RI_PROGRESSIVE_STRENGTH: {
             s32 tier = Combo_Gear_GetStrength();
@@ -541,6 +571,22 @@ bool Rando::CrossGearRemove(RandoItemId randoItemId) {
         case RI_SPELL_LOVE:
             Flags_ClearRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE);
             RemoveSlot(ITEM_COMBO_SPELL_LOVE);
+            return true;
+        case RI_HAMMER:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_HAMMER);
+            RemoveSlot(ITEM_COMBO_HAMMER);
+            return true;
+        case RI_BOOMERANG:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_BOOMERANG);
+            RemoveSlot(ITEM_COMBO_BOOMERANG);
+            return true;
+        case RI_SLINGSHOT:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_SLINGSHOT);
+            RemoveSlot(ITEM_COMBO_SLINGSHOT);
+            return true;
+        case RI_SHIELD_DEKU:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_SHIELD_DEKU);
+            Combo_Tools_LoseDekuShield();
             return true;
         case RI_PROGRESSIVE_STRENGTH: {
             s32 tier = Combo_Gear_GetStrength();

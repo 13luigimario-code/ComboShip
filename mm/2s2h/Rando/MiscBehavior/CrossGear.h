@@ -81,6 +81,33 @@ void Combo_Spells_OnPlayerUpdate(struct PlayState* play, struct Player* player);
 // 0x0D holds Link's limb matrices.
 void Combo_Gear_DrawBoots(struct PlayState* play, struct Player* player);
 
+// ---- CrossTools.cpp: Megaton Hammer, Boomerang, Fairy Slingshot and Deku Shield for human Link ----
+#define COMBO_SLINGSHOT_MAX_SEEDS 30 // OOT's first bullet bag
+// Player_ItemToItemAction for ITEM_COMBO_* ids: the MM item action that drives a tool (Hammer: two-handed sword,
+// Boomerang: PLAYER_IA_11, Slingshot: bow) for human Link, PLAYER_IA_NONE for anything else.
+int Combo_Tools_ItemAction(struct Player* player, int item);
+// Human Link holds that tool (heldItemId, with its item action in effect).
+int Combo_Tools_IsHeld(struct Player* player, int item);
+int Combo_Tools_OwnsSlingshot(void);
+int Combo_Tools_GetSlingshotSeeds(void);
+void Combo_Tools_ChangeSlingshotSeeds(int delta);
+// An arrow drop was collected: it refills the Slingshot's seeds too while it is owned.
+void Combo_Tools_OnArrowPickup(int arrows);
+// Deku Shield: equipped in the Hero's Shield value (only into an empty shield slot) with a RandoInf marker.
+void Combo_Tools_EquipDekuShield(void);
+void Combo_Tools_LoseDekuShield(void);
+// Item_Give of a Hero's/Mirror Shield: drops the Deku marker; 1 when the equipped shield was the Deku Shield.
+int Combo_Tools_ReplaceDekuShield(void);
+// Per-frame (from Combo_Gear_OnPlayerUpdate): the Deku Shield burns away.
+void Combo_Tools_OnPlayerUpdate(struct PlayState* play, struct Player* player);
+// Model overrides for human Link (Gfx*, or NULL to keep MM's): a tool drawn after MM's closed left fist, a whole OOT
+// right hand, the first-person slingshot arm, the slingshot string, the Deku Shield on the back.
+void* Combo_Tools_LeftHandToolDL(struct Player* player, int leftHandType);
+void* Combo_Tools_RightHandDL(struct Player* player, int rightHandType);
+void* Combo_Tools_FirstPersonRightHandDL(struct Player* player);
+void* Combo_Tools_SlingshotStringDL(struct Player* player);
+void* Combo_Tools_BackShieldDL(struct Player* player);
+
 #ifdef __cplusplus
 }
 #endif

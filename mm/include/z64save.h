@@ -392,6 +392,7 @@ typedef struct RandoSaveInfo {
     u16 sariaPriorityItems[16];
 #ifdef COMBO_BUILD
     u8 pendingTrapCount; // ComboShip: cross-world traps granted while MM was dormant; drained on activation
+    u8 comboSlingshotSeeds; // ComboShip (cross-game items): Deku Seeds for the OOT Slingshot in MM
 #endif
 } RandoSaveInfo;
 

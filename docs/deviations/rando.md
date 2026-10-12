@@ -2302,3 +2302,59 @@ table has no slot for them); models are OOT's own (`"@oot:overlays/ovl_Magic_*"`
 - No casting animation: the effect starts from the C-button press.
 
 **Shared Items:** `spellFire`, `spellWind`, `spellLove`. **Logic:** none. OOT draws MM's copies with its own models.
+
+### OOT tools in MM: Megaton Hammer, Boomerang, Fairy Slingshot, Deku Shield (2026-10-11)
+
+OoTMM's `hammerMm`, `boomerangMm`, `slingshotMm`, `dekuShieldMm` and the `sharedHammer` / `sharedBoomerang` /
+`sharedSlingshot` twins. MM options `RO_CROSS_HAMMER/BOOMERANG/SLINGSHOT/SHIELD_DEKU` (Item Pool, default off); items
+`RI_HAMMER/BOOMERANG/SLINGSHOT/SHIELD_DEKU`, owned as `RANDO_INF_OBTAINED_*`. Logic and behavior live in
+`mm/2s2h/Rando/MiscBehavior/CrossTools.cpp` (C ABI in `CrossGear.h`).
+
+**Held tools ride on MM item actions.** `Player_ItemToItemAction` maps the three `ITEM_COMBO_*` ids for human Link
+(`Combo_Tools_ItemAction`), and `Combo_CrossItem_TryUse` lets vanilla `Player_UseItem` take them:
+- Megaton Hammer → `PLAYER_IA_SWORD_TWO_HANDED` (the Great Fairy's Sword swings); `func_8083375C` swaps in OoTMM's
+  `{ DMG_GORON_PUNCH, 2, 4, 2, 4 }`.
+- Boomerang → `PLAYER_IA_11`, OOT's own boomerang action that MM kept and re-pointed at Zora Link's fins. For human
+  Link (`COMBO_HUMAN_BOOMERANG`) `func_80830E30` / `Player_UpperAction_12..15` play OOT's animations
+  (`link_boom_throw_wait2waitR`, `throwR`, `catch` from OOT's archive; the `waitR` loop is MM's own) and
+  `Player_UpperAction_14` spawns one `EnBoom` (left half, no partner: `EnBoom_Destroy` already clears the thrown
+  state when it has neither child nor parent) like OOT's `func_808359FC`. `EnBoom_Draw` uses OOT's `gBoomerangRefDL`
+  when the player is human.
+- Fairy Slingshot → `PLAYER_IA_BOW`. `func_808305BC` returns `ITEM_COMBO_SLINGSHOT` + `ARROW_TYPE_SLINGSHOT` (MM's
+  EnArrow still has the seed) with its own ammo, `RandoSaveInfo::comboSlingshotSeeds` (30 max, OOT's first bullet bag;
+  full on grant; JSON `comboSlingshotSeeds`, tolerant). Seeds hit as `DMG_DEKU_BUBBLE` (OoTMM). `Inventory_ChangeAmmo`
+  and `Interface_DrawAmmoCount` handle the id. Arrow drops also spawn while the Slingshot is owned (`func_800A7650`)
+  and every arrow pickup refills seeds (`Combo_Tools_OnArrowPickup`, both pickup paths in `z_en_item00.c`).
+- `Player_UseItem`: pressing a tool's button while holding the MM item sharing its action (or the reverse) switches
+  `heldItemId` instead of firing/swinging; the model follows `heldItemId`.
+
+**Inventory:** the three tools join the trade-slot cycles (Hammer: Moon's Tear/Deeds, Boomerang: Room Key/Letter
+to Mama, Slingshot: Letter to Kafei/Pendant); their `gItemSlots` entries moved from the Great Fairy's Sword /
+Pictograph Box / Bow slots (reserved earlier, never used) to those trade slots.
+
+**Deku Shield:** no inventory item. `Combo_Tools_EquipDekuShield` puts it in an empty shield slot as
+`EQUIP_VALUE_SHIELD_HERO` + `RANDO_INF_COMBO_SHIELD_IS_DEKU`; Link burning, or fire (damage effect 1) blocked with it,
+takes it away (`Combo_Tools_OnPlayerUpdate`). `Item_Give` of a Hero's/Mirror Shield drops the marker first
+(`Combo_Tools_ReplaceDekuShield`), and `IsItemObtainable(RI_SHIELD_HERO)` ignores an equipped Deku Shield. No Shared
+Deku Shield: OOT's burns and is re-bought, and a shared one would keep coming back.
+
+**Models (`z_player_lib.c`, guarded):** OOT's own, loaded at runtime from the player's OOT archive; nothing of OOT's
+is compiled in. The Hammer and the held Boomerang are OOT's hand-holding-the-tool display lists
+(`gLinkAdultLeftHandHoldingHammerNearDL`, `gLinkChildLeftFistAndBoomerangFarDL` + `gLinkChildDL_18580`) cut where
+OOT's fist material begins (the first texture named `Gauntlet` / `gLinkChildHandTex`, backed up over its pipe sync /
+othermode / texture commands: the same cuts as OoTMM's custom objects). The cut copies the loaded LUS `Gfx` words
+(`DisplayListFactory`'s two-word opcodes are skipped as pairs) and is drawn after MM's closed left fist inside a
+`G_COMBO_RM_PUSH("oot")` bracket, so its texture/vertex hashes resolve against OOT's archive; the cache holds the OOT
+resource and is released from a `CrossRMRegistry` teardown listener. The Slingshot hand, its first-person arm and
+string, and the Deku Shield in hand and on the back are whole OOT display lists by "@oot:" path
+(`Combo_Tools_*DL`). The slingshot string uses OOT's child offset `{606, 236, 0}` and bend.
+
+**Routed animations (`BenPort.cpp`):** `ResourceMgr_LoadAnimByName` loads `"__OTR__@<game>:"` paths from that game's
+ResourceManager inside a `ResourceManagerScope` (the owning factory nested-loads Link animation frame data through the
+active RM); a missing one falls back to MM's `link_boom_throw_waitR` so callers never see NULL. OOT and MM Link
+animations share the frame layout (22 limbs + face word), as OoTMM relies on.
+
+**Shared Items:** `hammer`, `boomerang`, `slingshot` (OOT `Progressive Slingshot` tier 1 ↔ MM `Fairy Slingshot`).
+**Logic:** none, like the other cross-game items. Not ported: OoTMM's hammer shockwave and Snowhead pillar/rusty
+switch interactions, boomerang item-fetch tuning, and the Deku Shield icon on the equipment page (it shows the Hero's
+Shield).

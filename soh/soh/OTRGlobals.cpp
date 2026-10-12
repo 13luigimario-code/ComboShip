@@ -3376,6 +3376,12 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
                     Flags_GetRandomizerInf(RAND_INF_OBTAINED_NAYRUS_LOVE))
                        ? 1
                        : 0;
+        case ComboRando::SF_HAMMER:
+            return INV_CONTENT(ITEM_HAMMER) == ITEM_HAMMER ? 1 : 0;
+        case ComboRando::SF_BOOMERANG:
+            return INV_CONTENT(ITEM_BOOMERANG) == ITEM_BOOMERANG ? 1 : 0;
+        case ComboRando::SF_SLINGSHOT:
+            return CUR_UPG_VALUE(UPG_BULLET_BAG);
         case ComboRando::SF_BLAST_MASK:
             return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_MASK_BLAST) ? 1 : 0;
         case ComboRando::SF_STONE_MASK:
@@ -3530,6 +3536,15 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_NAYRUS_LOVE:
                 rg = RG_NAYRUS_LOVE;
+                break;
+            case ComboRando::SF_HAMMER:
+                rg = RG_MEGATON_HAMMER;
+                break;
+            case ComboRando::SF_BOOMERANG:
+                rg = RG_BOOMERANG;
+                break;
+            case ComboRando::SF_SLINGSHOT:
+                rg = cur == 0 ? RG_FAIRY_SLINGSHOT : cur == 1 ? RG_BIG_BULLET_BAG : RG_BIGGEST_BULLET_BAG;
                 break;
             case ComboRando::SF_BLAST_MASK:
                 rg = RG_COMBO_MASK_BLAST;

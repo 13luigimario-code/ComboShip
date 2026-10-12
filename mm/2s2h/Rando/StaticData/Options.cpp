@@ -103,6 +103,10 @@ std::map<RandoOptionId, RandoStaticOption> Options = {
     RO(RO_CROSS_SPELL_FIRE,         RO_GENERIC_OFF),
     RO(RO_CROSS_SPELL_WIND,         RO_GENERIC_OFF),
     RO(RO_CROSS_SPELL_LOVE,         RO_GENERIC_OFF),
+    RO(RO_CROSS_HAMMER,             RO_GENERIC_OFF),
+    RO(RO_CROSS_BOOMERANG,          RO_GENERIC_OFF),
+    RO(RO_CROSS_SLINGSHOT,          RO_GENERIC_OFF),
+    RO(RO_CROSS_SHIELD_DEKU,        RO_GENERIC_OFF),
 #endif
 };
 // clang-format on

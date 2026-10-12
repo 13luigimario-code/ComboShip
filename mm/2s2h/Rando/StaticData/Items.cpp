@@ -306,6 +306,12 @@ std::map<RandoItemId, RandoStaticItem> Items = {
     RI(RI_SPELL_FIRE,                 "",     "Din's Fire",                 RITYPE_MAJOR,           ITEM_COMBO_SPELL_FIRE,           GI_NONE,                     GID_NONE),
     RI(RI_SPELL_WIND,                 "",     "Farore's Wind",              RITYPE_MAJOR,           ITEM_COMBO_SPELL_WIND,           GI_NONE,                     GID_NONE),
     RI(RI_SPELL_LOVE,                 "",     "Nayru's Love",               RITYPE_MAJOR,           ITEM_COMBO_SPELL_LOVE,           GI_NONE,                     GID_NONE),
+    // OOT tools used by human Link in MM (MiscBehavior/CrossTools.cpp): Hammer, Boomerang and Slingshot from the
+    // trade-slot cycles; the Deku Shield is equipped like the Hero's Shield (no inventory item).
+    RI(RI_HAMMER,                     "the",  "Megaton Hammer",             RITYPE_MAJOR,           ITEM_COMBO_HAMMER,               GI_NONE,                     GID_NONE),
+    RI(RI_BOOMERANG,                  "the",  "Boomerang",                  RITYPE_MAJOR,           ITEM_COMBO_BOOMERANG,            GI_NONE,                     GID_NONE),
+    RI(RI_SLINGSHOT,                  "the",  "Fairy Slingshot",            RITYPE_MAJOR,           ITEM_COMBO_SLINGSHOT,            GI_NONE,                     GID_NONE),
+    RI(RI_SHIELD_DEKU,                "a",    "Deku Shield",                RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
 };
 
 std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
@@ -348,6 +354,7 @@ std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
           RI_BOOTS_IRON, RI_BOOTS_HOVER, RI_TUNIC_GORON, RI_TUNIC_ZORA, RI_PROGRESSIVE_SCALE, RI_PROGRESSIVE_STRENGTH,
           RI_MASK_GERUDO, RI_MASK_SKULL, RI_MASK_SPOOKY, RI_SONG_ZELDA,
           RI_SPELL_FIRE, RI_SPELL_WIND, RI_SPELL_LOVE,
+          RI_HAMMER, RI_BOOMERANG, RI_SLINGSHOT, RI_SHIELD_DEKU,
 #endif
         } }, 
 };
@@ -502,6 +509,14 @@ const char* GetIconTexturePath(RandoItemId randoItemId) {
             return gComboIconFaroresWindTex;
         case RI_SPELL_LOVE:
             return gComboIconNayrusLoveTex;
+        case RI_HAMMER:
+            return gComboIconHammerTex;
+        case RI_BOOMERANG:
+            return gComboIconBoomerangTex;
+        case RI_SLINGSHOT:
+            return gComboIconSlingshotTex;
+        case RI_SHIELD_DEKU:
+            return gComboIconShieldDekuTex;
 #endif
         case RI_BOMBCHU:
         case RI_BOMBCHU_5:

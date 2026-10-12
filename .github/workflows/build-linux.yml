@@ -105,6 +105,7 @@ jobs:
                       "RO_CROSS_TUNIC_ZORA", "RO_CROSS_SCALES", "RO_CROSS_STRENGTH", "RO_CROSS_MASK_GERUDO",
                       "RO_CROSS_MASK_SKULL", "RO_CROSS_MASK_SPOOKY", "RO_CROSS_SONG_ZELDA",
                       "RO_CROSS_SPELL_FIRE", "RO_CROSS_SPELL_WIND", "RO_CROSS_SPELL_LOVE",
+                      "RO_CROSS_HAMMER", "RO_CROSS_BOOMERANG", "RO_CROSS_SLINGSHOT", "RO_CROSS_SHIELD_DEKU",
                       "RO_SHUFFLE_SONG_SUN", "RO_SHUFFLE_SONG_SARIA", "RO_SHUFFLE_SONG_WARP_SONGS"]:
               mm[key] = 1
           json.dump(cfg, open(path, "w"), indent=2)

@@ -4234,6 +4234,13 @@ u8 Item_GiveImpl(PlayState* play, u8 item) {
         return ITEM_NONE;
 
     } else if ((item >= ITEM_SHIELD_HERO) && (item <= ITEM_SHIELD_MIRROR)) {
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): a real Hero's/Mirror Shield replaces an equipped OOT Deku Shield (which
+        // occupies the Hero's Shield value), so the value check below would otherwise see "already owned".
+        if (Combo_Tools_ReplaceDekuShield()) {
+            SET_EQUIP_VALUE(EQUIP_TYPE_SHIELD, EQUIP_VALUE_SHIELD_NONE);
+        }
+#endif
         if (GET_CUR_EQUIP_VALUE(EQUIP_TYPE_SHIELD) != (u16)(item - ITEM_SHIELD_HERO + EQUIP_VALUE_SHIELD_HERO)) {
             SET_EQUIP_VALUE(EQUIP_TYPE_SHIELD, item - ITEM_SHIELD_HERO + EQUIP_VALUE_SHIELD_HERO);
             // 2S2H [Randomizer] Added a nullptr check so that we can call this function outside of gameplay for logic
@@ -5210,6 +5217,12 @@ void Rupees_ChangeBy(s16 rupeeChange) {
 }
 
 void Inventory_ChangeAmmo(s16 item, s16 ammoChange) {
+#ifdef COMBO_BUILD
+    if (item == ITEM_COMBO_SLINGSHOT) { // ComboShip (cross-game items): OOT Slingshot seeds
+        Combo_Tools_ChangeSlingshotSeeds(ammoChange);
+        return;
+    }
+#endif
     if (item == ITEM_DEKU_STICK) {
         AMMO(ITEM_DEKU_STICK) += ammoChange;
 
@@ -6321,6 +6334,32 @@ void Interface_DrawAmmoCount(PlayState* play, s16 button, s16 alpha) {
     OPEN_DISPS(play->state.gfxCtx);
 
     i = ((void)0, GET_CUR_FORM_BTN_ITEM(button));
+
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): the OOT Slingshot shows its seed count, green when the bag is full.
+    if (i == ITEM_COMBO_SLINGSHOT) {
+        u16 seeds = (u16)Combo_Tools_GetSlingshotSeeds();
+
+        gDPPipeSync(OVERLAY_DISP++);
+        GameInteractor_Should(VB_SET_BUTTON_ENV_COLOR, false);
+        if (seeds >= COMBO_SLINGSHOT_MAX_SEEDS) {
+            gDPSetPrimColor(OVERLAY_DISP++, 0, 0, 120, 255, 0, alpha);
+        } else if (seeds == 0) {
+            gDPSetPrimColor(OVERLAY_DISP++, 0, 0, 100, 100, 100, alpha);
+        }
+        if (seeds >= 10) {
+            HudEditor_SetActiveElement(button);
+            OVERLAY_DISP =
+                Gfx_DrawTexRectIA8(OVERLAY_DISP, gAmmoDigitTextures[seeds / 10], AMMO_DIGIT_TEX_WIDTH,
+                                   AMMO_DIGIT_TEX_HEIGHT, sAmmoDigitsXPositions[button], sAmmoDigitsYPositions[button],
+                                   AMMO_DIGIT_TEX_WIDTH, AMMO_DIGIT_TEX_HEIGHT, 1 << 10, 1 << 10);
+        }
+        HudEditor_SetActiveElement(button);
+        OVERLAY_DISP =
+            Gfx_DrawTexRectIA8(OVERLAY_DISP, gAmmoDigitTextures[seeds % 10], 8, 8, sAmmoDigitsXPositions[button] + 6,
+                               sAmmoDigitsYPositions[button], 8, 8, 1 << 10, 1 << 10);
+    }
+#endif
 
     if ((i == ITEM_DEKU_STICK) || (i == ITEM_DEKU_NUT) || (i == ITEM_BOMB) || (i == ITEM_BOW) ||
         ((i >= ITEM_BOW_FIRE) && (i <= ITEM_BOW_LIGHT)) || (i == ITEM_BOMBCHU) || (i == ITEM_POWDER_KEG) ||

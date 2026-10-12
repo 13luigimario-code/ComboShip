@@ -48,6 +48,18 @@
 #include "2s2h/BenPort.h"
 #ifdef COMBO_BUILD
 #include "2s2h/Rando/MiscBehavior/CrossGear.h" // ComboShip: cross-game items (OOT gear in MM)
+#include "align_asset_macro.h"
+// ComboShip (cross-game items): OOT's own boomerang animations for human Link (MM keeps only the aim loop), loaded
+// from OOT's archive through "@oot:" routing (ResourceMgr_LoadAnimByName, BenPort.cpp).
+static const ALIGN_ASSET(2) char sComboAnimBoomWait2WaitR[] =
+    "__OTR__@oot:objects/gameplay_keep/gPlayerAnim_link_boom_throw_wait2waitR";
+static const ALIGN_ASSET(2) char sComboAnimBoomThrowR[] =
+    "__OTR__@oot:objects/gameplay_keep/gPlayerAnim_link_boom_throwR";
+static const ALIGN_ASSET(2) char sComboAnimBoomCatch[] =
+    "__OTR__@oot:objects/gameplay_keep/gPlayerAnim_link_boom_catch";
+// Human Link throwing OOT's Boomerang (PLAYER_IA_11, OOT's own boomerang item action left in MM).
+#define COMBO_HUMAN_BOOMERANG(this) \
+    (((this)->transformation == PLAYER_FORM_HUMAN) && ((this)->heldItemAction == PLAYER_IA_11))
 #endif
 #include "2s2h/GameInteractor/GameInteractor.h"
 #include "2s2h/CustomMessage/CustomMessage.h"
@@ -3109,10 +3121,11 @@ s8 sItemItemActions[] = {
 
 PlayerItemAction Player_ItemToItemAction(Player* this, ItemId item) {
 #ifdef COMBO_BUILD
-    // ComboShip (cross-game items): ITEM_COMBO_* ids are past sItemItemActions; Player_UseItem handles them
-    // (Combo_CrossItem_TryUse) before any item action is taken.
+    // ComboShip (cross-game items): ITEM_COMBO_* ids are past sItemItemActions. The OOT tools map to the MM action
+    // that drives them (Hammer: two-handed sword, Boomerang: PLAYER_IA_11, Slingshot: bow) for human Link; every
+    // other cross-game item is handled by Player_UseItem (Combo_CrossItem_TryUse) before any item action is taken.
     if (IS_COMBO_CROSS_ITEM(item)) {
-        return PLAYER_IA_NONE;
+        return Combo_Tools_ItemAction(this, item);
     }
 #endif
     if (item >= ITEM_FD) {
@@ -4071,6 +4084,14 @@ void Player_UpdateItems(Player* this, PlayState* play) {
 
 // EN_ARROW ammo related?
 s32 func_808305BC(PlayState* play, Player* this, ItemId* item, ArrowType* typeParam) {
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): OOT's Slingshot fires Deku Seeds (EnArrow's slingshot type) from its own ammo.
+    if (Combo_Tools_IsHeld(this, ITEM_COMBO_SLINGSHOT)) {
+        *item = ITEM_COMBO_SLINGSHOT;
+        *typeParam = ARROW_TYPE_SLINGSHOT;
+        return Combo_Tools_GetSlingshotSeeds();
+    }
+#endif
     if (this->heldItemAction == PLAYER_IA_DEKU_NUT) {
         *item = ITEM_DEKU_NUT;
         *typeParam = (this->transformation == PLAYER_FORM_DEKU) ? ARROW_TYPE_DEKU_BUBBLE : ARROW_TYPE_SLINGSHOT;
@@ -4161,6 +4182,13 @@ s32 func_808306F8(Player* this, PlayState* play) {
                     this->heldActor = Actor_SpawnAsChild(
                         &play->actorCtx, &this->actor, play, ACTOR_EN_ARROW, this->actor.world.pos.x,
                         this->actor.world.pos.y, this->actor.world.pos.z, 0, this->actor.shape.rot.y, 0, arrowType);
+#ifdef COMBO_BUILD
+                    // ComboShip (cross-game items): Slingshot seeds hit like Deku Link's bubble (OoTMM's choice).
+                    if ((this->heldActor != NULL) && (item == ITEM_COMBO_SLINGSHOT)) {
+                        ((EnArrow*)this->heldActor)->collider.elem.atDmgInfo.dmgFlags = DMG_DEKU_BUBBLE;
+                        ((EnArrow*)this->heldActor)->collider.elem.atDmgInfo.damage = 1;
+                    }
+#endif
 
                     if ((this->heldActor != NULL) && (magicArrowType > ARROW_MAGIC_INVALID)) {
                         Magic_Consume(play, sMagicArrowCosts[magicArrowType], MAGIC_CONSUME_NOW);
@@ -4331,6 +4359,11 @@ s32 func_80830E30(Player* this, PlayState* play) {
                                      : ((this->meleeWeaponAnimation == PLAYER_MWA_ZORA_PUNCH_COMBO)
                                             ? &gPlayerAnim_pz_cutterwaitB
                                             : &gPlayerAnim_pz_cutterwaitC));
+#ifdef COMBO_BUILD
+        if (COMBO_HUMAN_BOOMERANG(this)) { // ComboShip: OOT's boomerang wind-up instead of Zora Link's
+            PlayerAnimation_PlayOnce(play, &this->skelAnimeUpper, (PlayerAnimationHeader*)sComboAnimBoomWait2WaitR);
+        }
+#endif
         this->unk_ACC = 0xA;
     } else {
         if (!func_808306F8(this, play)) {
@@ -4637,6 +4670,15 @@ void Player_UseItem(PlayState* play, Player* this, ItemId item) {
 #ifdef COMBO_BUILD
     // ComboShip (cross-game items): OOT boots/tunics toggle on use, like OoTMM.
     if (Combo_CrossItem_TryUse(play, this, item)) {
+        return;
+    }
+    // A tool and the MM item sharing its item action (Slingshot/Bow, Hammer/Great Fairy's Sword): vanilla would read
+    // the press as "use the held item" (fire, swing). Switch what is held instead; the hand model follows heldItemId.
+    if ((item != this->heldItemId) && (IS_COMBO_CROSS_ITEM(item) || IS_COMBO_CROSS_ITEM(this->heldItemId)) &&
+        (this->heldItemAction > PLAYER_IA_NONE) && (this->heldItemAction == this->itemAction) &&
+        (Player_ItemToItemAction(this, item) == this->heldItemAction) && (this->heldActor == NULL)) {
+        this->heldItemId = item;
+        Player_PlaySfx(this, NA_SE_PL_CHANGE_ARMS);
         return;
     }
 #endif
@@ -5791,6 +5833,13 @@ void func_8083375C(Player* this, PlayerMeleeWeaponAnimation meleeWeaponAnim) {
         //! as human.
         dmgInfo = &D_8085D09C[(this->transformation == PLAYER_FORM_GORON) ? PLAYER_MELEEWEAPON_NONE
                                                                           : Player_GetMeleeWeaponHeld(this)];
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): OOT's Megaton Hammer hits like a Goron punch (OoTMM's megatonHammerDmgInfo).
+        if (Combo_Tools_IsHeld(this, ITEM_COMBO_HAMMER)) {
+            static MeleeWeaponDamageInfo sComboHammerDmgInfo = { DMG_GORON_PUNCH, 2, 4, 2, 4 };
+            dmgInfo = &sComboHammerDmgInfo;
+        }
+#endif
     }
 
     //! @bug Great Deku Sword: Presumably the dmgTransformed fields are intended for Fierce Deity, but also work for
@@ -14521,6 +14570,18 @@ s32 Player_UpperAction_11(Player* this, PlayState* play) {
 }
 
 s32 Player_UpperAction_12(Player* this, PlayState* play) {
+#ifdef COMBO_BUILD
+    if (COMBO_HUMAN_BOOMERANG(this)) { // ComboShip: OOT's boomerang aim loop (MM keeps it in gameplay_keep)
+        if (PlayerAnimation_Update(play, &this->skelAnimeUpper)) {
+            Player_SetUpperAction(play, this, Player_UpperAction_13);
+            PlayerAnimation_PlayLoop(play, &this->skelAnimeUpper, &gPlayerAnim_link_boom_throw_waitR);
+        }
+        if (BEN_ANIM_EQUAL(this->skelAnimeUpper.animation, gPlayerAnim_link_boom_throw_waitR)) {
+            func_80831010(this, play);
+        }
+        return true;
+    }
+#endif
     if (PlayerAnimation_Update(play, &this->skelAnimeUpper)) {
         Player_SetUpperAction(play, this, Player_UpperAction_13);
         PlayerAnimation_PlayLoop(play, &this->skelAnimeUpper, &gPlayerAnim_pz_cutterwaitanim);
@@ -14537,6 +14598,11 @@ s32 Player_UpperAction_13(Player* this, PlayState* play) {
     if (!sPlayerHeldItemButtonIsHeldDown) {
         Player_SetUpperAction(play, this, Player_UpperAction_14);
         PlayerAnimation_PlayOnce(play, &this->skelAnimeUpper, &gPlayerAnim_pz_cutterattack);
+#ifdef COMBO_BUILD
+        if (COMBO_HUMAN_BOOMERANG(this)) { // ComboShip: OOT's boomerang throw instead of Zora Link's
+            PlayerAnimation_PlayOnce(play, &this->skelAnimeUpper, (PlayerAnimationHeader*)sComboAnimBoomThrowR);
+        }
+#endif
     }
     return true;
 }
@@ -14549,6 +14615,36 @@ s32 Player_UpperAction_14(Player* this, PlayState* play) {
         Vec3f pos;
         s16 untargetedRotY;
 
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): human Link throws one OOT Boomerang (EnBoom's left half, drawn with OOT's
+        // model), spawned like OOT's func_808359FC: in front of Link, angled off a targeted actor.
+        if (COMBO_HUMAN_BOOMERANG(this)) {
+            EnBoom* boomerang = (EnBoom*)Actor_Spawn(
+                &play->actorCtx, play, ACTOR_EN_BOOM,
+                (Math_SinS(this->actor.shape.rot.y) * 10.0f) + this->actor.world.pos.x, this->actor.world.pos.y + 30.0f,
+                (Math_CosS(this->actor.shape.rot.y) * 10.0f) + this->actor.world.pos.z, this->actor.focus.rot.x,
+                (this->focusActor != NULL) ? this->actor.shape.rot.y + 14000 : this->actor.shape.rot.y, 0,
+                ZORA_BOOMERANG_LEFT);
+
+            this->zoraBoomerangActor = &boomerang->actor;
+            if (boomerang != NULL) {
+                boomerang->moveTo = this->focusActor;
+                if (boomerang->moveTo != NULL) {
+                    boomerang->unk_1CF = 0x10;
+                }
+                boomerang->unk_1CC = boomerang->unk_1CF + 0x24;
+                this->stateFlags1 |= PLAYER_STATE1_ZORA_BOOMERANG_THROWN;
+                this->stateFlags3 &= ~PLAYER_STATE3_ZORA_BOOMERANG_CAUGHT;
+                if (!Player_CheckHostileLockOn(this)) {
+                    Player_SetParallel(this);
+                }
+                this->unk_D57 = 20;
+                Player_PlaySfx(this, NA_SE_IT_BOOMERANG_THROW);
+                Player_AnimSfx_PlayVoice(this, NA_SE_VO_LI_SWORD_N);
+            }
+            return true;
+        }
+#endif
         func_80835BF8(&this->bodyPartsPos[PLAYER_BODYPART_LEFT_HAND], this->actor.shape.rot.y, 0.0f, &pos);
         pos.y = this->actor.world.pos.y + 50.0f;
 
@@ -14611,6 +14707,11 @@ s32 Player_UpperAction_15(Player* this, PlayState* play) {
     if (this->stateFlags3 & PLAYER_STATE3_ZORA_BOOMERANG_CAUGHT) {
         Player_SetUpperAction(play, this, Player_UpperAction_16);
         PlayerAnimation_PlayOnce(play, &this->skelAnimeUpper, &gPlayerAnim_pz_cuttercatch);
+#ifdef COMBO_BUILD
+        if (COMBO_HUMAN_BOOMERANG(this)) { // ComboShip: OOT's boomerang catch instead of Zora Link's
+            PlayerAnimation_PlayOnce(play, &this->skelAnimeUpper, (PlayerAnimationHeader*)sComboAnimBoomCatch);
+        }
+#endif
         this->stateFlags3 &= ~PLAYER_STATE3_ZORA_BOOMERANG_CAUGHT;
         Player_PlaySfx(this, NA_SE_PL_CATCH_BOOMERANG);
         Player_AnimSfx_PlayVoice(this, NA_SE_VO_LI_SWORD_N);

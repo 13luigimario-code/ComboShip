@@ -62,7 +62,8 @@ inline void to_json(json& j, const RandoSaveInfo& rando) {
         { "sariaPriorityItems", rando.sariaPriorityItems },
     };
 #ifdef COMBO_BUILD
-    j["pendingTrapCount"] = rando.pendingTrapCount; // ComboShip: deferred cross-world traps
+    j["pendingTrapCount"] = rando.pendingTrapCount;       // ComboShip: deferred cross-world traps
+    j["comboSlingshotSeeds"] = rando.comboSlingshotSeeds; // ComboShip: OOT Slingshot ammo in MM
 #endif
 }
 
@@ -99,6 +100,7 @@ inline void from_json(const json& j, RandoSaveInfo& rando) {
     j.at("sariaPriorityItems").get_to(rando.sariaPriorityItems);
 #ifdef COMBO_BUILD
     rando.pendingTrapCount = j.value("pendingTrapCount", (u8)0); // tolerate pre-existing combo saves
+    rando.comboSlingshotSeeds = j.value("comboSlingshotSeeds", (u8)0);
 #endif
 }
 

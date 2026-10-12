@@ -7,6 +7,13 @@
 #include "z_en_boom.h"
 #include "objects/gameplay_keep/gameplay_keep.h"
 #include "2s2h/BenGui/CosmeticEditor.h"
+#ifdef COMBO_BUILD
+#include "align_asset_macro.h"
+// ComboShip (cross-game items): human Link's OOT Boomerang flies as OOT's model (OOT EnBoom_Draw: gBoomerangRefDL),
+// loaded from OOT's archive through "@oot:" routing. Only human Link throws a boomerang as human
+// (Player_UpperAction_14).
+static const ALIGN_ASSET(2) char sComboOotBoomerangDL[] = "__OTR__@oot:objects/gameplay_keep/gBoomerangRefDL";
+#endif
 
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_DRAW_CULLING_DISABLED)
 
@@ -341,7 +348,14 @@ void EnBoom_Draw(Actor* thisx, PlayState* play) {
     OPEN_DISPS(play->state.gfxCtx);
 
     Matrix_RotateYS(this->actor.world.rot.y, MTXMODE_APPLY);
+#ifdef COMBO_BUILD
+    s32 comboOotBoomerang = (GET_PLAYER(play)->transformation == PLAYER_FORM_HUMAN);
+    // OOT tilts its boomerang the other way from MM's left fin.
+    Matrix_RotateZS(((this->actor.params != ZORA_BOOMERANG_LEFT) || comboOotBoomerang) ? 0x1F40 : -0x1F40,
+                    MTXMODE_APPLY);
+#else
     Matrix_RotateZS((this->actor.params != ZORA_BOOMERANG_LEFT) ? 0x1F40 : -0x1F40, MTXMODE_APPLY);
+#endif
     Matrix_RotateXS(this->actor.world.rot.x, MTXMODE_APPLY);
     Matrix_MultVec3f(&sp58->unk_04, &sp4C);
     Matrix_MultVec3f(&sp58->unk_10, &sp40);
@@ -354,7 +368,11 @@ void EnBoom_Draw(Actor* thisx, PlayState* play) {
     Matrix_RotateYS(this->unk_1CD * 0x2EE0, MTXMODE_APPLY);
 
     MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, play->state.gfxCtx);
+#ifdef COMBO_BUILD
+    gSPDisplayList(POLY_OPA_DISP++, comboOotBoomerang ? (Gfx*)sComboOotBoomerangDL : sp58->unk_00);
+#else
     gSPDisplayList(POLY_OPA_DISP++, sp58->unk_00);
+#endif
 
     CLOSE_DISPS(play->state.gfxCtx);
 }

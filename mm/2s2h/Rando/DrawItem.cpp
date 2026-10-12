@@ -805,7 +805,11 @@ void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* 
         case RI_MASK_SPOOKY:
         case RI_SPELL_FIRE:
         case RI_SPELL_WIND:
-        case RI_SPELL_LOVE: {
+        case RI_SPELL_LOVE:
+        case RI_HAMMER:
+        case RI_BOOMERANG:
+        case RI_SLINGSHOT:
+        case RI_SHIELD_DEKU: {
             RandoItemId concrete = randoItemId;
             if ((randoItemId == RI_PROGRESSIVE_SCALE) || (randoItemId == RI_PROGRESSIVE_STRENGTH)) {
                 concrete = Rando::ConvertItem(randoItemId, randoCheckId); // the tier this copy will give
