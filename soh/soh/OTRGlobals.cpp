@@ -401,6 +401,17 @@ OTRGlobals::OTRGlobals() {
         fontStandardLargest = CreateFontWithSize(24.0f, "fonts/Montserrat-Regular.ttf");
         fontJapanese = CreateFontWithSize(24.0f, "fonts/NotoSansJP-Regular.ttf", true);
         ImGui::GetIO().FontDefault = fontStandardLarger;
+#ifdef COMBO_BUILD
+        // ComboShip: OOT just added 11 fonts to the shared ImGui atlas (TexReady=false). On the
+        // post-extraction path the ROM Setup screen already created the window AND drew frames, so the
+        // renderer backend's font texture is already built and will not rebuild on its own — the next
+        // ImGui::NewFrame() then runs against an unbuilt atlas. In Debug that is the "Font Atlas not
+        // built!" assert; in Release NDEBUG compiles the assert out and it segfaults instead.
+        // Mirrors the same deviation MM already carries after its own font loads (BenPort.cpp).
+        // Unconditional on purpose: invalidating before the texture exists is a no-op, and the normal
+        // boot path (no frames drawn yet) costs at most one extra rebuild.
+        Ship::Context::GetRawInstance()->GetWindow()->GetGui()->RebuildFontTexture();
+#endif
     }
 
     previousImGuiScaleIndex = -1;
@@ -1943,6 +1954,24 @@ extern "C" void DeinitOTR() {
 }
 
 #ifdef COMBO_BUILD
+// ComboShip: the window half of DeinitOTR, for launcher exits before Combo_FinishInit completed (the
+// ROM extraction screen was closed, or SOH_Init threw). DeinitOTR would dereference the save manager
+// and network clients FinishInit creates. Destroying the Context here, rather than leaving it to
+// static destructors, saves the config and drains the async log before the process exits.
+extern "C" COMBO_EXPORT void SOH_DeinitWindowOnly() {
+    if (OTRGlobals::Instance == nullptr) { // the OTRGlobals ctor itself threw
+        return;
+    }
+    OTRAudio_Exit(); // only joins a thread FinishInit started
+    SohGui::Destroy();
+    sohFast3dWindow = nullptr;
+    Ship::CrossRMRegistry::Unregister("oot");
+    sOOTResourceManager = nullptr;
+    OTRGlobals::Instance->context = nullptr;
+    Ship::Context::DestroyInstance();
+    ImGui::SetCurrentContext(nullptr);
+}
+
 // ComboShip: stop OOT audio and wait for pending saves WITHOUT destroying the context or window.
 // Called before launching MM so archives can be safely swapped.
 // COMBO_EXPORT must follow the extern "C" specifier: the split form (the export attribute on its

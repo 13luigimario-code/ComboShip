@@ -4,6 +4,7 @@
 #include "global.h"
 #include "BenPort.h"
 #include "2s2h/GameInteractor/GameInteractor.h"
+#include <libultraship/bridge/consolevariablebridge.h> // CVarGetInteger (Remember Save Location)
 // ComboShip (teleport songs): arrival entrance pushed by the launcher (>= 0), consumed once.
 extern int gComboTargetEntrance;
 extern int gComboCrossArrival;
