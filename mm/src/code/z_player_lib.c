@@ -6,6 +6,7 @@
 #include "global.h"
 #ifdef COMBO_BUILD
 #include "2s2h/Rando/MiscBehavior/CrossGear.h" // ComboShip: cross-game items (OOT gear in MM)
+#include "2s2h/Rando/MiscBehavior/AdultLink.h" // ComboShip: Cross-Games Age (adult Link in MM)
 #endif
 #include "2s2h/GameInteractor/GameInteractor.h"
 
@@ -2069,6 +2070,22 @@ PlayerFaceIndices sPlayerFaces[PLAYER_FACE_MAX] = {
     { PLAYER_EYES_OPEN, PLAYER_MOUTH_SMILE },   // PLAYER_FACE_SMILE
 };
 
+#ifdef COMBO_BUILD
+// ComboShip (Cross-Games Age): adult Link's limbs go through the player's own limb override first, then get OOT's
+// adult display list for whatever it chose.
+static OverrideLimbDrawFlex sComboAdultOverrideLimbDraw;
+
+static s32 Combo_AdultOverrideLimbDraw(PlayState* play, s32 limbIndex, Gfx** dList, Vec3f* pos, Vec3s* rot,
+                                       Actor* actor) {
+    s32 skip = (sComboAdultOverrideLimbDraw != NULL)
+                   ? sComboAdultOverrideLimbDraw(play, limbIndex, dList, pos, rot, actor)
+                   : false;
+
+    Combo_AdultLink_RemapLimb((Player*)actor, limbIndex, (void**)dList, sPlayerLod);
+    return skip;
+}
+#endif
+
 // Note the correct pointer to pass as the jointTable is the jointTable pointer from the SkelAnime struct, not the
 // buffer from the Player struct itself since that one may be misaligned.
 void Player_DrawImpl(PlayState* play, void** skeleton, Vec3s* jointTable, s32 dListCount, s32 lod,
@@ -2130,11 +2147,21 @@ void Player_DrawImpl(PlayState* play, void** skeleton, Vec3s* jointTable, s32 dL
         lod = 0;
     }
     sPlayerLod = lod;
+#ifdef COMBO_BUILD
+    // ComboShip (Cross-Games Age): OOT adult Link's face and tunic color, and his display lists per limb.
+    if ((actor != NULL) && Combo_AdultLink_Is((Player*)actor)) {
+        Combo_AdultLink_SetupDraw(play, (Player*)actor, eyeIndex, mouthIndex);
+        sComboAdultOverrideLimbDraw = overrideLimbDraw;
+        overrideLimbDraw = Combo_AdultOverrideLimbDraw;
+    }
+#endif
     SkelAnime_DrawFlexLod(play, skeleton, jointTable, dListCount, overrideLimbDraw, postLimbDraw, actor, lod);
 #ifdef COMBO_BUILD
     // ComboShip (cross-game items): OOT boots on human Link's feet. Segment 0x0D still holds this
     // skeleton's limb matrices, which the boot display lists load (like OoTMM's MM boot meshes).
-    if ((actor != NULL) && (actor->id == ACTOR_PLAYER) && (playerForm == PLAYER_FORM_HUMAN)) {
+    // Not yet on adult Link (the meshes are child-sized).
+    if ((actor != NULL) && (actor->id == ACTOR_PLAYER) && (playerForm == PLAYER_FORM_HUMAN) &&
+        !Combo_AdultLink_Is((Player*)actor)) {
         Combo_Gear_DrawBoots(play, (Player*)actor);
     }
 #endif
@@ -2199,14 +2226,21 @@ void Player_AdjustSingleLeg(PlayState* play, Player* player, SkelAnime* skelAnim
         return;
     }
 
-    sp74 = D_801C0910[player->transformation];
-    sp70 = D_801C0924[player->transformation];
-    sp7C = D_801C0938[player->transformation] - player->unk_AB8;
+#ifdef COMBO_BUILD
+    // ComboShip (Cross-Games Age): adult Link's legs are Fierce Deity's (OOT's adult leg lengths).
+    s32 legForm = Combo_AdultLink_Is(player) ? PLAYER_FORM_FIERCE_DEITY : player->transformation;
+#else
+    s32 legForm = player->transformation;
+#endif
+
+    sp74 = D_801C0910[legForm];
+    sp70 = D_801C0924[legForm];
+    sp7C = D_801C0938[legForm] - player->unk_AB8;
     Matrix_Push();
     Matrix_TranslateRotateZYX(pos, rot);
     Matrix_MultZero(&sp90);
-    Matrix_TranslateRotateZYX(&D_801C08C0[player->transformation], &skelAnime->jointTable[shinLimbIndex]);
-    Matrix_Translate(D_801C08FC[player->transformation], 0.0f, 0.0f, MTXMODE_APPLY);
+    Matrix_TranslateRotateZYX(&D_801C08C0[legForm], &skelAnime->jointTable[shinLimbIndex]);
+    Matrix_Translate(D_801C08FC[legForm], 0.0f, 0.0f, MTXMODE_APPLY);
     Matrix_MultZero(&sp84);
     Matrix_MultVecY(-300.0f, &footprintPos);
     Matrix_Pop();
@@ -3880,6 +3914,12 @@ Vec3f sPlayerFootPos[PLAYER_FORM_MAX] = {
 void Player_SetFeetPos(PlayState* play, Player* player, s32 limbIndex) {
     Vec3f* footPos = &sPlayerFootPos[player->transformation];
 
+#ifdef COMBO_BUILD
+    if (Combo_AdultLink_Is(player)) { // ComboShip (Cross-Games Age): adult feet
+        footPos = &sPlayerFootPos[PLAYER_FORM_FIERCE_DEITY];
+    }
+#endif
+
     Actor_SetFeetPos(&player->actor, limbIndex, PLAYER_LIMB_LEFT_FOOT, footPos, PLAYER_LIMB_RIGHT_FOOT, footPos);
 }
 
@@ -4366,10 +4406,13 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
             ((player->sheathType == PLAYER_MODELTYPE_SHEATH_14) ||
              (player->sheathType == PLAYER_MODELTYPE_SHEATH_15))) {
 #ifdef COMBO_BUILD
-            // ComboShip (cross-game items): the Deku Shield on the back is OOT's own (with its matrix).
-            CosmeticEditor_DrawBackShield(play, (Combo_Tools_BackShieldDL(player) != NULL)
-                                                    ? (Gfx*)Combo_Tools_BackShieldDL(player)
-                                                    : gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);
+            // ComboShip (cross-game items): the Deku Shield on the back is OOT's own (with its matrix). Adult Link's
+            // sheath model already carries the shield (Cross-Games Age).
+            if (!Combo_AdultLink_Is(player)) {
+                CosmeticEditor_DrawBackShield(play, (Combo_Tools_BackShieldDL(player) != NULL)
+                                                        ? (Gfx*)Combo_Tools_BackShieldDL(player)
+                                                        : gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);
+            }
 #else
             CosmeticEditor_DrawBackShield(play, gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);
 #endif
