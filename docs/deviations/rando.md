@@ -1919,6 +1919,11 @@ that warp pad. Opt-in seed settings: OOT `RSK_SONG_OF_SOARING_OOT`, MM `RO_SHUFF
 - **Logic.** `combo/rando/CrossWarpLogic.h`: each oracle exports `GetCrossOut` and the fill feeds it to the
   other as `@combo:*` pseudo-owned names. OOT root warp exits accept `Logic::ComboCrossWarp(n)`; MM owl
   exits accept `CAN_SOAR_TO_OWL`. Standalone single-game generation ignores the songs.
+- **Spoiler tags.** `SuffixCrossGameItems` tags the seven song names "(OOT)"/"(MM)" only when the guest
+  game's copy is on (any name of the song's group in its pool, fixed or starting items). The usual rule
+  reads each game's full item table, which holds all seven songs every seed, so every seed got tagged.
+  Gap: MM starting with all six warp songs leaves no trace in its dump, so they stay untagged. Harmless,
+  since MM then has no warp-song placement to confuse.
 
 ## Cross-placed MM junk is baked at generation (2026-09-07)
 
