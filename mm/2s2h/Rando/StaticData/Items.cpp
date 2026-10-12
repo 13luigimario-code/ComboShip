@@ -312,6 +312,17 @@ std::map<RandoItemId, RandoStaticItem> Items = {
     RI(RI_BOOMERANG,                  "the",  "Boomerang",                  RITYPE_MAJOR,           ITEM_COMBO_BOOMERANG,            GI_NONE,                     GID_NONE),
     RI(RI_SLINGSHOT,                  "the",  "Fairy Slingshot",            RITYPE_MAJOR,           ITEM_COMBO_SLINGSHOT,            GI_NONE,                     GID_NONE),
     RI(RI_SHIELD_DEKU,                "a",    "Deku Shield",                RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    // OOT items in MM (MiscBehavior/CrossUpgrades.cpp). The Fairy Ocarina and the Short Hookshot are MM's own ocarina /
+    // hookshot in the inventory, marked as the first tier; the capacity upgrades raise MM's own stick/nut upgrades.
+    RI(RI_STONE_OF_AGONY,             "the",  "Stone of Agony",             RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_OCARINA_FAIRY,              "the",  "Fairy Ocarina",              RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_HOOKSHOT_SHORT,             "the",  "Short Hookshot",             RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_PROGRESSIVE_STICK_UPGRADE,  "a",    "Progressive Stick Capacity", RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_DEKU_STICK_UPGRADE_20,      "a",    "Deku Stick Capacity (20)",   RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_DEKU_STICK_UPGRADE_30,      "a",    "Deku Stick Capacity (30)",   RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_PROGRESSIVE_NUT_UPGRADE,    "a",    "Progressive Nut Capacity",   RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_DEKU_NUT_UPGRADE_30,        "a",    "Deku Nut Capacity (30)",     RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    RI(RI_DEKU_NUT_UPGRADE_40,        "a",    "Deku Nut Capacity (40)",     RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
 };
 
 std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
@@ -355,6 +366,7 @@ std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
           RI_MASK_GERUDO, RI_MASK_SKULL, RI_MASK_SPOOKY, RI_SONG_ZELDA,
           RI_SPELL_FIRE, RI_SPELL_WIND, RI_SPELL_LOVE,
           RI_HAMMER, RI_BOOMERANG, RI_SLINGSHOT, RI_SHIELD_DEKU,
+          RI_STONE_OF_AGONY, RI_PROGRESSIVE_STICK_UPGRADE, RI_PROGRESSIVE_NUT_UPGRADE,
 #endif
         } }, 
 };
@@ -517,6 +529,20 @@ const char* GetIconTexturePath(RandoItemId randoItemId) {
             return gComboIconSlingshotTex;
         case RI_SHIELD_DEKU:
             return gComboIconShieldDekuTex;
+        case RI_STONE_OF_AGONY:
+            return gComboIconStoneOfAgonyTex;
+        case RI_OCARINA_FAIRY:
+            return gComboIconOcarinaFairyTex;
+        case RI_HOOKSHOT_SHORT:
+            return gComboIconHookshotShortTex;
+        case RI_PROGRESSIVE_STICK_UPGRADE:
+        case RI_DEKU_STICK_UPGRADE_20:
+        case RI_DEKU_STICK_UPGRADE_30:
+            return (const char*)gItemIcons[ITEM_DEKU_STICK];
+        case RI_PROGRESSIVE_NUT_UPGRADE:
+        case RI_DEKU_NUT_UPGRADE_30:
+        case RI_DEKU_NUT_UPGRADE_40:
+            return (const char*)gItemIcons[ITEM_DEKU_NUT];
 #endif
         case RI_BOMBCHU:
         case RI_BOMBCHU_5:

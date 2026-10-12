@@ -47,6 +47,9 @@ static const ALIGN_ASSET(2) char sSlingshotStringDL[] = COMBO_OOT_LINK_CHILD_DL(
 static const ALIGN_ASSET(2) char sDekuShieldHandDL[] =
     COMBO_OOT_LINK_CHILD_DL("gLinkChildRightFistAndDekuShieldNearDL");
 static const ALIGN_ASSET(2) char sDekuShieldBackDL[] = COMBO_OOT_LINK_CHILD_DL("gLinkChildDekuShieldWithMatrixDL");
+// CrossUpgrades.cpp: OOT's Fairy Ocarina in human Link's hand while he plays it.
+static const ALIGN_ASSET(2) char sFairyOcarinaHandDL[] =
+    COMBO_OOT_LINK_CHILD_DL("gLinkChildRightHandHoldingFairyOcarinaNearDL");
 // The textured half of OOT's held boomerang (OoTMM makeEqBoomerang appends it to the cut fist list).
 static const ALIGN_ASSET(2) char sBoomerangTexturedDL[] = COMBO_OOT_LINK_CHILD_DL("gLinkChildDL_18580");
 
@@ -290,6 +293,9 @@ extern "C" void* Combo_Tools_RightHandDL(Player* player, int rightHandType) {
     }
     if ((rightHandType == PLAYER_MODELTYPE_RH_SHIELD) && IsDekuShield(player)) {
         return (void*)sDekuShieldHandDL;
+    }
+    if ((rightHandType == PLAYER_MODELTYPE_RH_INSTRUMENT) && Combo_Upgrades_OcarinaIsFairy()) {
+        return (void*)sFairyOcarinaHandDL;
     }
     return nullptr;
 }

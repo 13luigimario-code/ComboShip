@@ -3567,6 +3567,12 @@ static void ComboGrantTradeSlot(u8 itemId) {
 // Covers the save-context mutations that logic conditions read (INV_CONTENT, equipment,
 // quest items, rando flags, dungeon items, week event regs). Derived from GiveItem.cpp.
 static void GiveItemForOracle(RandoItemId ri) {
+    // ComboShip (cross-game items): the full ocarina / hookshot upgrades the Fairy Ocarina / Short Hookshot.
+    if (ri == RI_OCARINA) {
+        Flags_ClearRandoInf(RANDO_INF_COMBO_OCARINA_IS_FAIRY);
+    } else if (ri == RI_HOOKSHOT) {
+        Flags_ClearRandoInf(RANDO_INF_COMBO_HOOKSHOT_IS_SHORT);
+    }
     switch (ri) {
         case RI_JUNK:
         case RI_NONE:
@@ -3804,6 +3810,18 @@ static void GiveItemForOracle(RandoItemId ri) {
         case RI_SLINGSHOT:
         case RI_SHIELD_DEKU:
             Rando::CrossGearGive(ri);
+            break;
+        // ComboShip (cross-game items): OOT items in MM - flag / inventory / upgrade writes, headless-safe.
+        case RI_STONE_OF_AGONY:
+        case RI_OCARINA_FAIRY:
+        case RI_HOOKSHOT_SHORT:
+        case RI_PROGRESSIVE_STICK_UPGRADE:
+        case RI_DEKU_STICK_UPGRADE_20:
+        case RI_DEKU_STICK_UPGRADE_30:
+        case RI_PROGRESSIVE_NUT_UPGRADE:
+        case RI_DEKU_NUT_UPGRADE_30:
+        case RI_DEKU_NUT_UPGRADE_40:
+            Rando::CrossUpgradesGive(ri);
             break;
         case RI_SONG_ZELDA: // ComboShip (cross-game items)
             Flags_SetRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);
@@ -4289,7 +4307,14 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
         case ComboRando::SF_WALLET:
             return CUR_UPG_VALUE(UPG_WALLET);
         case ComboRando::SF_HOOKSHOT:
-            return INV_CONTENT(ITEM_HOOKSHOT) != ITEM_NONE ? 1 : 0;
+            // ComboShip (cross-game items): with MM's Short Hookshot, tier 1 is the Short Hookshot and 2 the Hookshot.
+            if (INV_CONTENT(ITEM_HOOKSHOT) == ITEM_NONE) {
+                return 0;
+            }
+            return ((RANDO_SAVE_OPTIONS[RO_CROSS_HOOKSHOT_SHORT] == RO_GENERIC_YES) &&
+                    !Flags_GetRandoInf(RANDO_INF_COMBO_HOOKSHOT_IS_SHORT))
+                       ? 2
+                       : 1;
         case ComboRando::SF_FIRE_ARROWS:
             return INV_CONTENT(ITEM_ARROW_FIRE) != ITEM_NONE ? 1 : 0;
         case ComboRando::SF_ICE_ARROWS:
@@ -4368,6 +4393,13 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
             return Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOMERANG) ? 1 : 0;
         case ComboRando::SF_SLINGSHOT:
             return Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT) ? 1 : 0;
+        case ComboRando::SF_STONE_OF_AGONY:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_STONE_OF_AGONY) ? 1 : 0;
+        // MM starts at capacity tier 1 (10 sticks / 20 nuts); the family counts the upgrades past it.
+        case ComboRando::SF_STICK_UPGRADES:
+            return std::max(0, (int)CUR_UPG_VALUE(UPG_DEKU_STICKS) - 1);
+        case ComboRando::SF_NUT_UPGRADES:
+            return std::max(0, (int)CUR_UPG_VALUE(UPG_DEKU_NUTS) - 1);
         case ComboRando::SF_BLAST_MASK:
             return INV_CONTENT(ITEM_MASK_BLAST) != ITEM_NONE ? 1 : 0;
         case ComboRando::SF_STONE_MASK:
@@ -4531,6 +4563,15 @@ extern "C" COMBO_EXPORT void MM_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_SLINGSHOT:
                 base = RI_SLINGSHOT;
+                break;
+            case ComboRando::SF_STONE_OF_AGONY:
+                base = RI_STONE_OF_AGONY;
+                break;
+            case ComboRando::SF_STICK_UPGRADES:
+                base = RI_PROGRESSIVE_STICK_UPGRADE;
+                break;
+            case ComboRando::SF_NUT_UPGRADES:
+                base = RI_PROGRESSIVE_NUT_UPGRADE;
                 break;
             case ComboRando::SF_BLAST_MASK:
                 base = RI_MASK_BLAST;

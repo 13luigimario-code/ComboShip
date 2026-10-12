@@ -19,6 +19,14 @@ extern "C" int Combo_MM_BombchuBagShared(void);
 #endif
 
 void Rando::GiveItem(RandoItemId randoItemId) {
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): the full ocarina / hookshot upgrades OOT's Fairy Ocarina / the Short Hookshot.
+    if (randoItemId == RI_OCARINA) {
+        Flags_ClearRandoInf(RANDO_INF_COMBO_OCARINA_IS_FAIRY);
+    } else if (randoItemId == RI_HOOKSHOT) {
+        Flags_ClearRandoInf(RANDO_INF_COMBO_HOOKSHOT_IS_SHORT);
+    }
+#endif
     switch (randoItemId) {
 #ifdef COMBO_BUILD
         // ComboShip (cross-game items): OOT gear usable in MM (MiscBehavior/CrossGear.cpp).
@@ -44,6 +52,17 @@ void Rando::GiveItem(RandoItemId randoItemId) {
         case RI_SLINGSHOT:
         case RI_SHIELD_DEKU:
             Rando::CrossGearGive(randoItemId);
+            break;
+        case RI_STONE_OF_AGONY:
+        case RI_OCARINA_FAIRY:
+        case RI_HOOKSHOT_SHORT:
+        case RI_PROGRESSIVE_STICK_UPGRADE:
+        case RI_DEKU_STICK_UPGRADE_20:
+        case RI_DEKU_STICK_UPGRADE_30:
+        case RI_PROGRESSIVE_NUT_UPGRADE:
+        case RI_DEKU_NUT_UPGRADE_30:
+        case RI_DEKU_NUT_UPGRADE_40:
+            Rando::CrossUpgradesGive(randoItemId); // MiscBehavior/CrossUpgrades.cpp
             break;
         case RI_SONG_ZELDA:
             Flags_SetRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);

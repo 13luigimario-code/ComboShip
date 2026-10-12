@@ -108,6 +108,14 @@ void* Combo_Tools_FirstPersonRightHandDL(struct Player* player);
 void* Combo_Tools_SlingshotStringDL(struct Player* player);
 void* Combo_Tools_BackShieldDL(struct Player* player);
 
+// ---- CrossUpgrades.cpp: Stone of Agony, Fairy Ocarina, Short Hookshot, Deku Stick & Nut upgrades ----
+// The inventory's ocarina is still OOT's Fairy Ocarina / the hookshot is still the Short Hookshot.
+int Combo_Upgrades_OcarinaIsFairy(void);
+int Combo_Upgrades_HookshotIsShort(void);
+// Player_DetectSecrets is about to rumble: 0 to stay silent (Stone of Agony option on, not owned yet); with the Stone
+// it also flashes OOT's Stone of Agony icon.
+int Combo_Upgrades_SecretRumble(void);
+
 #ifdef __cplusplus
 }
 #endif

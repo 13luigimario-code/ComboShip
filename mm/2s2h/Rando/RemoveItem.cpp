@@ -36,6 +36,17 @@ void Rando::RemoveItem(RandoItemId randoItemId) {
         case RI_SHIELD_DEKU:
             Rando::CrossGearRemove(randoItemId);
             break;
+        case RI_STONE_OF_AGONY:
+        case RI_OCARINA_FAIRY:
+        case RI_HOOKSHOT_SHORT:
+        case RI_PROGRESSIVE_STICK_UPGRADE:
+        case RI_DEKU_STICK_UPGRADE_20:
+        case RI_DEKU_STICK_UPGRADE_30:
+        case RI_PROGRESSIVE_NUT_UPGRADE:
+        case RI_DEKU_NUT_UPGRADE_30:
+        case RI_DEKU_NUT_UPGRADE_40:
+            Rando::CrossUpgradesRemove(randoItemId); // MiscBehavior/CrossUpgrades.cpp
+            break;
         case RI_SONG_ZELDA:
             Flags_ClearRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);
             break;

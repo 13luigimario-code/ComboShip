@@ -54,6 +54,10 @@ const char* CrossGearOOTItemName(RandoItemId randoItemId);
 // Grant/remove for those items (RandoInf flags + trade-slot entry); dormant-safe, never touches gPlayState.
 bool CrossGearGive(RandoItemId randoItemId);
 bool CrossGearRemove(RandoItemId randoItemId);
+// ComboShip (cross-game items): OOT items in MM (Stone of Agony, Fairy Ocarina, Short Hookshot, Deku Stick & Nut
+// upgrades); MiscBehavior/CrossUpgrades.cpp. Headless-safe (save writes only). False for any other item.
+bool CrossUpgradesGive(RandoItemId randoItemId);
+bool CrossUpgradesRemove(RandoItemId randoItemId);
 #endif
 void RemoveItem(RandoItemId randoItemId);
 RandoItemId CurrentJunkItem(RandoCheckId randoCheckId = RC_UNKNOWN);

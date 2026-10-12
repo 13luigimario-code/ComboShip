@@ -287,6 +287,36 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT);
         case RI_SHIELD_DEKU:
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SHIELD_DEKU);
+        // OOT items in MM (CrossUpgrades.cpp). The first ocarina / hookshot is the Fairy Ocarina / Short Hookshot;
+        // with one of those in the inventory, the ocarina / hookshot is still obtainable as the upgrade.
+        case RI_STONE_OF_AGONY:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_STONE_OF_AGONY);
+        case RI_OCARINA_FAIRY:
+            return INV_CONTENT(ITEM_OCARINA_OF_TIME) == ITEM_NONE;
+        case RI_HOOKSHOT_SHORT:
+            return INV_CONTENT(ITEM_HOOKSHOT) == ITEM_NONE;
+        case RI_OCARINA:
+            if (Flags_GetRandoInf(RANDO_INF_COMBO_OCARINA_IS_FAIRY)) {
+                return true;
+            }
+            break;
+        case RI_HOOKSHOT:
+            if (Flags_GetRandoInf(RANDO_INF_COMBO_HOOKSHOT_IS_SHORT)) {
+                return true;
+            }
+            break;
+        case RI_PROGRESSIVE_STICK_UPGRADE:
+            return !hasObtainedCheck && (CUR_UPG_VALUE(UPG_DEKU_STICKS) < 3);
+        case RI_DEKU_STICK_UPGRADE_20:
+            return CUR_UPG_VALUE(UPG_DEKU_STICKS) < 2;
+        case RI_DEKU_STICK_UPGRADE_30:
+            return CUR_UPG_VALUE(UPG_DEKU_STICKS) < 3;
+        case RI_PROGRESSIVE_NUT_UPGRADE:
+            return !hasObtainedCheck && (CUR_UPG_VALUE(UPG_DEKU_NUTS) < 3);
+        case RI_DEKU_NUT_UPGRADE_30:
+            return CUR_UPG_VALUE(UPG_DEKU_NUTS) < 2;
+        case RI_DEKU_NUT_UPGRADE_40:
+            return CUR_UPG_VALUE(UPG_DEKU_NUTS) < 3;
 #endif
         case RI_PROGRESSIVE_WALLET:
             if (hasObtainedCheck) {
@@ -780,6 +810,24 @@ RandoItemId Rando::ConvertItem(RandoItemId randoItemId, RandoCheckId randoCheckI
                        : (tier == 1) ? RI_STRENGTH_SILVER_GAUNTLETS
                                      : RI_STRENGTH_GOLDEN_GAUNTLETS;
             }
+            // OOT items in MM (CrossUpgrades.cpp): the first ocarina / hookshot is OOT's Fairy Ocarina / Short
+            // Hookshot.
+            case RI_OCARINA:
+                if ((RANDO_SAVE_OPTIONS[RO_CROSS_OCARINA_FAIRY] == RO_GENERIC_YES) &&
+                    (INV_CONTENT(ITEM_OCARINA_OF_TIME) == ITEM_NONE)) {
+                    return RI_OCARINA_FAIRY;
+                }
+                break;
+            case RI_HOOKSHOT:
+                if ((RANDO_SAVE_OPTIONS[RO_CROSS_HOOKSHOT_SHORT] == RO_GENERIC_YES) &&
+                    (INV_CONTENT(ITEM_HOOKSHOT) == ITEM_NONE)) {
+                    return RI_HOOKSHOT_SHORT;
+                }
+                break;
+            case RI_PROGRESSIVE_STICK_UPGRADE:
+                return (CUR_UPG_VALUE(UPG_DEKU_STICKS) < 2) ? RI_DEKU_STICK_UPGRADE_20 : RI_DEKU_STICK_UPGRADE_30;
+            case RI_PROGRESSIVE_NUT_UPGRADE:
+                return (CUR_UPG_VALUE(UPG_DEKU_NUTS) < 2) ? RI_DEKU_NUT_UPGRADE_30 : RI_DEKU_NUT_UPGRADE_40;
 #endif
             case RI_TIME_PROGRESSIVE: {
                 // Choose the next clock according to mode and current owned half-days

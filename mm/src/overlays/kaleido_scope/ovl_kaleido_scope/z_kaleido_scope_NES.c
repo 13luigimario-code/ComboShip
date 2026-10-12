@@ -25,6 +25,7 @@
 #include "2s2h_assets.h"
 #ifdef COMBO_BUILD
 #include "2s2h/Rando/MiscBehavior/CrossItemAssets.h" // ComboShip: cross-game item names
+#include "2s2h/Rando/MiscBehavior/CrossGear.h"       // ComboShip: Fairy Ocarina name (OOT items in MM)
 #endif
 
 #include "2s2h/GameInteractor/GameInteractor.h"
@@ -438,6 +439,11 @@ void Kaleido_LoadItemNameStatic(void** segment, u32 texIndex) {
     };
     if (IS_COMBO_CROSS_ITEM(texIndex)) {
         *segment = (void*)sComboCrossItemNames[texIndex - ITEM_COMBO_MIN];
+        return;
+    }
+    // OOT items in MM (CrossUpgrades.cpp): the first-tier ocarina is OOT's Fairy Ocarina.
+    if ((texIndex == ITEM_OCARINA_OF_TIME) && Combo_Upgrades_OcarinaIsFairy()) {
+        *segment = (void*)gComboNameFairyOcarinaTex;
         return;
     }
 #endif
