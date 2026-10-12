@@ -334,6 +334,8 @@ RANDO_ENUM_ITEM(RSK_COMBO_MASK_KAMARO)
 // ComboShip (cross-game items): OoTMM's elegyOot / songHealingOot / songAwakeningOot / songGoronOot / songZoraOot /
 // songOrderOot
 RANDO_ENUM_ITEM(RSK_COMBO_MM_SONGS)
+// ComboShip (cross-game items): OoTMM's extraChildSwordsOot (Kokiri -> Razor -> Gilded Sword, as in MM)
+RANDO_ENUM_ITEM(RSK_COMBO_CHILD_SWORDS)
 #endif
 RANDO_ENUM_ITEM(RSK_MAX)
 RANDO_ENUM_END(RandomizerSettingKey)

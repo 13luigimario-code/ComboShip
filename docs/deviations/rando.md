@@ -2358,3 +2358,25 @@ animations share the frame layout (22 limbs + face word), as OoTMM relies on.
 **Logic:** none, like the other cross-game items. Not ported: OoTMM's hammer shockwave and Snowhead pillar/rusty
 switch interactions, boomerang item-fetch tuning, and the Deku Shield icon on the equipment page (it shows the Hero's
 Shield).
+
+### Extra child swords: Razor and Gilded Swords in OOT (2026-10-12)
+
+OoTMM's `extraChildSwordsOot`: the Kokiri Sword upgrades like MM's sword. OOT option `RSK_COMBO_CHILD_SWORDS`
+(`ComboChildSwords`, default off) adds two `RG_COMBO_PROGRESSIVE_CHILD_SWORD` to the pool. The Kokiri Sword and both
+progressive copies resolve in `Item::GetGIEntry` to the next tier (Kokiri Sword → `RG_COMBO_RAZOR_SWORD` →
+`RG_COMBO_GILDED_SWORD`), owned as `RAND_INF_OBTAINED_COMBO_RAZOR_SWORD/_GILDED_SWORD`; obtainability stops at the
+Gilded Sword. The equipment stays OOT's Kokiri Sword (equip flag, B button, `ITEM_SWORD_KOKIRI`), so everything that
+checks for it is unchanged; MM's Razor Sword durability is not ported.
+
+**Gameplay (`soh/soh/Enhancements/combo/ComboChildSwords.cpp`):**
+- Damage: `CollisionCheck_ApplyDamage` (guarded) multiplies hits carrying `DMG_SLASH_KOKIRI`, `DMG_SPIN_KOKIRI` or
+  `DMG_JUMP_KOKIRI` by 2 (Razor) or 3 (Gilded); zero-damage table entries stay zero.
+- Models: `VB_PLAYER_OVERRIDE_LIMB_DRAW` / `_PAUSE` replace child Link's Kokiri-Sword hand and sheath display lists
+  (matched by OOT resource name, near and far LOD) with MM's `gLinkHuman*RazorSword*` / `*GildedSword*` by "@mm:"
+  path; sheath variants that carry the Deku Shield add OOT's `gLinkChildDekuShieldWithMatrixDL`. A Hylian Shield on
+  the back keeps OOT's combined model.
+- Icon and name: `gItemIcons[ITEM_SWORD_KOKIRI]` is pointed at MM's Razor/Gilded icon each frame (restored at
+  tier 0), and `VB_DRAW_CUSTOM_ITEM_NAME` supplies MM's name texture on the equipment page.
+
+**Logic:** only the Kokiri Sword, as before; the upgrades are out of logic. **Shared Items:** none (no shared child
+sword family yet). OOT's progressive copies placed in MM draw as OOT's Kokiri Sword.

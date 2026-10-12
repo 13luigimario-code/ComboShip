@@ -456,6 +456,18 @@ void Rando::StaticData::InitItemTable() {
                            RHT_COMBO_SONG_OATH, RG_COMBO_SONG_OATH, OBJECT_GI_MELODY, GID_SONG_PRELUDE, TEXT_RANDOMIZER_CUSTOM_ITEM, 0x80,
                            CHEST_ANIM_LONG, ITEM_CATEGORY_MAJOR, MOD_RANDOMIZER, {"the ", "le ", "das "});
     itemTable[RG_COMBO_SONG_OATH].SetCustomDrawFunc(Randomizer_DrawComboMmSong);
+    // ComboShip (cross-game items): progressive child sword, Kokiri -> Razor -> Gilded (item.cpp resolves it). The two
+    // upgrades are MM's swords, drawn with MM's real models ("@mm:", draw.cpp).
+    itemTable[RG_COMBO_PROGRESSIVE_CHILD_SWORD] = Item(RG_COMBO_PROGRESSIVE_CHILD_SWORD, Text{ "Progressive Kokiri Sword", "Épée Kokiri (prog.)", "Kokiri-Schwert (Upgrade)" }, ITEMTYPE_ITEM, GI_SWORD_KOKIRI, true, LOGIC_COMBO_PROGRESSIVE_CHILD_SWORD,
+                           RHT_COMBO_PROGRESSIVE_CHILD_SWORD, ITEM_CATEGORY_MAJOR, {"a ", "une ", "ein "}, "%g");
+    itemTable[RG_COMBO_RAZOR_SWORD] = Item(RG_COMBO_RAZOR_SWORD, Text{ "Razor Sword", "Épée Rasoir", "Schmiedeschwert" }, ITEMTYPE_ITEM, RG_COMBO_RAZOR_SWORD, true, LOGIC_COMBO_RAZOR_SWORD,
+                           RHT_COMBO_RAZOR_SWORD, RG_COMBO_RAZOR_SWORD, OBJECT_GI_SWORD_1, GID_SWORD_KOKIRI, TEXT_RANDOMIZER_CUSTOM_ITEM, 0x80,
+                           CHEST_ANIM_LONG, ITEM_CATEGORY_MAJOR, MOD_RANDOMIZER, {"the ", "l'", "das "});
+    itemTable[RG_COMBO_RAZOR_SWORD].SetCustomDrawFunc(Randomizer_DrawComboMmSword);
+    itemTable[RG_COMBO_GILDED_SWORD] = Item(RG_COMBO_GILDED_SWORD, Text{ "Gilded Sword", "Épée Dorée", "Goldenes Schwert" }, ITEMTYPE_ITEM, RG_COMBO_GILDED_SWORD, true, LOGIC_COMBO_GILDED_SWORD,
+                           RHT_COMBO_GILDED_SWORD, RG_COMBO_GILDED_SWORD, OBJECT_GI_SWORD_1, GID_SWORD_KOKIRI, TEXT_RANDOMIZER_CUSTOM_ITEM, 0x80,
+                           CHEST_ANIM_LONG, ITEM_CATEGORY_MAJOR, MOD_RANDOMIZER, {"the ", "l'", "das "});
+    itemTable[RG_COMBO_GILDED_SWORD].SetCustomDrawFunc(Randomizer_DrawComboMmSword);
 #endif
     itemTable[RG_OCARINA_C_UP_BUTTON] =                 Item(RG_OCARINA_C_UP_BUTTON,              Text{ "Ocarina C Up Button", "Touche C-Haut de l'Ocarina", "C-Oben-Taste der Okarina" },                                             ITEMTYPE_ITEM,              GI_MAP,               true,  LOGIC_OCARINA_C_UP_BUTTON,          RHT_OCARINA_C_UP_BUTTON,               RG_OCARINA_C_UP_BUTTON,               OBJECT_GI_MAP,          GID_STONE_OF_AGONY,   TEXT_RANDOMIZER_CUSTOM_ITEM, 0x80, CHEST_ANIM_LONG,  ITEM_CATEGORY_MAJOR,  MOD_RANDOMIZER, {"the ", "la ", "den "});
     itemTable[RG_OCARINA_C_UP_BUTTON].SetCustomDrawFunc(Randomizer_DrawOcarinaButton);
