@@ -150,7 +150,9 @@ void OnGameFrame() {
 } // namespace
 
 static void RegisterComboMmSongs() {
-    const bool on = IS_RANDO && RAND_GET_OPTION(RSK_COMBO_MM_SONGS);
+    // Registered for every rando save (like ComboOwlWarp.cpp): the seed's options may not be applied yet when
+    // this runs, and owning one of the songs (checked per play) already implies the option was on.
+    const bool on = IS_RANDO;
     ResetRing();
     sMatched = -1;
     COND_HOOK(OnOcarinaNote, on, OnOcarinaNote);
