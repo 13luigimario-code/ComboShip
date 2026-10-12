@@ -22,6 +22,7 @@
 #include <cstring>
 #include <memory>
 #include <vector>
+#include <fast/resource/ResourceType.h>
 #include <fast/resource/type/DisplayList.h>
 #include <ship/resource/CrossRMRegistry.h>
 #include <ship/resource/ResourceManager.h>
@@ -116,7 +117,11 @@ Gfx* CutOotDL(CutDL& cut, const char* path, const char* fistTexture, const char*
         Ship::ResourceManagerScope rmScope(rm);
         cut.res = rm->LoadResource(path);
     }
-    auto dl = std::dynamic_pointer_cast<Fast::DisplayList>(cut.res);
+    std::shared_ptr<Fast::DisplayList> dl;
+    if ((cut.res != nullptr) &&
+        (cut.res->GetInitData()->Type == static_cast<uint32_t>(Fast::ResourceType::DisplayList))) {
+        dl = std::static_pointer_cast<Fast::DisplayList>(cut.res);
+    }
     if (dl == nullptr) {
         SPDLOG_ERROR("[ComboShip] cross-game tool model missing from the OOT archive: {}", path);
         return nullptr;
