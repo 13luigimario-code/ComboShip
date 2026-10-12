@@ -295,7 +295,19 @@ ItemObtainability Randomizer::GetItemObtainabilityFromRandomizerGet(RandomizerGe
 
         // Equipment
         case RG_KOKIRI_SWORD:
+#ifdef COMBO_BUILD
+            // ComboShip (cross-game items): with Extra Child Swords it upgrades an owned Kokiri Sword (item.cpp).
+            if (GetRandoSettingValue(RSK_COMBO_CHILD_SWORDS)) {
+                return !Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_GILDED_SWORD) ? CAN_OBTAIN
+                                                                                     : CANT_OBTAIN_ALREADY_HAVE;
+            }
+#endif
             return !CHECK_OWNED_EQUIP(EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_KOKIRI) ? CAN_OBTAIN : CANT_OBTAIN_ALREADY_HAVE;
+#ifdef COMBO_BUILD
+        case RG_COMBO_PROGRESSIVE_CHILD_SWORD:
+            return !Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_GILDED_SWORD) ? CAN_OBTAIN
+                                                                                 : CANT_OBTAIN_ALREADY_HAVE;
+#endif
         case RG_MASTER_SWORD:
             return !CHECK_OWNED_EQUIP(EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_MASTER) ? CAN_OBTAIN : CANT_OBTAIN_ALREADY_HAVE;
         case RG_BIGGORON_SWORD:

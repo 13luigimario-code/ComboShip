@@ -364,6 +364,11 @@ RANDO_ENUM_ITEM(RG_COMBO_SONG_SONATA)
 RANDO_ENUM_ITEM(RG_COMBO_SONG_GORON)
 RANDO_ENUM_ITEM(RG_COMBO_SONG_BOSSA)
 RANDO_ENUM_ITEM(RG_COMBO_SONG_OATH)
+// ComboShip (cross-game items): progressive child sword (Kokiri -> Razor -> Gilded, as in MM). The progressive item
+// resolves to the Kokiri Sword or one of the two upgrades below when it is given.
+RANDO_ENUM_ITEM(RG_COMBO_PROGRESSIVE_CHILD_SWORD)
+RANDO_ENUM_ITEM(RG_COMBO_RAZOR_SWORD)
+RANDO_ENUM_ITEM(RG_COMBO_GILDED_SWORD)
 #endif
 RANDO_ENUM_ITEM(RG_MAX)
 RANDO_ENUM_END(RandomizerGet)

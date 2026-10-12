@@ -189,6 +189,8 @@ bool Logic::HasItem(RandomizerGet itemName) {
         case RG_COMBO_SONG_GORON:
         case RG_COMBO_SONG_BOSSA:
         case RG_COMBO_SONG_OATH:
+        case RG_COMBO_RAZOR_SWORD:
+        case RG_COMBO_GILDED_SWORD:
 #endif
             // Ocarina Buttons
         case RG_OCARINA_A_BUTTON:
@@ -210,6 +212,10 @@ bool Logic::HasItem(RandomizerGet itemName) {
         case RG_SKELETON_KEY:
         case RG_RUTOS_LETTER:
             return CheckRandoInf(StaticData::RandoGetToRandInf.at(itemName));
+#ifdef COMBO_BUILD
+        case RG_COMBO_PROGRESSIVE_CHILD_SWORD: // ComboShip (cross-game items): out of logic; "has one" = upgraded
+            return CheckRandoInf(RAND_INF_OBTAINED_COMBO_RAZOR_SWORD);
+#endif
             // Boss Souls
         case RG_GOHMA_SOUL:
         case RG_KING_DODONGO_SOUL:
@@ -2073,6 +2079,8 @@ std::map<RandomizerGet, uint32_t> StaticData::RandoGetToRandInf = {
     { RG_COMBO_SONG_GORON, RAND_INF_OBTAINED_COMBO_SONG_GORON },
     { RG_COMBO_SONG_BOSSA, RAND_INF_OBTAINED_COMBO_SONG_BOSSA },
     { RG_COMBO_SONG_OATH, RAND_INF_OBTAINED_COMBO_SONG_OATH },
+    { RG_COMBO_RAZOR_SWORD, RAND_INF_OBTAINED_COMBO_RAZOR_SWORD },
+    { RG_COMBO_GILDED_SWORD, RAND_INF_OBTAINED_COMBO_GILDED_SWORD },
 #endif
     { RG_KEATON_MASK, RAND_INF_CHILD_TRADES_HAS_MASK_KEATON },
     { RG_SKULL_MASK, RAND_INF_CHILD_TRADES_HAS_MASK_SKULL },
@@ -2559,6 +2567,8 @@ void Logic::ApplyItemEffect(Item& item, bool state) {
                 case RG_COMBO_SONG_GORON:
                 case RG_COMBO_SONG_BOSSA:
                 case RG_COMBO_SONG_OATH:
+                case RG_COMBO_RAZOR_SWORD:
+                case RG_COMBO_GILDED_SWORD:
 #endif
                 case RG_KEATON_MASK:
                 case RG_SKULL_MASK:

@@ -430,6 +430,11 @@ void GenerateItemPool() {
     if (ctx->GetOption(RSK_COMBO_MASK_KAMARO)) {
         AddItemToPool(RG_COMBO_MASK_KAMARO, 1, 1, 1, 1);
     }
+    // ComboShip (cross-game items): two Progressive Kokiri Swords join the Kokiri Sword (Kokiri -> Razor -> Gilded,
+    // OoTMM extraChildSwordsOot). Out of OOT logic: the Kokiri Sword stays the logic item.
+    if (ctx->GetOption(RSK_COMBO_CHILD_SWORDS)) {
+        AddItemToPool(RG_COMBO_PROGRESSIVE_CHILD_SWORD, 2, 2, 2, 2);
+    }
     // ComboShip (cross-game items): MM songs in OOT (cosmetic in OOT; their use is the Shared Items songs).
     if (ctx->GetOption(RSK_COMBO_MM_SONGS)) {
         for (RandomizerGet song = RG_COMBO_SONG_ELEGY; song <= RG_COMBO_SONG_OATH; song = (RandomizerGet)(song + 1)) {

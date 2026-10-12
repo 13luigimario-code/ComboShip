@@ -1535,6 +1535,15 @@
                     "them with Shared Items to make one copy count for both games. Not considered by logic."
                 ]
             },
+            "combo_child_swords": {
+                "name": "Extra Child Swords (MM Swords in OoT)",
+                "description": [
+                    "Makes the Kokiri Sword progressive like Majora's Mask's sword: adds two Progressive Kokiri ",
+                    "Swords to the item pool, upgrading it to the Razor Sword (double damage) and then the Gilded ",
+                    "Sword (triple damage), with MM's models and icons. Logic still only needs the Kokiri Sword; ",
+                    "the upgrades are not considered by logic."
+                ]
+            },
             "slingbow_break_beehives": {
                 "name": "Slingshot/Bow Can Break Beehives",
                 "description": "Allows Slingshot and Bow to break beehives when Beehive Shuffle is turned on."

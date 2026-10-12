@@ -2090,6 +2090,22 @@ void StaticData::HintTable_Init_Item() {
                                                   CustomMessage("something melodic", /*german*/"etwas Melodisches", /*french*/"quelque chose de mélodieux")
                                                   }, {
                                                   CustomMessage("a song to the giants", /*german*/"Hymne des Appells", /*french*/"Hymne de l'Appel")});
+    // ComboShip (cross-game items): progressive child sword
+    hintTextTable[RHT_COMBO_PROGRESSIVE_CHILD_SWORD] = HintText(CustomMessage("a Progressive Kokiri Sword", /*german*/"ein Kokiri-Schwert (Upgrade)", /*french*/"une Épée Kokiri (prog.)"),
+                                                  {
+                                                  CustomMessage("a weapon", /*german*/"eine Waffe", /*french*/"une arme")
+                                                  }, {
+                                                  CustomMessage("a sharper blade", /*german*/"eine schärfere Klinge", /*french*/"une lame plus tranchante")});
+    hintTextTable[RHT_COMBO_RAZOR_SWORD] = HintText(CustomMessage("the Razor Sword", /*german*/"das Schmiedeschwert", /*french*/"l'Épée Rasoir"),
+                                                  {
+                                                  CustomMessage("a weapon", /*german*/"eine Waffe", /*french*/"une arme")
+                                                  }, {
+                                                  CustomMessage("a sharper blade", /*german*/"eine schärfere Klinge", /*french*/"une lame plus tranchante")});
+    hintTextTable[RHT_COMBO_GILDED_SWORD] = HintText(CustomMessage("the Gilded Sword", /*german*/"das Goldene Schwert", /*french*/"l'Épée Dorée"),
+                                                  {
+                                                  CustomMessage("a weapon", /*german*/"eine Waffe", /*french*/"une arme")
+                                                  }, {
+                                                  CustomMessage("a golden blade", /*german*/"eine goldene Klinge", /*french*/"une lame dorée")});
 #endif
 
     hintTextTable[RHT_OCARINA_A_BUTTON] = HintText(CustomMessage("an Ocarina A Button", /*german*/"die A-Taste der Okarina", /*french*/"la Touche A de l'Ocarina"),

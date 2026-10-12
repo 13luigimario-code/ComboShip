@@ -484,6 +484,14 @@ extern "C" void Randomizer_DrawComboMmMask(PlayState* play, GetItemEntry* getIte
         GetItem_Draw(play, GID_MASK_TRUTH);
     }
 }
+
+// ComboShip (cross-game items): the Kokiri Sword's MM upgrades, drawn with MM's own get-item models.
+extern "C" void Randomizer_DrawComboMmSword(PlayState* play, GetItemEntry* getItemEntry) {
+    const char* mmName = (getItemEntry->itemId == RG_COMBO_GILDED_SWORD) ? "RI_SWORD_GILDED" : "RI_SWORD_RAZOR";
+    if (!OOT_DrawMMItemByName(play, mmName)) {
+        GetItem_Draw(play, GID_SWORD_KOKIRI);
+    }
+}
 #endif
 
 Gfx* GetEmptyDlist(GraphicsContext* gfxCtx) {

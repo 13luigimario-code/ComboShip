@@ -1481,6 +1481,8 @@ void Settings::CreateOptions() {
     OPT_BOOL(RSK_COMBO_MASK_STONE, CVAR_RANDOMIZER_SETTING("ComboMaskStone"));
     OPT_BOOL(RSK_COMBO_MASK_KAMARO, CVAR_RANDOMIZER_SETTING("ComboMaskKamaro"));
     OPT_BOOL(RSK_COMBO_MM_SONGS, CVAR_RANDOMIZER_SETTING("ComboMmSongs"));
+    // ComboShip (cross-game items): OoTMM's extraChildSwordsOot
+    OPT_BOOL(RSK_COMBO_CHILD_SWORDS, CVAR_RANDOMIZER_SETTING("ComboChildSwords"));
 #endif
     OPT_U8(RSK_INFINITE_UPGRADES, {"Off", "Progressive", "Condensed Progressive"}, OptionCategory::Setting, CVAR_RANDOMIZER_SETTING("InfiniteUpgrades"));
     OPT_BOOL(RSK_SKELETON_KEY, CVAR_RANDOMIZER_SETTING("SkeletonKey"));
@@ -2222,6 +2224,7 @@ void Settings::CreateOptions() {
                                                                                  &mOptions[RSK_COMBO_MASK_STONE],
                                                                                  &mOptions[RSK_COMBO_MASK_KAMARO],
                                                                                  &mOptions[RSK_COMBO_MM_SONGS],
+                                                                                 &mOptions[RSK_COMBO_CHILD_SWORDS],
 #endif
                                                                                  &mOptions[RSK_BOMBCHU_BAG],
                                                                                  &mOptions[RSK_ENABLE_BOMBCHU_DROPS],
@@ -2431,6 +2434,7 @@ void Settings::CreateOptions() {
                                             &mOptions[RSK_COMBO_MASK_STONE],
                                             &mOptions[RSK_COMBO_MASK_KAMARO],
                                             &mOptions[RSK_COMBO_MM_SONGS],
+                                            &mOptions[RSK_COMBO_CHILD_SWORDS],
 #endif
                                             &mOptions[RSK_PROGRESSIVE_GORON_SWORD],
                                             &mOptions[RSK_SHUFFLE_BOSS_SOULS],
