@@ -216,8 +216,8 @@ layout, re-check the func→order mapping here.
   `soh/soh/Enhancements/randomizer/item_list.cpp` under COMBO_BUILD (mirror of the `ComboItemDrawMM.h`
   include in `mm/2s2h/BenPort.cpp`).
 - `combo/menu/ComboForeignDrawMM.h` — 2ship.dll consumer `MM_DrawComboForeign(RandoCheckId)`. Mirror
-  of `Randomizer_DrawComboForeign` (`soh/.../draw.cpp`): `MM_LookupForeign` → `GetProcAddress(soh.dll,
-  OOT_GetItemDrawInfo)` → route paths with `"__OTR__@oot:"` → submit OPA/XLU layers (per-check
+  of `Randomizer_DrawComboForeign` (`soh/.../draw.cpp`): `MM_LookupForeign` → `Combo_ResolveSym("soh",
+  "OOT_GetItemDrawInfo")` → route paths with `"__OTR__@oot:"` → submit OPA/XLU layers (per-check
   per-slot cache + sentinel fallback). MM passes the `RandoCheckId` straight into `Rando::DrawItem`,
   so no GetItemEntry-stamping analog is needed.
 
@@ -1749,7 +1749,7 @@ the next file creation.
 `MM_InitRandoSaveFile` returns 0 — MM has just rolled its own, so this overwrites it. OOT is the source
 of truth because its roll is seed-derived and MM's is not. It lives in comboui (not the launcher exe)
 because comboui already links libultraship, so the CVar API is called directly instead of through a
-hand-cast `GetProcAddress` shim; the launcher drives it through three exports,
+hand-cast `Combo_ResolveSym` shim; the launcher drives it through three exports,
 `ComboUI_SyncRandomizedCosmetics`, `ComboUI_CosmeticsSyncGateEnabled` (one predicate, so the gate's CVar
 reads are never duplicated) and `ComboUI_ClaimGenRollSeed` (the latch above). The CVar store is one
 shared instance across the exe and every DLL (shared `libultraship.dll`), so this is plain CVar
@@ -1919,6 +1919,11 @@ that warp pad. Opt-in seed settings: OOT `RSK_SONG_OF_SOARING_OOT`, MM `RO_SHUFF
 - **Logic.** `combo/rando/CrossWarpLogic.h`: each oracle exports `GetCrossOut` and the fill feeds it to the
   other as `@combo:*` pseudo-owned names. OOT root warp exits accept `Logic::ComboCrossWarp(n)`; MM owl
   exits accept `CAN_SOAR_TO_OWL`. Standalone single-game generation ignores the songs.
+- **Spoiler tags.** `SuffixCrossGameItems` tags the seven song names "(OOT)"/"(MM)" only when the guest
+  game's copy is on (any name of the song's group in its pool, fixed or starting items). The usual rule
+  reads each game's full item table, which holds all seven songs every seed, so every seed got tagged.
+  Gap: MM starting with all six warp songs leaves no trace in its dump, so they stay untagged. Harmless,
+  since MM then has no warp-song placement to confuse.
 
 ## Cross-placed MM junk is baked at generation (2026-09-07)
 

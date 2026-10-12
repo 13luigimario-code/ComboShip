@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <cstdlib>
 #include <nlohmann/json.hpp>
 
 #include "SharedItems.h"
@@ -98,8 +99,38 @@ inline GameId KeyToGameId(const std::string& s) {
     return s == "mm" ? GAME_MM : GAME_OOT;
 }
 
+// Base directory for ComboShip's WRITABLE data (save containers, seeds, spoilers).
+//
+// Same rule as libultraship's Context::GetAppDirectoryPath, which places the games' own saves and
+// config: SHIP_HOME on macOS/Linux, else the working directory. Agreeing with it keeps
+// Save/*.combosav and Randomizer/ beside the games' saves wherever the player launches from.
+// SHIP_HOME is what keeps this off CWD on macOS: the .app's Info.plist always sets it, because a
+// Finder launch starts with CWD "/" (the read-only system volume), where every save write failed.
+inline std::filesystem::path DataDir() {
+#if defined(__APPLE__) || defined(__linux__)
+    if (const char* h = std::getenv("SHIP_HOME"); h != nullptr && *h != '\0') {
+        std::string p(h);
+        if (p[0] == '~') { // the .app's Info.plist stores it tilde-relative
+            if (const char* home = std::getenv("HOME"))
+                p = std::string(home) + p.substr(1);
+        }
+        return p;
+    }
+#endif
+    return std::filesystem::path(".");
+}
+
 inline std::filesystem::path ConsolidatedDir() {
-    return std::filesystem::path("Randomizer");
+    return DataDir() / "Randomizer";
+}
+
+// Slot save containers, under the same base as ConsolidatedDir.
+inline std::filesystem::path SaveDir() {
+    return DataDir() / "Save";
+}
+
+inline std::filesystem::path ContainerPath(int fileNum) {
+    return SaveDir() / ("file" + std::to_string(fileNum + 1) + ".combosav");
 }
 
 // Per-seed spoiler named from the 5 hash-icon indexes, like SoH's own (spoiler_log.cpp). The newest
@@ -398,29 +429,52 @@ inline nlohmann::json BuildForeignArray(const nlohmann::json& foreignArray, Shar
 // on apply. Foreign checks are skipped (their real cross-game item is carried by the foreign[] array,
 // whose displayName already carries the tag). Check names are never suffixed: they live in per-game
 // objects (oot/mm) and a game DLL can't reproduce a cross-game-aware suffix at runtime.
+// Teleport songs are tagged only while the guest game's copy is on (in its pool, fixed or starting items).
 inline void SuffixCrossGameItems(nlohmann::json& ootPlacements, nlohmann::json& mmPlacements,
                                  const nlohmann::json& foreignArray, const std::string& sohDump,
                                  const std::string& mmDump, const std::set<std::string>& untagged = {}) {
+    struct NameSets {
+        std::set<std::string> all, has; // all = pool+items+fixed; has = pool+fixed+startingItems
+    };
     auto itemNames = [](const std::string& dump) {
-        std::set<std::string> s;
+        NameSets s;
         try {
             auto d = nlohmann::json::parse(dump);
             for (auto& it : d.value("pool", nlohmann::json::array()))
-                if (auto n = it.value("name", std::string{}); !n.empty())
-                    s.insert(std::move(n));
+                if (auto n = it.value("name", std::string{}); !n.empty()) {
+                    s.has.insert(n);
+                    s.all.insert(std::move(n));
+                }
             for (auto& it : d.value("items", nlohmann::json::array()))
                 if (auto n = it.value("name", std::string{}); !n.empty())
-                    s.insert(std::move(n));
+                    s.all.insert(std::move(n));
             for (auto& f : d.value("fixed", nlohmann::json::array()))
-                if (auto n = f.value("item", std::string{}); !n.empty())
-                    s.insert(std::move(n));
+                if (auto n = f.value("item", std::string{}); !n.empty()) {
+                    s.has.insert(n);
+                    s.all.insert(std::move(n));
+                }
+            for (auto& n : d.value("startingItems", nlohmann::json::array()))
+                if (n.is_string())
+                    s.has.insert(n.get<std::string>());
         } catch (...) {}
         return s;
     };
-    std::set<std::string> ootSet = itemNames(sohDump), mmSet = itemNames(mmDump), shared;
-    for (const auto& n : ootSet)
-        if (mmSet.count(n))
+    NameSets ootSet = itemNames(sohDump), mmSet = itemNames(mmDump);
+    std::set<std::string> shared;
+    for (const auto& n : ootSet.all)
+        if (mmSet.all.count(n))
             shared.insert(n);
+    const SharedFamilyDef* fams = SharedFamilyTable();
+    for (int i = 0; i < SF_COUNT; ++i) {
+        if (!IsTeleportSong(fams[i].family))
+            continue;
+        const auto& guest = TeleportSongGuestIsOot(fams[i].family) ? ootSet.has : mmSet.has;
+        bool guestOn = false;
+        for (int j = 0; j < SF_COUNT && !guestOn; ++j)
+            guestOn = std::strcmp(fams[j].cvar, fams[i].cvar) == 0 && guest.count(fams[j].ootName);
+        if (!guestOn)
+            shared.erase(fams[i].ootName);
+    }
     // Shared Items (OoTMM-style): a name-collision here is between OOT's copies and MM's now-trimmed
     // remainder, which is meaningless once the family is shared (decision 3) — never suffixed.
     for (const auto& n : untagged)
