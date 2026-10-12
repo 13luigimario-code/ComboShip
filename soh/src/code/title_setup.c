@@ -10,6 +10,7 @@ extern s32 gComboReturnFileNum;
 // ComboShip (teleport songs): arrival entrance pushed by the launcher (>= 0), consumed once.
 extern s32 gComboTargetEntrance;
 extern s32 gComboCrossArrival;
+void Combo_OoT_ApplyFwArrival(void);
 #endif
 
 void TitleSetup_InitImpl(GameState* gameState) {
@@ -41,6 +42,7 @@ void TitleSetup_InitImpl(GameState* gameState) {
             gSaveContext.entranceIndex = Entrance_OverrideNextIndex((s16)gComboTargetEntrance);
             gComboTargetEntrance = -1;
             gComboCrossArrival = 1;
+            Combo_OoT_ApplyFwArrival(); // Cross-Games Farore's Wind: arrive at the warp point (ComboCrossFw.cpp)
         } else {
             gSaveContext.entranceIndex = Entrance_OverrideNextIndex(ENTR_MARKET_DAY_OUTSIDE_HAPPY_MASK_SHOP);
         }

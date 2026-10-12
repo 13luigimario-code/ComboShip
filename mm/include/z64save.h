@@ -393,6 +393,10 @@ typedef struct RandoSaveInfo {
 #ifdef COMBO_BUILD
     u8 pendingTrapCount; // ComboShip: cross-world traps granted while MM was dormant; drained on activation
     u8 comboSlingshotSeeds; // ComboShip (cross-game items): Deku Seeds for the OOT Slingshot in MM
+    // ComboShip (cross-game items): Farore's Wind point (CrossSpells.cpp). 0 none, 1 set in MM, 2 set in OOT
+    // (Cross-Games Farore's Wind: casting here warps there).
+    u8 comboFwState;
+    RespawnData comboFw;
 #endif
 } RandoSaveInfo;
 

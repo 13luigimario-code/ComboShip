@@ -37,6 +37,12 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <libultraship/bridge/consolevariablebridge.h>
+#ifdef COMBO_BUILD
+// ComboShip: Cross-Games Farore's Wind (ComboCrossFw.cpp)
+int Combo_Fw_OotReturn(PlayState* play);
+void Combo_Fw_OotOnSet(void);
+void Combo_Fw_OotOnDispel(void);
+#endif
 
 // Some player animations are played at this reduced speed, for reasons yet unclear.
 // This is called "adjusted" for now.
@@ -15139,6 +15145,14 @@ void Player_Action_8085063C(Player* this, PlayState* play) {
     if (Message_GetState(&play->msgCtx) == TEXT_STATE_CLOSING) {
         s32 respawnData = gSaveContext.respawn[RESPAWN_MODE_TOP].data;
 
+#ifdef COMBO_BUILD
+        // ComboShip: Cross-Games Farore's Wind - a point in Termina warps there (ComboCrossFw.cpp).
+        if ((play->msgCtx.choiceIndex == 0) && Combo_Fw_OotReturn(play)) {
+            func_80853080(this, play);
+            func_8005B1A4(Play_GetCamera(play, 0));
+            return;
+        }
+#endif
         if (play->msgCtx.choiceIndex == 0) { // Returns to FW
             gSaveContext.respawnFlag = 3;
             play->transitionTrigger = TRANS_TRIGGER_START;
@@ -15149,6 +15163,9 @@ void Player_Action_8085063C(Player* this, PlayState* play) {
         }
 
         if (play->msgCtx.choiceIndex == 1) { // Unsets FW
+#ifdef COMBO_BUILD
+            Combo_Fw_OotOnDispel(); // ComboShip: Cross-Games Farore's Wind (ComboCrossFw.cpp)
+#endif
             gSaveContext.respawn[RESPAWN_MODE_TOP].data = -respawnData;
             gSaveContext.fw.set = 0;
             Sfx_PlaySfxAtPos(&gSaveContext.respawn[RESPAWN_MODE_TOP].pos, NA_SE_PL_MAGIC_WIND_VANISH);
@@ -15266,6 +15283,9 @@ void Player_Action_808507F4(Player* this, PlayState* play) {
                 gSaveContext.fw.roomIndex = gSaveContext.respawn[RESPAWN_MODE_DOWN].roomIndex;
                 gSaveContext.fw.tempSwchFlags = gSaveContext.respawn[RESPAWN_MODE_DOWN].tempSwchFlags;
                 gSaveContext.fw.tempCollectFlags = gSaveContext.respawn[RESPAWN_MODE_DOWN].tempCollectFlags;
+#ifdef COMBO_BUILD
+                Combo_Fw_OotOnSet(); // ComboShip: Cross-Games Farore's Wind (ComboCrossFw.cpp)
+#endif
                 this->av2.actionVar2 = 2;
             }
         } else if (this->av1.actionVar1 >= 0) {

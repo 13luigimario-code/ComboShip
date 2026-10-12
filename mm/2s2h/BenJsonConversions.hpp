@@ -64,6 +64,18 @@ inline void to_json(json& j, const RandoSaveInfo& rando) {
 #ifdef COMBO_BUILD
     j["pendingTrapCount"] = rando.pendingTrapCount;       // ComboShip: deferred cross-world traps
     j["comboSlingshotSeeds"] = rando.comboSlingshotSeeds; // ComboShip: OOT Slingshot ammo in MM
+    j["comboFwState"] = rando.comboFwState;               // ComboShip: Farore's Wind point
+    j["comboFw"] = {
+        { "x", rando.comboFw.pos.x },
+        { "y", rando.comboFw.pos.y },
+        { "z", rando.comboFw.pos.z },
+        { "yaw", rando.comboFw.yaw },
+        { "playerParams", rando.comboFw.playerParams },
+        { "entrance", rando.comboFw.entrance },
+        { "roomIndex", rando.comboFw.roomIndex },
+        { "tempSwitchFlags", rando.comboFw.tempSwitchFlags },
+        { "tempCollectFlags", rando.comboFw.tempCollectFlags },
+    };
 #endif
 }
 
@@ -101,6 +113,20 @@ inline void from_json(const json& j, RandoSaveInfo& rando) {
 #ifdef COMBO_BUILD
     rando.pendingTrapCount = j.value("pendingTrapCount", (u8)0); // tolerate pre-existing combo saves
     rando.comboSlingshotSeeds = j.value("comboSlingshotSeeds", (u8)0);
+    rando.comboFwState = j.value("comboFwState", (u8)0);
+    rando.comboFw = {};
+    if (j.contains("comboFw") && j["comboFw"].is_object()) {
+        const json& fw = j["comboFw"];
+        rando.comboFw.pos.x = fw.value("x", 0.0f);
+        rando.comboFw.pos.y = fw.value("y", 0.0f);
+        rando.comboFw.pos.z = fw.value("z", 0.0f);
+        rando.comboFw.yaw = fw.value("yaw", (s16)0);
+        rando.comboFw.playerParams = fw.value("playerParams", (s16)0);
+        rando.comboFw.entrance = fw.value("entrance", (u16)0);
+        rando.comboFw.roomIndex = fw.value("roomIndex", (u8)0);
+        rando.comboFw.tempSwitchFlags = fw.value("tempSwitchFlags", (u32)0);
+        rando.comboFw.tempCollectFlags = fw.value("tempCollectFlags", (u32)0);
+    }
 #endif
 }
 
