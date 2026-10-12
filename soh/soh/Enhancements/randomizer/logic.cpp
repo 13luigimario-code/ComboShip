@@ -584,6 +584,60 @@ bool Logic::CanUse(RandomizerGet itemName) {
         case RG_LIGHT_ARROWS:
             return CanUse(RG_MAGIC_SINGLE) && CanUse(RG_FAIRY_BOW);
 
+#ifdef COMBO_BUILD
+        // ComboShip: OoTMM's ageless settings (RSK_COMBO_AGELESS_*, ComboAgeless.cpp) fill in the "AsChild" /
+        // "AsAdult" usability settings these cases were waiting for.
+        // Adult items
+        case RG_FAIRY_BOW:
+            return IsAdult || ctx->GetOption(RSK_COMBO_AGELESS_BOW);
+        case RG_MEGATON_HAMMER:
+            return IsAdult || ctx->GetOption(RSK_COMBO_AGELESS_HAMMER);
+        case RG_IRON_BOOTS:
+        case RG_HOVER_BOOTS:
+            return IsAdult || ctx->GetOption(RSK_COMBO_AGELESS_BOOTS);
+        case RG_HOOKSHOT:
+        case RG_LONGSHOT:
+            return IsAdult || ctx->GetOption(RSK_COMBO_AGELESS_HOOKSHOT);
+        case RG_GORON_TUNIC:
+        case RG_ZORA_TUNIC:
+            return IsAdult || ctx->GetOption(RSK_COMBO_AGELESS_TUNICS);
+        case RG_MIRROR_SHIELD:
+            return IsAdult || ctx->GetOption(RSK_COMBO_AGELESS_SHIELDS);
+        case RG_MASTER_SWORD:
+        case RG_PROGRESSIVE_GORONSWORD:
+        case RG_GIANTS_KNIFE:
+        case RG_BIGGORON_SWORD:
+            return IsAdult || ctx->GetOption(RSK_COMBO_AGELESS_SWORDS);
+        case RG_SILVER_GAUNTLETS:
+        case RG_GOLDEN_GAUNTLETS:
+            return IsAdult || ctx->GetOption(RSK_COMBO_AGELESS_STRENGTH);
+        // Adult Trade
+        case RG_POCKET_EGG:
+        case RG_COJIRO:
+        case RG_ODD_MUSHROOM:
+        case RG_ODD_POTION:
+        case RG_POACHERS_SAW:
+        case RG_BROKEN_SWORD:
+        case RG_PRESCRIPTION:
+        case RG_EYEBALL_FROG:
+        case RG_EYEDROPS:
+        case RG_CLAIM_CHECK:
+            return IsAdult;
+
+        // Child items
+        case RG_FAIRY_SLINGSHOT:
+            return IsChild || ctx->GetOption(RSK_COMBO_AGELESS_SLINGSHOT);
+        case RG_BOOMERANG:
+            return IsChild || ctx->GetOption(RSK_COMBO_AGELESS_BOOMERANG);
+        case RG_KOKIRI_SWORD:
+            return IsChild || ctx->GetOption(RSK_COMBO_AGELESS_SWORDS);
+        case RG_NUTS:
+            return Get(LOGIC_NUT_ACCESS);
+        case RG_STICKS:
+            return (IsChild || ctx->GetOption(RSK_COMBO_AGELESS_STICKS)) && Get(LOGIC_STICK_ACCESS);
+        case RG_DEKU_SHIELD:
+            return IsChild || ctx->GetOption(RSK_COMBO_AGELESS_SHIELDS);
+#else
         // Adult items
         // TODO: Uncomment those if we ever implement more item usability settings
         case RG_FAIRY_BOW:
@@ -637,6 +691,7 @@ bool Logic::CanUse(RandomizerGet itemName) {
             return IsChild /* || StickAsAdult;*/ && Get(LOGIC_STICK_ACCESS);
         case RG_DEKU_SHIELD:
             return IsChild; // || DekuShieldAsAdult;
+#endif
         case RG_PROGRESSIVE_BOMB_BAG:
         case RG_BOMB_BAG:
             return true; // AmmoCanDrop || Get(LOGIC_BUY_BOMB)
@@ -645,6 +700,18 @@ bool Logic::CanUse(RandomizerGet itemName) {
         case RG_BOMBCHU_10:
         case RG_BOMBCHU_20:
             return BombchuRefill() && BombchusEnabled();
+#ifdef COMBO_BUILD
+        case RG_WEIRD_EGG: // ComboShip: OoTMM's ageless child trade
+            return IsChild || ctx->GetOption(RSK_COMBO_AGELESS_CHILD_TRADE);
+        case RG_RUTOS_LETTER:
+            return IsChild;
+        case RG_MAGIC_BEAN:
+            return IsChild;
+        case RG_SKULL_MASK:
+        case RG_MASK_OF_TRUTH:
+        case RG_BUNNY_HOOD:
+            return IsChild || ctx->GetOption(RSK_MASKS_AS_ADULT) || ctx->GetOption(RSK_COMBO_AGELESS_CHILD_TRADE);
+#else
         case RG_WEIRD_EGG:
         case RG_RUTOS_LETTER:
             return IsChild;
@@ -654,6 +721,7 @@ bool Logic::CanUse(RandomizerGet itemName) {
         case RG_MASK_OF_TRUTH:
         case RG_BUNNY_HOOD:
             return IsChild || ctx->GetOption(RSK_MASKS_AS_ADULT);
+#endif
 
         // Songs
         case RG_ZELDAS_LULLABY:
