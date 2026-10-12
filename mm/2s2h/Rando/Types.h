@@ -2982,6 +2982,12 @@ typedef enum {
     RI_SPELL_FIRE,
     RI_SPELL_WIND,
     RI_SPELL_LOVE,
+    // OOT tools used by human Link in MM (OoTMM "Megaton Hammer (MM)", "Boomerang (MM)", "Slingshot (MM)",
+    // "Deku Shield (MM)"); MiscBehavior/CrossTools.cpp.
+    RI_HAMMER,
+    RI_BOOMERANG,
+    RI_SLINGSHOT,
+    RI_SHIELD_DEKU,
 #endif
     RI_MAX_TRAP, // Just used for ice trap ice cube model
     RI_MAX,
@@ -3397,6 +3403,10 @@ typedef enum {
     RO_CROSS_SPELL_FIRE,
     RO_CROSS_SPELL_WIND,
     RO_CROSS_SPELL_LOVE,
+    RO_CROSS_HAMMER,
+    RO_CROSS_BOOMERANG,
+    RO_CROSS_SLINGSHOT,
+    RO_CROSS_SHIELD_DEKU,
 #endif
     RO_MAX,
 } RandoOptionId;
@@ -3574,6 +3584,12 @@ typedef enum {
     RANDO_INF_OBTAINED_SPELL_FIRE,
     RANDO_INF_OBTAINED_SPELL_WIND,
     RANDO_INF_OBTAINED_SPELL_LOVE,
+    RANDO_INF_OBTAINED_HAMMER,
+    RANDO_INF_OBTAINED_BOOMERANG,
+    RANDO_INF_OBTAINED_SLINGSHOT,
+    RANDO_INF_OBTAINED_SHIELD_DEKU,
+    // The equipped shield (EQUIP_VALUE_SHIELD_HERO) is the Deku Shield: drawn as OOT's, burns away.
+    RANDO_INF_COMBO_SHIELD_IS_DEKU,
 #endif
     RANDO_INF_MAX,
 } RandoInf;

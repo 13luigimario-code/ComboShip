@@ -30,6 +30,10 @@ void Rando::RemoveItem(RandoItemId randoItemId) {
         case RI_SPELL_FIRE:
         case RI_SPELL_WIND:
         case RI_SPELL_LOVE:
+        case RI_HAMMER:
+        case RI_BOOMERANG:
+        case RI_SLINGSHOT:
+        case RI_SHIELD_DEKU:
             Rando::CrossGearRemove(randoItemId);
             break;
         case RI_SONG_ZELDA:

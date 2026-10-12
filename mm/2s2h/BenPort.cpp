@@ -2082,7 +2082,41 @@ extern "C" int ResourceMgr_OTRSigCheck(char* imgData) {
 // Load animation with explicit alt asset path checking.
 // When Alt Assets is OFF: use original path directly (O2R or vanilla)
 // When Alt Assets is ON: try alt/ prefix first, fall back to regular path if not found or invalid
+#ifdef COMBO_BUILD
+// ComboShip (cross-game items): "__OTR__@<game>:<path>" animations load from that game's archive (OOT's boomerang
+// animations for human Link, z_player.c). The owning game's Animation factory nested-loads a Link animation's frame
+// data through the *active* ResourceManager, so the load is scoped to the owning RM (as ComboForeignAnim.h does). The
+// RM caches the resource, which keeps the raw pointer valid. Missing game/resource: MM's own boomerang aim loop, so
+// callers never see NULL.
+static AnimationHeaderCommon* Combo_LoadRoutedAnim(const char* path) {
+    const char* game = path + sizeof("__OTR__@") - 1;
+    const char* colon = strchr(game, ':');
+    if (colon != nullptr) {
+        auto rm = Ship::CrossRMRegistry::Get(std::string(game, colon - game));
+        if (rm != nullptr) {
+            Ship::ResourceManagerScope rmScope(rm);
+            auto res = rm->LoadResource(std::string(colon + 1));
+            if (res != nullptr && res->GetRawPointer() != nullptr) {
+                return (AnimationHeaderCommon*)res->GetRawPointer();
+            }
+        }
+    }
+    static bool sReported = false;
+    if (!sReported) {
+        sReported = true;
+        SPDLOG_ERROR("[ComboShip] routed animation not available: {}", path);
+    }
+    return (AnimationHeaderCommon*)ResourceGetDataByName(
+        "__OTR__objects/gameplay_keep/gPlayerAnim_link_boom_throw_waitR");
+}
+#endif
+
 extern "C" AnimationHeaderCommon* ResourceMgr_LoadAnimByName(const char* path) {
+#ifdef COMBO_BUILD
+    if (strncmp(path, "__OTR__@", sizeof("__OTR__@") - 1) == 0) {
+        return Combo_LoadRoutedAnim(path);
+    }
+#endif
     bool isAlt = ResourceMgr_IsAltAssetsEnabled();
 
     if (isAlt) {
@@ -3765,6 +3799,10 @@ static void GiveItemForOracle(RandoItemId ri) {
         case RI_SPELL_FIRE:
         case RI_SPELL_WIND:
         case RI_SPELL_LOVE:
+        case RI_HAMMER:
+        case RI_BOOMERANG:
+        case RI_SLINGSHOT:
+        case RI_SHIELD_DEKU:
             Rando::CrossGearGive(ri);
             break;
         case RI_SONG_ZELDA: // ComboShip (cross-game items)
@@ -4324,6 +4362,12 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
             return Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_WIND) ? 1 : 0;
         case ComboRando::SF_NAYRUS_LOVE:
             return Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE) ? 1 : 0;
+        case ComboRando::SF_HAMMER:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_HAMMER) ? 1 : 0;
+        case ComboRando::SF_BOOMERANG:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOMERANG) ? 1 : 0;
+        case ComboRando::SF_SLINGSHOT:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT) ? 1 : 0;
         case ComboRando::SF_BLAST_MASK:
             return INV_CONTENT(ITEM_MASK_BLAST) != ITEM_NONE ? 1 : 0;
         case ComboRando::SF_STONE_MASK:
@@ -4478,6 +4522,15 @@ extern "C" COMBO_EXPORT void MM_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_NAYRUS_LOVE:
                 base = RI_SPELL_LOVE;
+                break;
+            case ComboRando::SF_HAMMER:
+                base = RI_HAMMER;
+                break;
+            case ComboRando::SF_BOOMERANG:
+                base = RI_BOOMERANG;
+                break;
+            case ComboRando::SF_SLINGSHOT:
+                base = RI_SLINGSHOT;
                 break;
             case ComboRando::SF_BLAST_MASK:
                 base = RI_MASK_BLAST;

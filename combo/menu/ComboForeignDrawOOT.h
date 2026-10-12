@@ -683,6 +683,10 @@ inline RandomizerGet ComboCrossGearNativeOOT(const std::string& mmName) {
         { "Din's Fire", RG_DINS_FIRE },
         { "Farore's Wind", RG_FARORES_WIND },
         { "Nayru's Love", RG_NAYRUS_LOVE },
+        { "Megaton Hammer", RG_MEGATON_HAMMER },
+        { "Boomerang", RG_BOOMERANG },
+        { "Fairy Slingshot", RG_FAIRY_SLINGSHOT },
+        { "Deku Shield", RG_DEKU_SHIELD },
     };
     auto it = kMap.find(mmName);
     return (it == kMap.end()) ? RG_NONE : it->second;

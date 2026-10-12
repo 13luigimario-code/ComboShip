@@ -65,6 +65,11 @@ enum SharedFamily {
     SF_DINS_FIRE,
     SF_FARORES_WIND,
     SF_NAYRUS_LOVE,
+    // OOT tools used in MM (MM's copy needs MM's matching option). No Deku Shield family: OOT's burns and is
+    // re-bought, and a shared one would keep coming back.
+    SF_HAMMER,
+    SF_BOOMERANG,
+    SF_SLINGSHOT,
     SF_COUNT
 };
 // Family bitmask (bit i = SharedFamily i). 64 bits since the cross-game item families (was uint32_t);
@@ -234,6 +239,16 @@ inline const SharedFamilyDef* SharedFamilyTable() {
         { SF_NAYRUS_LOVE, "spellLove", "gCombo.Rando.Shared.SpellLove", "Shared Nayru's Love",
           "One Nayru's Love counts for both games. Requires MM's Nayru's Love (Ocarina of Time Gear).", "Nayru's Love",
           "Nayru's Love", 1, false, true, false },
+        { SF_HAMMER, "hammer", "gCombo.Rando.Shared.Hammer", "Shared Megaton Hammer",
+          "One Megaton Hammer counts for both games. Requires MM's Megaton Hammer (Ocarina of Time Gear).",
+          "Megaton Hammer", "Megaton Hammer", 1, false, true, false },
+        { SF_BOOMERANG, "boomerang", "gCombo.Rando.Shared.Boomerang", "Shared Boomerang",
+          "One Boomerang counts for both games. Requires MM's Boomerang (Ocarina of Time Gear).", "Boomerang",
+          "Boomerang", 1, false, true, false },
+        { SF_SLINGSHOT, "slingshot", "gCombo.Rando.Shared.Slingshot", "Shared Slingshot",
+          "One Progressive Slingshot counts for both games (MM only needs the Fairy Slingshot). Requires MM's Fairy "
+          "Slingshot (Ocarina of Time Gear).",
+          "Progressive Slingshot", "Fairy Slingshot", 1, false, true, false },
     };
     return table;
 }

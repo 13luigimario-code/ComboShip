@@ -2632,6 +2632,45 @@ void func_80125CE0(Player* player, struct_80124618* arg1, Vec3f* pos, Vec3s* rot
     Matrix_Scale(player->unk_AF0[0].x, player->unk_AF0[0].y, player->unk_AF0[0].z, MTXMODE_APPLY);
 }
 
+#ifdef COMBO_BUILD
+// ComboShip (cross-game items): OOT tools in human Link's hands (CrossTools.cpp). The models are OOT's own: the
+// Hammer and the held Boomerang are OOT display lists cut before OOT's fist, drawn after MM's closed fist inside an
+// OOT ResourceManager bracket (their texture/vertex references are OOT's); the Slingshot and the Deku Shield are
+// whole OOT hand display lists, loaded by "@oot:" routed path.
+static const char sComboRmOot[] = "oot";
+
+static Gfx* Combo_HandWithTool(PlayState* play, Gfx* hand, Gfx* tool) {
+    Gfx* dl = GRAPH_ALLOC(play->state.gfxCtx, 5 * sizeof(Gfx));
+    Gfx* d = dl;
+
+    gSPDisplayList(d++, hand);
+    gSPComboRMPush(d++, sComboRmOot);
+    gSPDisplayList(d++, tool);
+    gSPComboRMPop(d++);
+    gSPEndDisplayList(d++);
+    return dl;
+}
+
+static void Combo_OverrideToolHand(PlayState* play, Player* player, s32 limbIndex, Gfx** dList) {
+    Gfx* tool;
+
+    if ((player->transformation != PLAYER_FORM_HUMAN) || (*dList == NULL)) {
+        return;
+    }
+    if (limbIndex == PLAYER_LIMB_LEFT_HAND) {
+        tool = (Gfx*)Combo_Tools_LeftHandToolDL(player, sPlayerLeftHandType);
+        if (tool != NULL) {
+            *dList = Combo_HandWithTool(play, gPlayerLeftHandClosedDLs[D_801F59E0 + sPlayerLod], tool);
+        }
+    } else if (limbIndex == PLAYER_LIMB_RIGHT_HAND) {
+        tool = (Gfx*)Combo_Tools_RightHandDL(player, sPlayerRightHandType);
+        if (tool != NULL) {
+            *dList = tool;
+        }
+    }
+}
+#endif
+
 s32 Player_OverrideLimbDrawGameplayDefault(PlayState* play, s32 limbIndex, Gfx** dList, Vec3f* pos, Vec3s* rot,
                                            Actor* actor) {
     Player* player = (Player*)actor;
@@ -2670,6 +2709,9 @@ s32 Player_OverrideLimbDrawGameplayDefault(PlayState* play, s32 limbIndex, Gfx**
 
             *dList = leftHandDLists[sPlayerLod];
             CosmeticEditor_SplitHeldItem(dList, CVAR_COSMETIC("Silly.LinkSwordScale"));
+#ifdef COMBO_BUILD
+            Combo_OverrideToolHand(play, player, limbIndex, dList); // ComboShip: Hammer / Boomerang
+#endif
 
             if (player->transformation == PLAYER_FORM_GORON) {
                 if (BEN_ANIM_EQUAL(player->skelAnime.animation, gPlayerAnim_pg_punchA)) {
@@ -2728,6 +2770,9 @@ s32 Player_OverrideLimbDrawGameplayDefault(PlayState* play, s32 limbIndex, Gfx**
 
                 *dList = rightHandDLists[sPlayerLod];
                 CosmeticEditor_SplitHeldItem(dList, CVAR_COSMETIC("Silly.LinkShieldScale"));
+#ifdef COMBO_BUILD
+                Combo_OverrideToolHand(play, player, limbIndex, dList); // ComboShip: Slingshot / Deku Shield
+#endif
 
                 if (BEN_ANIM_EQUAL(player->skelAnime.animation, gPlayerAnim_pg_punchB)) {
                     func_80125CE0(player, D_801C0784, pos, rot);
@@ -2783,6 +2828,12 @@ s32 Player_OverrideLimbDrawGameplayFirstPerson(PlayState* play, s32 limbIndex, G
             } else {
                 *dList = sPlayerFirstPersonRightHandDLs[player->transformation];
             }
+#ifdef COMBO_BUILD
+            // ComboShip (cross-game items): OOT's first-person child arm drawing the Slingshot.
+            if (Combo_Tools_FirstPersonRightHandDL(player) != NULL) {
+                *dList = (Gfx*)Combo_Tools_FirstPersonRightHandDL(player);
+            }
+#endif
         } else {
             *dList = NULL;
         }
@@ -3914,11 +3965,19 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
                 static Vec3f D_801C0D98 = { -35.0f, -395.0f, 0.0f };
                 // Unused
                 static s32 D_801C0DA4 = 0;
+#ifdef COMBO_BUILD
+                // ComboShip (cross-game items): OOT's slingshot string at OOT's child offset (sBowSlingshotStringData).
+                static Vec3f sComboSlingshotStringPos = { 606.0f, 236.0f, 0.0f };
+                Gfx* comboStringDL = (Gfx*)Combo_Tools_SlingshotStringDL(player);
+                Vec3f* stringPos = (comboStringDL != NULL) ? &sComboSlingshotStringPos : &D_801C0D98;
+#else
+                Vec3f* stringPos = &D_801C0D98;
+#endif
 
                 OPEN_DISPS(play->state.gfxCtx);
 
                 Matrix_Push();
-                Matrix_Translate(D_801C0D98.x, D_801C0D98.y, D_801C0D98.z, MTXMODE_APPLY);
+                Matrix_Translate(stringPos->x, stringPos->y, stringPos->z, MTXMODE_APPLY);
                 if ((player->stateFlags3 & PLAYER_STATE3_40) && (player->unk_B28 >= 0) && (player->unk_ACC < 0xB)) {
                     Vec3f sp20C;
                     f32 temp_fv0;
@@ -3938,9 +3997,18 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
                     player->unk_B0C = -0.5f;
                 }
                 Matrix_Scale(1.0f, player->unk_B08, 1.0f, MTXMODE_APPLY);
+#ifdef COMBO_BUILD
+                if (comboStringDL != NULL) {
+                    Matrix_RotateZF(player->unk_B08 * -0.2f, MTXMODE_APPLY); // OOT bends the child's string
+                }
+#endif
 
                 MATRIX_FINALIZE_AND_LOAD(POLY_XLU_DISP++, play->state.gfxCtx);
+#ifdef COMBO_BUILD
+                gSPDisplayList(POLY_XLU_DISP++, (comboStringDL != NULL) ? comboStringDL : D_801C0D94);
+#else
                 gSPDisplayList(POLY_XLU_DISP++, D_801C0D94);
+#endif
 
                 Matrix_Pop();
 
@@ -4291,7 +4359,14 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
             (player->currentShield != PLAYER_SHIELD_NONE) &&
             ((player->sheathType == PLAYER_MODELTYPE_SHEATH_14) ||
              (player->sheathType == PLAYER_MODELTYPE_SHEATH_15))) {
+#ifdef COMBO_BUILD
+            // ComboShip (cross-game items): the Deku Shield on the back is OOT's own (with its matrix).
+            CosmeticEditor_DrawBackShield(play, (Combo_Tools_BackShieldDL(player) != NULL)
+                                                    ? (Gfx*)Combo_Tools_BackShieldDL(player)
+                                                    : gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);
+#else
             CosmeticEditor_DrawBackShield(play, gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);
+#endif
         }
 
         if (player->actor.scale.y >= 0.0f) {

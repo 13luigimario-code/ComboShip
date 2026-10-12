@@ -113,6 +113,9 @@ std::vector<u8> BuildAvailableItemsList(u8 slot) {
             if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_FIRE)) {
                 availableItems.push_back(ITEM_COMBO_SPELL_FIRE);
             }
+            if (Flags_GetRandoInf(RANDO_INF_OBTAINED_HAMMER)) {
+                availableItems.push_back(ITEM_COMBO_HAMMER);
+            }
 #endif
             break;
         case SLOT_TRADE_KEY_MAMA:
@@ -136,6 +139,9 @@ std::vector<u8> BuildAvailableItemsList(u8 slot) {
             if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_WIND)) {
                 availableItems.push_back(ITEM_COMBO_SPELL_WIND);
             }
+            if (Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOMERANG)) {
+                availableItems.push_back(ITEM_COMBO_BOOMERANG);
+            }
 #endif
             break;
         case SLOT_TRADE_COUPLE:
@@ -157,6 +163,9 @@ std::vector<u8> BuildAvailableItemsList(u8 slot) {
             }
             if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE)) {
                 availableItems.push_back(ITEM_COMBO_SPELL_LOVE);
+            }
+            if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT)) {
+                availableItems.push_back(ITEM_COMBO_SLINGSHOT);
             }
 #endif
             break;

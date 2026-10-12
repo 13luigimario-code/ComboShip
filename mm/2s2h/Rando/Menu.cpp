@@ -469,6 +469,10 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_CROSS_SPELL_FIRE",
                                                                    "gRando.Options.RO_CROSS_SPELL_WIND",
                                                                    "gRando.Options.RO_CROSS_SPELL_LOVE",
+                                                                   "gRando.Options.RO_CROSS_HAMMER",
+                                                                   "gRando.Options.RO_CROSS_BOOMERANG",
+                                                                   "gRando.Options.RO_CROSS_SLINGSHOT",
+                                                                   "gRando.Options.RO_CROSS_SHIELD_DEKU",
 #endif
                                                                });
 
@@ -1092,6 +1096,24 @@ static void DrawItemPoolTab() {
     ItemPoolCheckbox("Nayru's Love", RO_CROSS_SPELL_LOVE,
                      "Adds Ocarina of Time's Nayru's Love to the item pool (Letter to Kafei / Pendant slot). Cast by "
                      "human Link in Termina for 24 magic, nothing can hurt him for about a minute.",
+                     1);
+    ItemPoolCheckbox("Megaton Hammer", RO_CROSS_HAMMER,
+                     "Adds Ocarina of Time's Megaton Hammer to the item pool (Moon's Tear / Title Deed slot). Human "
+                     "Link swings it two-handed like the Great Fairy's Sword; it hits like a Goron punch.",
+                     1);
+    ItemPoolCheckbox(
+        "Boomerang", RO_CROSS_BOOMERANG,
+        "Adds Ocarina of Time's Boomerang to the item pool (Room Key / Letter to Mama slot). Human Link "
+        "throws it like OOT: hold to aim, release to throw; it hits like Zora Link's fins and fetches items.",
+        1);
+    ItemPoolCheckbox("Fairy Slingshot", RO_CROSS_SLINGSHOT,
+                     "Adds Ocarina of Time's Fairy Slingshot to the item pool (Letter to Kafei / Pendant slot). Human "
+                     "Link aims it like the Hero's Bow and fires Deku Seeds (30 max); arrow pickups also refill seeds "
+                     "while you own it.",
+                     1);
+    ItemPoolCheckbox("Deku Shield", RO_CROSS_SHIELD_DEKU,
+                     "Adds Ocarina of Time's Deku Shield to the item pool. With no shield it is equipped like the "
+                     "Hero's Shield, but burns away on fire. Getting the Hero's or Mirror Shield replaces it.",
                      1);
 #endif
     CVarCheckbox("Repeatable Rupee Purchases", Rando::StaticData::Options[RO_PURCHASE_INFINITE_RUPEES].cvar,

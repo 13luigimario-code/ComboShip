@@ -279,6 +279,14 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_WIND);
         case RI_SPELL_LOVE:
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SPELL_LOVE);
+        case RI_HAMMER:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_HAMMER);
+        case RI_BOOMERANG:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOMERANG);
+        case RI_SLINGSHOT:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT);
+        case RI_SHIELD_DEKU:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SHIELD_DEKU);
 #endif
         case RI_PROGRESSIVE_WALLET:
             if (hasObtainedCheck) {
@@ -460,6 +468,13 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
 #endif
             break;
         case RI_SHIELD_HERO:
+#ifdef COMBO_BUILD
+            // ComboShip (cross-game items): an equipped Deku Shield sits in the Hero's Shield value; it does not
+            // make the Hero's Shield unobtainable (getting it replaces the Deku Shield).
+            if (Flags_GetRandoInf(RANDO_INF_COMBO_SHIELD_IS_DEKU)) {
+                break;
+            }
+#endif
             if (GET_CUR_EQUIP_VALUE(EQUIP_TYPE_SHIELD) != EQUIP_VALUE_SHIELD_NONE) {
                 return false;
             }
