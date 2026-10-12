@@ -2380,3 +2380,34 @@ checks for it is unchanged; MM's Razor Sword durability is not ported.
 
 **Logic:** only the Kokiri Sword, as before; the upgrades are out of logic. **Shared Items:** none (no shared child
 sword family yet). OOT's progressive copies placed in MM draw as OOT's Kokiri Sword.
+
+### OOT items in MM: Stone of Agony, Fairy Ocarina, Short Hookshot, Deku Stick & Nut upgrades (2026-10-12)
+
+OoTMM's `stoneAgonyMm`, `fairyOcarinaMm`, `shortHookshotMm` and `sticksNutsUpgradesMm`. MM options
+`RO_CROSS_STONE_AGONY`, `RO_CROSS_OCARINA_FAIRY`, `RO_CROSS_HOOKSHOT_SHORT`, `RO_CROSS_STICKS_NUTS` (Item Pool, default
+off). Gameplay in `mm/2s2h/Rando/MiscBehavior/CrossUpgrades.cpp` (C ABI in `CrossGear.h`).
+
+- **Stone of Agony:** `RI_STONE_OF_AGONY` / `RANDO_INF_OBTAINED_STONE_OF_AGONY`. MM already rumbles near secrets
+  (`Player_DetectSecrets`); with the option on that rumble waits for the Stone (`Combo_Upgrades_SecretRumble`,
+  guarded in `z_player.c`), and each rumble flashes OOT's 24x24 Stone of Agony icon above the rupee counter
+  (`OnInterfaceDrawStart`, OoTMM's `Interface_AgonyIconDraw`). Out of logic (OoTMM's `MM_HIDDEN_GROTTOS` trick on).
+- **Fairy Ocarina:** a second `RI_OCARINA` in the pool. `ConvertItem` turns the first one (the starting ocarina too)
+  into `RI_OCARINA_FAIRY`: MM's own `ITEM_OCARINA_OF_TIME` plus `RANDO_INF_COMBO_OCARINA_IS_FAIRY`, so it plays every
+  song (OoTMM's `has_ocarina` counts the Fairy Ocarina) and logic is unchanged. The next `RI_OCARINA` clears the
+  marker. While marked: OOT's icon (`gItemIcons[ITEM_OCARINA_OF_TIME]`, swapped each frame and C/D-pad icons
+  reloaded), OOT's pause name (`z_kaleido_scope_NES.c`), OOT's `gLinkChildRightHandHoldingFairyOcarinaNearDL` in
+  human Link's hand (`Combo_Tools_RightHandDL`, `PLAYER_MODELTYPE_RH_INSTRUMENT`).
+- **Short Hookshot:** a second `RI_HOOKSHOT`; the first becomes `RI_HOOKSHOT_SHORT` (MM's Hookshot plus
+  `RANDO_INF_COMBO_HOOKSHOT_IS_SHORT`). `ArmsHook_Wait` flies 13 frames instead of 26 (OoTMM's
+  `ArmsHook_SetTimerAndParent`) and the first-person reticle uses OOT's Hookshot range (38600 vs 77600); OOT's
+  Hookshot icon. MM's logic `HAS_ITEM(ITEM_HOOKSHOT)` (`Logic.h`) ignores a Short Hookshot, so logic needs both copies
+  (OoTMM's `can_hookshot`; its `can_hookshot_short` uses are not ported).
+- **Deku Stick & Nut upgrades:** `RI_PROGRESSIVE_STICK_UPGRADE` / `RI_PROGRESSIVE_NUT_UPGRADE` x2 each, raising MM's
+  leftover `UPG_DEKU_STICKS` / `UPG_DEKU_NUTS` (sticks 10/20/30, nuts 20/30/40) and refilling what is owned. They don't
+  grant sticks/nuts themselves. No `sticksNutsUpgradesInitial`.
+
+**Shared Items:** `stoneAgony` (OOT's `QUEST_STONE_OF_AGONY`), `stickUpgrades` + `nutUpgrades` (one menu toggle,
+"Shared Deku Sticks & Nuts"; tier = upgrades past the first capacity in both games, OOT's Deku Stick/Nut Bag included).
+`hookshot` now holds two MM tiers: with the Short Hookshot, OOT's Hookshot/Longshot pair with MM's Short Hookshot/
+Hookshot; without it MM's Hookshot comes with the first copy and the second is ignored there. No Shared Ocarinas yet.
+MM's copies placed in OOT draw OOT's own models (`ComboCrossGearNativeOOT`).

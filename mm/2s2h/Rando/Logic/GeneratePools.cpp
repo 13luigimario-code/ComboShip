@@ -359,6 +359,22 @@ void GeneratePools(RandoSaveInfo& saveInfo, std::vector<RandoCheckId>& checkPool
     if (saveInfo.randoSaveOptions[RO_CROSS_SHIELD_DEKU] == RO_GENERIC_YES) {
         itemPool.push_back(RI_SHIELD_DEKU);
     }
+    if (saveInfo.randoSaveOptions[RO_CROSS_STONE_AGONY] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_STONE_OF_AGONY);
+    }
+    // A second ocarina / hookshot: the first copy resolves to the Fairy Ocarina / Short Hookshot (ConvertItem).
+    if (saveInfo.randoSaveOptions[RO_CROSS_OCARINA_FAIRY] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_OCARINA);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_HOOKSHOT_SHORT] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_HOOKSHOT);
+    }
+    if (saveInfo.randoSaveOptions[RO_CROSS_STICKS_NUTS] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_PROGRESSIVE_STICK_UPGRADE);
+        itemPool.push_back(RI_PROGRESSIVE_STICK_UPGRADE);
+        itemPool.push_back(RI_PROGRESSIVE_NUT_UPGRADE);
+        itemPool.push_back(RI_PROGRESSIVE_NUT_UPGRADE);
+    }
 #endif
 
     // Tycoon's Wallet

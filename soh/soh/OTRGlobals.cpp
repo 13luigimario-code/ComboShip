@@ -3382,6 +3382,13 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
             return INV_CONTENT(ITEM_BOOMERANG) == ITEM_BOOMERANG ? 1 : 0;
         case ComboRando::SF_SLINGSHOT:
             return CUR_UPG_VALUE(UPG_BULLET_BAG);
+        case ComboRando::SF_STONE_OF_AGONY:
+            return CHECK_QUEST_ITEM(QUEST_STONE_OF_AGONY) ? 1 : 0;
+        // Upgrades past the first capacity (10 sticks / 20 nuts, or the shuffled Deku Stick / Nut Bag).
+        case ComboRando::SF_STICK_UPGRADES:
+            return std::max(0, (int)CUR_UPG_VALUE(UPG_STICKS) - 1);
+        case ComboRando::SF_NUT_UPGRADES:
+            return std::max(0, (int)CUR_UPG_VALUE(UPG_NUTS) - 1);
         case ComboRando::SF_BLAST_MASK:
             return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_MASK_BLAST) ? 1 : 0;
         case ComboRando::SF_STONE_MASK:
@@ -3545,6 +3552,15 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_SLINGSHOT:
                 rg = cur == 0 ? RG_FAIRY_SLINGSHOT : cur == 1 ? RG_BIG_BULLET_BAG : RG_BIGGEST_BULLET_BAG;
+                break;
+            case ComboRando::SF_STONE_OF_AGONY:
+                rg = RG_STONE_OF_AGONY;
+                break;
+            case ComboRando::SF_STICK_UPGRADES:
+                rg = cur == 0 ? RG_DEKU_STICK_CAPACITY_20 : RG_DEKU_STICK_CAPACITY_30;
+                break;
+            case ComboRando::SF_NUT_UPGRADES:
+                rg = cur == 0 ? RG_DEKU_NUT_CAPACITY_30 : RG_DEKU_NUT_CAPACITY_40;
                 break;
             case ComboRando::SF_BLAST_MASK:
                 rg = RG_COMBO_MASK_BLAST;

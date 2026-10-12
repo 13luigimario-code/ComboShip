@@ -201,7 +201,15 @@ void ValidateRegionTimeOwnership(RandoRegionId regionId, RandoCheckId checkId, u
 #define IS_DEITY (GET_PLAYER_FORM == PLAYER_FORM_FIERCE_DEITY)
 #define IS_GORON (GET_PLAYER_FORM == PLAYER_FORM_GORON)
 #define IS_HUMAN (GET_PLAYER_FORM == PLAYER_FORM_HUMAN)
+#ifdef COMBO_BUILD
+// ComboShip (cross-game items): the Short Hookshot is MM's Hookshot in the inventory with OOT's shorter range; logic
+// only counts the full Hookshot (CrossUpgrades.cpp). The item test folds away for every other item.
+#define HAS_ITEM(item)              \
+    ((INV_CONTENT(item) == item) && \
+     (((item) != ITEM_HOOKSHOT) || !Flags_GetRandoInf(RANDO_INF_COMBO_HOOKSHOT_IS_SHORT)))
+#else
 #define HAS_ITEM(item) (INV_CONTENT(item) == item)
+#endif
 #define CAN_BE_DEKU (IS_DEKU || HAS_ITEM(ITEM_MASK_DEKU))
 #define CAN_BE_ZORA (IS_ZORA || HAS_ITEM(ITEM_MASK_ZORA))
 #define CAN_BE_DEITY (IS_DEITY || HAS_ITEM(ITEM_MASK_FIERCE_DEITY))

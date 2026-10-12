@@ -21,6 +21,7 @@ void Rando::MiscBehavior::OnFileLoad() {
     Rando::MiscBehavior::WarpSongs();
     Rando::MiscBehavior::CrossSongs();
     Rando::MiscBehavior::CrossSpells();
+    Rando::MiscBehavior::CrossUpgrades();
 #endif
     Rando::MiscBehavior::BankSignHint();
     Rando::MiscBehavior::InitTycoonWallet();

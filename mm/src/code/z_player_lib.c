@@ -4050,7 +4050,13 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
                     heldActor->shape.rot = heldActor->world.rot;
                     if (func_800B7128(player)) {
                         Matrix_Translate(500.0f, 300.0f, 0.0f, MTXMODE_APPLY);
+#ifdef COMBO_BUILD
+                        // ComboShip (cross-game items): the Short Hookshot's reticle reaches OOT's Hookshot range.
+                        Player_DrawHookshotReticle(play, player,
+                                                   Combo_Upgrades_HookshotIsShort() ? 38600.0f : 77600.0f);
+#else
                         Player_DrawHookshotReticle(play, player, 77600.0f);
+#endif
                     }
                 }
             } else if (player->meleeWeaponState != PLAYER_MELEE_WEAPON_STATE_0) {

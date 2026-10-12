@@ -12440,6 +12440,12 @@ void Player_DetectSecrets(PlayState* play, Player* this) {
     this->secretRumbleCharge += step;
     if (this->secretRumbleCharge > SQ(2000.0f)) {
         this->secretRumbleCharge = 0.0f;
+#ifdef COMBO_BUILD
+        // ComboShip (cross-game items): with MM's Stone of Agony option, only once it is owned (CrossUpgrades.cpp).
+        if (!Combo_Upgrades_SecretRumble()) {
+            return;
+        }
+#endif
         Player_RequestRumble(play, this, 120, 20, 10, SQ(0));
     }
 }

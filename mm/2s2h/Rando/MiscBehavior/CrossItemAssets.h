@@ -51,6 +51,14 @@ static const ALIGN_ASSET(2) char gComboNameMegatonHammerTex[] = COMBO_OOT_NAME("
 static const ALIGN_ASSET(2) char gComboNameBoomerangTex[] = COMBO_OOT_NAME("gBoomerangItemNameENGTex");
 static const ALIGN_ASSET(2) char gComboNameFairySlingshotTex[] = COMBO_OOT_NAME("gFairySlingshotItemNameENGTex");
 
+// OOT items in MM (CrossUpgrades.cpp): the first-tier ocarina / hookshot show OOT's own icon and name, the Stone of
+// Agony OOT's 24x24 quest icon (HUD indicator and menus).
+static const ALIGN_ASSET(2) char gComboIconOcarinaFairyTex[] = COMBO_OOT_ICON("gItemIconOcarinaFairyTex");
+static const ALIGN_ASSET(2) char gComboIconHookshotShortTex[] = COMBO_OOT_ICON("gItemIconHookshotTex");
+static const ALIGN_ASSET(2) char gComboIconStoneOfAgonyTex[] =
+    "__OTR__@oot:textures/icon_item_24_static/gQuestIconStoneOfAgonyTex";
+static const ALIGN_ASSET(2) char gComboNameFairyOcarinaTex[] = COMBO_OOT_NAME("gFairyOcarinaItemNameENGTex");
+
 // Boot textures for the boots drawn on Link (OoTMM's child-sized boot meshes, CrossGear.cpp).
 static const ALIGN_ASSET(2) char gComboLinkIronBootTex[] = COMBO_OOT_LINK_BOY("gLinkAdultIronBootTex");
 static const ALIGN_ASSET(2) char gComboLinkIronBootTLUT[] = COMBO_OOT_LINK_BOY("object_link_boyTLUT_00CB40");

@@ -106,6 +106,8 @@ jobs:
                       "RO_CROSS_MASK_SKULL", "RO_CROSS_MASK_SPOOKY", "RO_CROSS_SONG_ZELDA",
                       "RO_CROSS_SPELL_FIRE", "RO_CROSS_SPELL_WIND", "RO_CROSS_SPELL_LOVE",
                       "RO_CROSS_HAMMER", "RO_CROSS_BOOMERANG", "RO_CROSS_SLINGSHOT", "RO_CROSS_SHIELD_DEKU",
+                      "RO_CROSS_STONE_AGONY", "RO_CROSS_OCARINA_FAIRY", "RO_CROSS_HOOKSHOT_SHORT",
+                      "RO_CROSS_STICKS_NUTS",
                       "RO_SHUFFLE_SONG_SUN", "RO_SHUFFLE_SONG_SARIA", "RO_SHUFFLE_SONG_WARP_SONGS"]:
               mm[key] = 1
           json.dump(cfg, open(path, "w"), indent=2)

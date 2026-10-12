@@ -2988,6 +2988,17 @@ typedef enum {
     RI_BOOMERANG,
     RI_SLINGSHOT,
     RI_SHIELD_DEKU,
+    // OOT items in MM (OoTMM "Stone of Agony in MM", "Fairy Ocarina in MM", "Short Hookshot in MM",
+    // "Deku Stick & Nut Upgrades in MM"); MiscBehavior/CrossUpgrades.cpp.
+    RI_STONE_OF_AGONY,
+    RI_OCARINA_FAIRY,
+    RI_HOOKSHOT_SHORT,
+    RI_PROGRESSIVE_STICK_UPGRADE,
+    RI_DEKU_STICK_UPGRADE_20,
+    RI_DEKU_STICK_UPGRADE_30,
+    RI_PROGRESSIVE_NUT_UPGRADE,
+    RI_DEKU_NUT_UPGRADE_30,
+    RI_DEKU_NUT_UPGRADE_40,
 #endif
     RI_MAX_TRAP, // Just used for ice trap ice cube model
     RI_MAX,
@@ -3407,6 +3418,10 @@ typedef enum {
     RO_CROSS_BOOMERANG,
     RO_CROSS_SLINGSHOT,
     RO_CROSS_SHIELD_DEKU,
+    RO_CROSS_STONE_AGONY,
+    RO_CROSS_OCARINA_FAIRY,
+    RO_CROSS_HOOKSHOT_SHORT,
+    RO_CROSS_STICKS_NUTS,
 #endif
     RO_MAX,
 } RandoOptionId;
@@ -3590,6 +3605,10 @@ typedef enum {
     RANDO_INF_OBTAINED_SHIELD_DEKU,
     // The equipped shield (EQUIP_VALUE_SHIELD_HERO) is the Deku Shield: drawn as OOT's, burns away.
     RANDO_INF_COMBO_SHIELD_IS_DEKU,
+    RANDO_INF_OBTAINED_STONE_OF_AGONY,
+    // The ocarina / hookshot in the inventory is still the first tier: OOT's Fairy Ocarina, the Short Hookshot.
+    RANDO_INF_COMBO_OCARINA_IS_FAIRY,
+    RANDO_INF_COMBO_HOOKSHOT_IS_SHORT,
 #endif
     RANDO_INF_MAX,
 } RandoInf;

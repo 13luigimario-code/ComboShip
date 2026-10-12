@@ -687,6 +687,14 @@ inline RandomizerGet ComboCrossGearNativeOOT(const std::string& mmName) {
         { "Boomerang", RG_BOOMERANG },
         { "Fairy Slingshot", RG_FAIRY_SLINGSHOT },
         { "Deku Shield", RG_DEKU_SHIELD },
+        { "Stone of Agony", RG_STONE_OF_AGONY },
+        { "Progressive Stick Capacity", RG_DEKU_STICK_CAPACITY_20 },
+        { "Deku Stick Capacity (20)", RG_DEKU_STICK_CAPACITY_20 },
+        { "Deku Stick Capacity (30)", RG_DEKU_STICK_CAPACITY_30 },
+        { "Progressive Nut Capacity", RG_DEKU_NUT_CAPACITY_30 },
+        { "Deku Nut Capacity (30)", RG_DEKU_NUT_CAPACITY_30 },
+        { "Deku Nut Capacity (40)", RG_DEKU_NUT_CAPACITY_40 },
+        { "Fairy Ocarina", RG_FAIRY_OCARINA },
     };
     auto it = kMap.find(mmName);
     return (it == kMap.end()) ? RG_NONE : it->second;

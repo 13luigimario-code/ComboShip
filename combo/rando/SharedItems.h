@@ -70,6 +70,10 @@ enum SharedFamily {
     SF_HAMMER,
     SF_BOOMERANG,
     SF_SLINGSHOT,
+    // OOT items in MM (MM's copy needs MM's matching option; mm/2s2h/Rando/MiscBehavior/CrossUpgrades.cpp).
+    SF_STONE_OF_AGONY,
+    SF_STICK_UPGRADES,
+    SF_NUT_UPGRADES,
     SF_COUNT
 };
 // Family bitmask (bit i = SharedFamily i). 64 bits since the cross-game item families (was uint32_t);
@@ -116,9 +120,12 @@ inline const SharedFamilyDef* SharedFamilyTable() {
         { SF_WALLET, "wallets", "gCombo.Rando.Shared.Wallets", "Shared Wallets",
           "One Progressive Wallet counts for both games. Forces Shuffle Child Wallet off.", "Progressive Wallet",
           "Progressive Wallet", 3, false, true, false },
+        // Two MM tiers only with MM's Short Hookshot (Short Hookshot, Hookshot); otherwise MM's Hookshot comes with the
+        // first copy and the second is ignored there (MM_GetSharedTier / MM_RaiseSharedTier).
         { SF_HOOKSHOT, "hookshot", "gCombo.Rando.Shared.Hookshot", "Shared Hookshot",
-          "One Progressive Hookshot counts for both games (MM only needs tier 1).", "Progressive Hookshot", "Hookshot",
-          1, false, true, false },
+          "One Progressive Hookshot counts for both games. MM gets its Hookshot with the first one, or with MM's Short "
+          "Hookshot on, the Short Hookshot and then the Hookshot.",
+          "Progressive Hookshot", "Hookshot", 2, false, true, false },
         { SF_FIRE_ARROWS, "fireArrows", "gCombo.Rando.Shared.FireArrows", "Shared Fire Arrows",
           "One Fire Arrows counts for both games.", "Fire Arrows", "Fire Arrows", 1, false, true, false },
         { SF_ICE_ARROWS, "iceArrows", "gCombo.Rando.Shared.IceArrows", "Shared Ice Arrows",
@@ -249,6 +256,19 @@ inline const SharedFamilyDef* SharedFamilyTable() {
           "One Progressive Slingshot counts for both games (MM only needs the Fairy Slingshot). Requires MM's Fairy "
           "Slingshot (Ocarina of Time Gear).",
           "Progressive Slingshot", "Fairy Slingshot", 1, false, true, false },
+        { SF_STONE_OF_AGONY, "stoneAgony", "gCombo.Rando.Shared.StoneAgony", "Shared Stone of Agony",
+          "One Stone of Agony counts for both games. Requires MM's Stone of Agony (Ocarina of Time Gear).",
+          "Stone of Agony", "Stone of Agony", 1, false, true, false },
+        // MM's stick/nut capacity starts one tier up (10 sticks, 20 nuts): tier n is OOT's n-th Progressive upgrade
+        // past the starting capacity (20/30 sticks, 30/40 nuts) in both games.
+        { SF_STICK_UPGRADES, "stickUpgrades", "gCombo.Rando.Shared.NutsSticks", "Shared Deku Sticks & Nuts",
+          "One Deku Stick or Deku Nut capacity upgrade counts for both games. Requires MM's Deku Stick & Nut "
+          "Upgrades (Ocarina of Time Gear).",
+          "Progressive Stick Capacity", "Progressive Stick Capacity", 2, false, true, false },
+        { SF_NUT_UPGRADES, "nutUpgrades", "gCombo.Rando.Shared.NutsSticks", "Shared Deku Sticks & Nuts",
+          "One Deku Stick or Deku Nut capacity upgrade counts for both games. Requires MM's Deku Stick & Nut "
+          "Upgrades (Ocarina of Time Gear).",
+          "Progressive Nut Capacity", "Progressive Nut Capacity", 2, false, true, false },
     };
     return table;
 }

@@ -809,12 +809,27 @@ void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* 
         case RI_HAMMER:
         case RI_BOOMERANG:
         case RI_SLINGSHOT:
-        case RI_SHIELD_DEKU: {
+        case RI_SHIELD_DEKU:
+        case RI_STONE_OF_AGONY:
+        case RI_OCARINA_FAIRY:
+        case RI_HOOKSHOT_SHORT:
+        case RI_PROGRESSIVE_STICK_UPGRADE:
+        case RI_DEKU_STICK_UPGRADE_20:
+        case RI_DEKU_STICK_UPGRADE_30:
+        case RI_PROGRESSIVE_NUT_UPGRADE:
+        case RI_DEKU_NUT_UPGRADE_30:
+        case RI_DEKU_NUT_UPGRADE_40: {
             RandoItemId concrete = randoItemId;
-            if ((randoItemId == RI_PROGRESSIVE_SCALE) || (randoItemId == RI_PROGRESSIVE_STRENGTH)) {
+            if ((randoItemId == RI_PROGRESSIVE_SCALE) || (randoItemId == RI_PROGRESSIVE_STRENGTH) ||
+                (randoItemId == RI_PROGRESSIVE_STICK_UPGRADE) || (randoItemId == RI_PROGRESSIVE_NUT_UPGRADE)) {
                 concrete = Rando::ConvertItem(randoItemId, randoCheckId); // the tier this copy will give
             }
-            if (!MM_DrawOOTItemByName(Rando::CrossGearOOTItemName(concrete))) {
+            const char* ootName = Rando::CrossGearOOTItemName(concrete);
+            if ((ootName == nullptr) && (concrete != randoItemId)) {
+                Rando::DrawItem(concrete, randoCheckId, actor); // maxed-out progressive copy: the junk it gives
+            } else if (ootName == nullptr) {
+                GetItem_Draw(gPlayState, GID_RUPEE_BLUE);
+            } else if (!MM_DrawOOTItemByName(ootName)) {
                 GetItem_Draw(gPlayState, GID_RUPEE_BLUE); // OOT not resident yet: never draw blank
             }
             break;

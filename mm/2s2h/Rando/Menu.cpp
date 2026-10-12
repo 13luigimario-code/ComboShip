@@ -473,6 +473,10 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_CROSS_BOOMERANG",
                                                                    "gRando.Options.RO_CROSS_SLINGSHOT",
                                                                    "gRando.Options.RO_CROSS_SHIELD_DEKU",
+                                                                   "gRando.Options.RO_CROSS_STONE_AGONY",
+                                                                   "gRando.Options.RO_CROSS_OCARINA_FAIRY",
+                                                                   "gRando.Options.RO_CROSS_HOOKSHOT_SHORT",
+                                                                   "gRando.Options.RO_CROSS_STICKS_NUTS",
 #endif
                                                                });
 
@@ -1114,6 +1118,25 @@ static void DrawItemPoolTab() {
     ItemPoolCheckbox("Deku Shield", RO_CROSS_SHIELD_DEKU,
                      "Adds Ocarina of Time's Deku Shield to the item pool. With no shield it is equipped like the "
                      "Hero's Shield, but burns away on fire. Getting the Hero's or Mirror Shield replaces it.",
+                     1);
+    ItemPoolCheckbox("Stone of Agony", RO_CROSS_STONE_AGONY,
+                     "Adds Ocarina of Time's Stone of Agony to the item pool. Until you find it, nothing rumbles near "
+                     "hidden grottos and other secrets; once you have it, the rumble comes with OOT's Stone of Agony "
+                     "icon flashing on screen. Not considered by logic.",
+                     1);
+    ItemPoolCheckbox("Fairy Ocarina", RO_CROSS_OCARINA_FAIRY,
+                     "Adds a second ocarina to the item pool. The first one found (or the one you start with) is "
+                     "Ocarina of Time's Fairy Ocarina, which plays every song; the second turns it into the Ocarina "
+                     "of Time.",
+                     1);
+    ItemPoolCheckbox("Short Hookshot", RO_CROSS_HOOKSHOT_SHORT,
+                     "Adds a second Hookshot to the item pool. The first one found is a Short Hookshot with half the "
+                     "range (Ocarina of Time's Hookshot); the second gives the full Hookshot. Logic only counts the "
+                     "full Hookshot.",
+                     1);
+    ItemPoolCheckbox("Deku Stick & Nut Upgrades", RO_CROSS_STICKS_NUTS,
+                     "Adds two Deku Stick and two Deku Nut capacity upgrades to the item pool, as in Ocarina of Time: "
+                     "sticks 10 -> 20 -> 30, nuts 20 -> 30 -> 40.",
                      1);
 #endif
     CVarCheckbox("Repeatable Rupee Purchases", Rando::StaticData::Options[RO_PURCHASE_INFINITE_RUPEES].cvar,

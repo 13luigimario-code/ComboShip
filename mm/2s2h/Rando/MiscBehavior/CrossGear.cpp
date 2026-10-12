@@ -413,6 +413,21 @@ const char* Rando::CrossGearOOTItemName(RandoItemId randoItemId) {
             return "Fairy Slingshot";
         case RI_SHIELD_DEKU:
             return "Deku Shield";
+        // CrossUpgrades.cpp
+        case RI_STONE_OF_AGONY:
+            return "Stone of Agony";
+        case RI_OCARINA_FAIRY:
+            return "Fairy Ocarina";
+        case RI_HOOKSHOT_SHORT:
+            return "Hookshot";
+        case RI_DEKU_STICK_UPGRADE_20:
+            return "Deku Stick Capacity (20)";
+        case RI_DEKU_STICK_UPGRADE_30:
+            return "Deku Stick Capacity (30)";
+        case RI_DEKU_NUT_UPGRADE_30:
+            return "Deku Nut Capacity (30)";
+        case RI_DEKU_NUT_UPGRADE_40:
+            return "Deku Nut Capacity (40)";
         default:
             return nullptr;
     }
