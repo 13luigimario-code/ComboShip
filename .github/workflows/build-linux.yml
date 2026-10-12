@@ -94,6 +94,7 @@ jobs:
           import json, os
           path = "comboship.json"
           cfg = json.load(open(path)) if os.path.exists(path) else {}
+          cfg = cfg if isinstance(cfg, dict) else {}  # the default run leaves a literal `null` here
           cvars = cfg.setdefault("CVars", {})
           oot = cvars.setdefault("gRandoSettings", {})
           for key in ["ComboMaskBlast", "ComboMaskStone", "ComboMaskKamaro", "ComboMmSongs",

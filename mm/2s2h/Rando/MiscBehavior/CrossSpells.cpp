@@ -27,11 +27,22 @@ extern "C" {
 #include "sfx.h"
 #include "z64player.h"
 s32 Map_CurRoomHasMapI(PlayState* play);
+// Declared first so OPEN_DISPS' block-scope declarations keep C linkage (inside the anonymous namespace below
+// they would otherwise name an undefined C++ function and lib2ship would fail to load).
+void FrameInterpolation_RecordOpenChild(const void* a, int b);
+void FrameInterpolation_RecordCloseChild(void);
 }
 
 #include "align_asset_macro.h"
 
 namespace {
+
+// OPEN_DISPS / CLOSE_DISPS declare these at block scope; inside this namespace that names
+// (anonymous)::FrameInterpolation_*, so redeclare them here with C linkage to bind the real ones.
+extern "C" {
+void FrameInterpolation_RecordOpenChild(const void* a, int b);
+void FrameInterpolation_RecordCloseChild(void);
+}
 
 #define COMBO_OOT_SPELL(path) "__OTR__@oot:overlays/" path
 static const ALIGN_ASSET(2) char sDinsTex[] = COMBO_OOT_SPELL("ovl_Magic_Fire/sTex");
