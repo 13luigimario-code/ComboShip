@@ -21,6 +21,10 @@ struct PlayState;
 struct Player;
 struct PlayerAgeProperties;
 
+// MM can have an adult Link at all (for now the developer CVar; the Cross-Games Age setting will decide it).
+int Combo_AdultLink_AgeSystemOn(void);
+// Link's age in MM is adult (whatever form he is in).
+int Combo_AdultLink_IsAdultAge(void);
 // Player_Init: decides whether this player is adult (human form only). Returns 1 when adult.
 int Combo_AdultLink_OnPlayerInit(struct Player* player);
 // This player is the adult Link set up by the last Player_Init.

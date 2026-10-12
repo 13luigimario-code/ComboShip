@@ -1,3 +1,6 @@
+#ifdef COMBO_BUILD
+#include "2s2h/Rando/MiscBehavior/AdultLink.h"
+#endif
 #include "Rando/Rando.h"
 #include <fast/Fast3dGui.h>
 #include "Rando/Spoiler/Spoiler.h"
@@ -1014,6 +1017,68 @@ static bool ItemPoolCheckbox(const char* label, RandoOptionId optionId, const ch
     return changed;
 }
 
+#ifdef COMBO_BUILD
+// ComboShip (Cross-Games Age): OoTMM's "requires Child/Adult Link" per MM item (AgeReqList.h), shown while MM can have
+// an adult Link.
+static void DrawAgeRequirementsCard() {
+    if (!Combo_AdultLink_AgeSystemOn()) {
+        return;
+    }
+    static const std::unordered_map<int32_t, const char*> kAgeReqOptions = {
+        { RO_AGE_ANY, "Any age" },
+        { RO_AGE_CHILD_ONLY, "Child only" },
+        { RO_AGE_ADULT_ONLY, "Adult only" },
+        { RO_AGE_RANDOM, "Random" },
+    };
+    struct Row {
+        RandoOptionId option;
+        const char* label;
+        RandoOptionId poolOption;
+    };
+    static const Row kRows[] = {
+#define AGE_REQ(suffix, label, ootmmId, item, poolOption) { RO_AGE_REQ_##suffix, label, poolOption },
+#include "MiscBehavior/AgeReqList.h"
+#undef AGE_REQ
+    };
+
+    UIWidgets::BeginCard("itemPoolAgeRequirements");
+    ImGui::SeparatorText("Age Requirements (MM)");
+    ImGui::TextWrapped(
+        "Which age of Link may use each item in Termina. An item for the other age is greyed out like an "
+        "item your form can't use. Random picks child or adult from the seed, keeping each form's mask "
+        "with what that form needs (its title deed; the Powder Keg with the Goron Mask or Strength).");
+    auto setAll = [](int32_t value) {
+        for (const Row& row : kRows) {
+            CVarSetInteger(Rando::StaticData::Options[row.option].cvar, value);
+        }
+        Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
+    };
+    if (UIWidgets::Button("All: Any age", UIWidgets::ButtonOptions().Size(UIWidgets::Sizes::Inline))) {
+        setAll(RO_AGE_ANY);
+    }
+    ImGui::SameLine();
+    if (UIWidgets::Button("All: Random", UIWidgets::ButtonOptions().Size(UIWidgets::Sizes::Inline))) {
+        setAll(RO_AGE_RANDOM);
+    }
+    if (ImGui::BeginTable("ageRequirements", 2, ImGuiTableFlags_SizingStretchSame)) {
+        for (const Row& row : kRows) {
+            ImGui::TableNextColumn();
+            const bool inPool = (row.poolOption == RO_MAX) ||
+                                (CVarGetInteger(Rando::StaticData::Options[row.poolOption].cvar,
+                                                Rando::StaticData::Options[row.poolOption].defaultValue) != 0);
+            UIWidgets::ComboboxOptions options;
+            options.labelPosition = UIWidgets::LabelPosition::Near;
+            options.alignment = UIWidgets::ComponentAlignment::Right;
+            options.disabled = !inPool;
+            options.disabledTooltip = "Not in the item pool (see Ocarina of Time Gear above).";
+            UIWidgets::CVarCombobox(row.label, Rando::StaticData::Options[row.option].cvar, &kAgeReqOptions, options);
+        }
+        ImGui::EndTable();
+    }
+    UIWidgets::EndCard();
+}
+#endif
+
 static void DrawItemPoolTab() {
     DrawSeedHealthStrip();
 
@@ -1161,6 +1226,9 @@ static void DrawItemPoolTab() {
     CVarCheckbox("Infinite Upgrades", "gPlaceholderBool",
                  CheckboxOptions({ { .disabled = true, .disabledTooltip = "Coming Soon" } }));
     UIWidgets::EndCard();
+#ifdef COMBO_BUILD
+    DrawAgeRequirementsCard();
+#endif
 
     UIWidgets::BeginCard("itemPoolSongs");
     ImGui::SeparatorText("Extra Songs");

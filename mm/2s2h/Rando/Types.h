@@ -3423,6 +3423,10 @@ typedef enum {
     RO_CROSS_HOOKSHOT_SHORT,
     RO_CROSS_STICKS_NUTS,
     RO_CROSS_GAME_FW, // OoTMM "Cross-Games Farore's Wind" (needs RO_CROSS_SPELL_WIND)
+// Cross-Games Age: OoTMM's MM age requirements, RO_AGE_REQ_<item> (values: RandoOptionAgeReq).
+#define AGE_REQ(suffix, label, ootmmId, item, poolOption) RO_AGE_REQ_##suffix,
+#include "MiscBehavior/AgeReqList.h"
+#undef AGE_REQ
 #endif
     RO_MAX,
 } RandoOptionId;
@@ -3431,6 +3435,17 @@ typedef enum {
     RO_GENERIC_OFF,
     RO_GENERIC_ON,
 } RandoOptionGenericOffOn;
+
+#ifdef COMBO_BUILD
+// Cross-Games Age: which age may use an MM item (OoTMM's "requires Child/Adult Link" pair; Random is resolved from the
+// seed when the save is created, so a save only holds the first three).
+typedef enum {
+    RO_AGE_ANY,
+    RO_AGE_CHILD_ONLY,
+    RO_AGE_ADULT_ONLY,
+    RO_AGE_RANDOM,
+} RandoOptionAgeReq;
+#endif
 
 typedef enum {
     RO_GENERIC_NO,

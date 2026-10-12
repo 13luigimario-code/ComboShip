@@ -2489,3 +2489,34 @@ when the player actor is created (`Player_Init`, human form only); the setting i
   OOT adult Link's bow hand without the bow (as OoTMM does), and its string stretches up to OoTMM's adult 1.65.
 - **Known gaps:** a held Deku Stick and the transformation-mask cutscene items keep MM's child placement. The
   All-Night and Kamaro masks fit closely enough that adult Link's face shows through at the edges.
+
+### Cross-Games Age: MM age requirements (OoTMM `items.mmAgeRequirements`) (2026-10-12)
+
+OoTMM's "<item> requires Child Link / requires Adult Link" pairs and "Random MM Age Requirements", as one MM option per
+item: `RO_AGE_REQ_<item>` (Any age, Child only, Adult only, Random; `RandoOptionAgeReq`). The 63 items, in OoTMM's
+order, are `mm/2s2h/Rando/MiscBehavior/AgeReqList.h` (an X-macro shared by the option enum, the option table and the
+menu). The module is `AgeRequirements.{h,cpp}`.
+
+- **Only with an adult Link:** the requirements apply, and the menu card (Item Pool tab, "Age Requirements (MM)")
+  shows, only while MM can have an adult Link (`Combo_AdultLink_AgeSystemOn`; for now the developer CVar, later the
+  Cross-Games Age setting). A save created without it stores "Any age" for every item, so no seed can ask for an age
+  MM can't reach.
+- **Random:** resolved when the save is created (native `OnFileCreate` and the combo `MM_InitRandoSaveFile`, with the
+  seed), with OoTMM's solver (`randomizeMmAgeRequirements`): each random item gets a coin flip for its preferred age,
+  and a backtracking search keeps OoTMM's dependencies (Deku Mask with the Swamp Title Deed, Goron Mask with the
+  Mountain Title Deed and the Powder Keg, Zora Mask with the Ocean Title Deed, Strength with the Powder Keg; the
+  Powder Keg may follow either the Goron Mask or Strength when those two differ). Items outside the pool (an OOT item
+  whose option is off) aren't restricted. Its own random stream (splitmix64 from the seed), so it doesn't shift the
+  seed's other rolls; the combo logic will call `Rando::AgeReq::Resolve` with the same seed to agree with the save.
+  If no assignment fits, the random items stay unrestricted (OoTMM throws).
+- **In game:** an item for the other age is greyed out like an item the current form can't use
+  (`VB_ITEM_BE_RESTRICTED`: C buttons, D-pad and pause menu). OoTMM refuses to equip it instead; ComboShip lets it be
+  assigned, unusable. The Fairy Ocarina and Short Hookshot share the Ocarina of Time and Hookshot slots, so the slot
+  follows whichever one Link has. Elemental arrows count while drawn (`ITEM_BOW_FIRE` etc.). Strength upgrades at the
+  wrong age count as none (`Combo_Gear_GetStrength`).
+- **Minigames:** like OoTMM, the Town and Swamp Shooting Galleries and Honey & Darling (bombchus, bombs, bow by day)
+  refuse Link at the wrong age, with their own "no bow" / wrong-form lines (`COMBO_AGE_OK` in `z_en_syateki_man.c`
+  and `z_en_fu.c`).
+- **Not ported yet:** OoTMM also refuses Romani's ranch defense, Cremia's cart escort and Koume's boat archery at the
+  wrong bow age (these lend Link the bow, so they need new dialogue), and drops no arrows or seeds when the Bow or
+  Slingshot belongs to the other age. The fill logic doesn't know about age yet (Cross-Games Age part 4).

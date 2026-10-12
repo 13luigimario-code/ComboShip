@@ -9,6 +9,7 @@
 
 #include "CrossGear.h"
 #include "AdultLink.h"
+#include "AgeRequirements.h"
 #include "CrossItemAssets.h"
 #include "2s2h/Rando/Rando.h"
 
@@ -215,6 +216,9 @@ extern "C" int Combo_Gear_GetScale(void) {
 }
 
 extern "C" int Combo_Gear_GetStrength(void) {
+    if (!Combo_AgeReq_StrengthAllowed()) {
+        return 0; // Cross-Games Age: strength restricted to the other age
+    }
     if (HasFlag(RANDO_INF_OBTAINED_STRENGTH_GOLDEN_GAUNTLETS)) {
         return 3;
     }

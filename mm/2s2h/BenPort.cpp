@@ -77,6 +77,10 @@ CrowdControl* CrowdControl::Instance;
 #include "2s2h/Enhancements/GfxPatcher/PlayerCustomFlipbooks.h"
 #include "2s2h/Enhancements/ModMenu/ModMenu.h"
 #include "2s2h/DeveloperTools/DebugConsole.h"
+#ifdef COMBO_BUILD
+#include "2s2h/Rando/MiscBehavior/AgeRequirements.h"
+#include "2s2h/Rando/MiscBehavior/AdultLink.h"
+#endif
 #include "2s2h/Rando/Rando.h"
 #include "2s2h/Rando/Spoiler/Spoiler.h"
 #include "2s2h/Rando/Logic/Logic.h"
@@ -2999,6 +3003,10 @@ extern "C" COMBO_EXPORT int MM_InitRandoSaveFile(int fileNum, const char* placem
         spoiler["checks"] = std::move(checks);
 
         Rando::Spoiler::ApplyToSaveContext(spoiler);
+
+        // ComboShip (Cross-Games Age): "Random" MM age requirements become child or adult from the combo seed (the
+        // combo logic resolves them the same way); off when MM has no adult Link.
+        Rando::AgeReq::Resolve((uint32_t)sMMComboRandoSeed, RANDO_SAVE_OPTIONS, Combo_AdultLink_AgeSystemOn() != 0);
 
         // ComboShip: the apply stamps shuffled=true on every payload check incl. non-shuffled Remains;
         // restore native state (delivery reads randoItemId, not shuffled) so stones/tracker skip them.

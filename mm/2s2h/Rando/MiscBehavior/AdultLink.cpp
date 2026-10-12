@@ -241,10 +241,17 @@ PlayerAgeProperties sAdultAgeProperties;
 
 } // namespace
 
+extern "C" int Combo_AdultLink_AgeSystemOn(void) {
+    return CVarGetInteger("gCombo.Dev.MmAdultLink", 0) != 0;
+}
+
+extern "C" int Combo_AdultLink_IsAdultAge(void) {
+    return Combo_AdultLink_AgeSystemOn(); // the developer toggle makes Link adult
+}
+
 extern "C" int Combo_AdultLink_OnPlayerInit(Player* player) {
     const bool adult = (player != nullptr) && (player->actor.id == ACTOR_PLAYER) &&
-                       (player->transformation == PLAYER_FORM_HUMAN) &&
-                       (CVarGetInteger("gCombo.Dev.MmAdultLink", 0) != 0);
+                       (player->transformation == PLAYER_FORM_HUMAN) && Combo_AdultLink_IsAdultAge();
     if (adult) {
         sAdultPlayer = player;
     } else if (sAdultPlayer == player) {
