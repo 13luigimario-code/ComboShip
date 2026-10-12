@@ -15945,6 +15945,10 @@ void Player_Action_26(Player* this, PlayState* play) {
             }
         }
     } else if (!func_80840A30(play, this, &this->speedXZ, 6.0f)) {
+        // ComboShip: SoH's Improved Roll, A late in a roll starts a new one (Enhancements/Player/ImprovedRoll.cpp).
+        if (GameInteractor_Should(VB_PLAYER_ROLL_CHAIN, false, this, play, sPlayerControlInput, sPlayerFloorType)) {
+            return;
+        }
         if ((this->skelAnime.curFrame < 15.0f) || !Player_ActionHandler_7(this, play)) {
             f32 speedTarget;
             s16 yawTarget;
@@ -15961,6 +15965,8 @@ void Player_Action_26(Player* this, PlayState* play) {
                 (this->controlStickDirections[this->controlStickDataIndex] != PLAYER_STICK_DIR_FORWARD)) {
                 speedTarget = 3.0f;
             }
+            // ComboShip: SoH's Improved Roll Steering turns the roll toward the stick.
+            GameInteractor_Should(VB_PLAYER_ROLL_STEER, false, this, play, yawTarget);
             func_8083CB58(this, speedTarget, this->actor.shape.rot.y);
 
             if (func_8083FBC4(play, this)) {
