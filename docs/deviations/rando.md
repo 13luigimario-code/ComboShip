@@ -2429,3 +2429,31 @@ CHILD_TRADE/STRENGTH` (`ComboAgeless*` CVars, Logic section of the OOT randomize
   left alone, so logic under-credits ageless items there rather than assuming a child can make an adult-only reach.
 - **Not ported:** `agelessGFS` (OOT has no Great Fairy's Sword) and `agelessSoaring` (ComboShip's Song of Soaring in
   OOT already works and is in logic at both ages).
+
+## Cross-Games Farore's Wind (OoTMM `crossGameFw`) (2026-10-12)
+
+MM option `RO_CROSS_GAME_FW` (Item Pool, under Farore's Wind; it needs `RO_CROSS_SPELL_WIND`). There is one Farore's
+Wind point across both games: setting it in one game turns the other game's point into a "lives over there" marker,
+and casting Farore's Wind there warps across (the teleport songs' `Combo_RequestCrossSwitch`) and spawns at the point,
+which is used up.
+
+- **Protocol (`combo/rando/CrossFw.h`):** each DLL exports `<GAME>_ComboFw(op)` on its own save (state, mark cross,
+  clear a marker, the point's entrance, arm the arrival) and takes a peer callback from the launcher
+  (`<GAME>_SetComboFwPeer`) that forwards to the other game while both halves of the slot are resident
+  (`combo/ComboShip.cpp`). Dormant writes persist immediately, like dormant item grants. A marker whose point is gone
+  is dropped when cast.
+- **MM (`CrossSpells.cpp`):** Farore's Wind's point now lives in the save (`RandoSaveInfo::comboFwState` / `comboFw`,
+  JSON `comboFwState` / `comboFw`, tolerant) instead of memory, with or without the option. `title_setup.c` (guarded)
+  calls `Combo_MM_ApplyFwArrival` after a cross arrival: entrance, `respawn[RESPAWN_MODE_HUMAN]` and `respawnFlag` from
+  the point.
+- **OOT (`soh/soh/Enhancements/combo/ComboCrossFw.cpp`):** the marker is `gSaveContext.fw` with `entranceIndex = -2`
+  (never the current scene, placed far below it), so OOT's own Return/Dispel prompt appears; `z_player.c` (guarded)
+  asks `Combo_Fw_OotReturn` first, and notifies on set and dispel. `title_setup.c` calls `Combo_OoT_ApplyFwArrival`:
+  `respawnFlag` 3 with `respawn[RESPAWN_MODE_TOP]` from the point, like OOT's own return. OOT stores its point from the
+  room-entry respawn (`fw.pos = respawn[RESPAWN_MODE_DOWN]`), so arriving from Termina lands there, as OOT's own return
+  from another area does.
+- **Not ported:** OoTMM keeps one point per age; ComboShip keeps one (SoH already keeps OOT's per age). Dispelling a
+  marker in OOT leaves MM's point. MM has no dispel prompt.
+
+Also: MM's `title_setup.c` now includes `consolevariablebridge.h` for its Remember Save Location `CVarGetInteger`
+(an implicit declaration clang rejects).

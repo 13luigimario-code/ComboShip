@@ -3422,6 +3422,7 @@ typedef enum {
     RO_CROSS_OCARINA_FAIRY,
     RO_CROSS_HOOKSHOT_SHORT,
     RO_CROSS_STICKS_NUTS,
+    RO_CROSS_GAME_FW, // OoTMM "Cross-Games Farore's Wind" (needs RO_CROSS_SPELL_WIND)
 #endif
     RO_MAX,
 } RandoOptionId;

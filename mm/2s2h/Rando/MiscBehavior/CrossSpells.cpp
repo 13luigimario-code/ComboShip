@@ -10,8 +10,10 @@
 //   (OoTMM uses DMG_FIRE_ARROW too). Costs 12 magic, like OOT.
 // - Nayru's Love: Link can't be hurt for 1200 frames (OOT keeps invincibilityTimer at -100); 24 magic.
 // - Farore's Wind: the first cast sets a warp point where Link stands, the next one returns to it (and uses
-//   it up). The point is kept in RESPAWN_MODE_HUMAN, which Player_Init reads for respawnFlag 8 (OoTMM's
-//   approach); refused where the Song of Soaring is. 12 magic. OoTMM's "dispel" prompt isn't ported.
+//   it up). The point is saved (RandoSaveInfo::comboFw) and restored through RESPAWN_MODE_HUMAN, which
+//   Player_Init reads for respawnFlag 8 (OoTMM's approach); refused where the Song of Soaring is. 12 magic.
+//   OoTMM's "dispel" prompt isn't ported. With Cross-Games Farore's Wind (RO_CROSS_GAME_FW) there is one point
+//   across both games (combo/rando/CrossFw.h): casting with OOT's point set warps to Hyrule.
 #ifdef COMBO_BUILD
 
 #include "CrossGear.h"
@@ -19,6 +21,9 @@
 #include "2s2h/Rando/Rando.h"
 #include "2s2h/GameInteractor/GameInteractor.h"
 #include <libultraship/libultraship.h>
+#include "ComboExport.h"
+#include "rando/CrossFw.h"
+#include "2s2h/SaveManager/SaveManager.h"
 
 extern "C" {
 #include "variables.h"
@@ -27,6 +32,7 @@ extern "C" {
 #include "sfx.h"
 #include "z64player.h"
 s32 Map_CurRoomHasMapI(PlayState* play);
+void Combo_RequestCrossSwitch(int ootEntrance); // BenPort.cpp (teleport songs)
 // Declared first so OPEN_DISPS' block-scope declarations keep C linkage (inside the anonymous namespace below
 // they would otherwise name an undefined C++ function and lib2ship would fail to load).
 void FrameInterpolation_RecordOpenChild(const void* a, int b);
@@ -102,8 +108,18 @@ s16 sNayrusYaw = 0;
 Vec3f sNayrusPos = { 0.0f, 0.0f, 0.0f };
 
 // ---- Farore's Wind ----
-bool sFaroreSet = false;
-RespawnData sFarore;
+// The point: RANDO_SAVE.comboFwState / comboFw (z64save.h).
+ComboFwPeerFn sFwPeer = nullptr; // launcher: forwards an op to OOT (-1 when OOT's save isn't resident)
+bool sFwArrivalArmed = false;    // the next cross-game arrival spawns at the point
+
+bool CrossFwOn() {
+    return IS_RANDO && (RANDO_SAVE_OPTIONS[RO_CROSS_GAME_FW] == RO_GENERIC_YES) &&
+           (RANDO_SAVE_OPTIONS[RO_CROSS_SPELL_WIND] == RO_GENERIC_YES);
+}
+
+int FwPeer(int op) {
+    return (CrossFwOn() && (sFwPeer != nullptr)) ? sFwPeer(op) : -1;
+}
 
 bool SongPlaying(PlayState* play) {
     s32 msgMode = play->msgCtx.msgMode;
@@ -155,20 +171,34 @@ void CastFarores(PlayState* play, Player* player) {
     if (!SpendMagic(play, kCostFarores)) {
         return;
     }
-    if (!sFaroreSet) {
+    RandoSaveInfo& rando = gSaveContext.save.shipSaveInfo.rando;
+    if (rando.comboFwState == CFW_CROSS) {
+        // Cross-Games Farore's Wind: the point is in Hyrule. Warp there if it still exists; it is used up on arrival.
+        const int entrance = (FwPeer(CFW_STATE) == CFW_HERE) ? FwPeer(CFW_ENTRANCE) : -1;
+        if ((entrance >= 0) && (FwPeer(CFW_ARM_ARRIVAL) >= 0)) {
+            rando.comboFwState = CFW_NONE;
+            Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_VANISH);
+            Combo_RequestCrossSwitch(entrance); // persist + switch on the next clean frame
+            return;
+        }
+        rando.comboFwState = CFW_NONE; // OOT's point is gone: set a new one here
+    }
+    if (rando.comboFwState != CFW_HERE) {
         // Set the warp point here (OOT's "Warp Point set" behavior; PLAYER_PARAMS(0xFF, START_MODE_D)).
         Play_SetRespawnData(play, RESPAWN_MODE_HUMAN, gSaveContext.save.entrance, play->roomCtx.curRoom.num, 0xDFF,
                             &player->actor.world.pos, player->actor.shape.rot.y);
-        sFarore = gSaveContext.respawn[RESPAWN_MODE_HUMAN];
-        sFaroreSet = true;
+        rando.comboFw = gSaveContext.respawn[RESPAWN_MODE_HUMAN];
+        rando.comboFwState = CFW_HERE;
+        FwPeer(CFW_MARK_CROSS); // OOT's own point (if any) now warps here
         Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_WARP);
         return;
     }
     // Return to it: Player_Init reads respawn[respawnFlag - 1] for a positive flag.
-    gSaveContext.respawn[RESPAWN_MODE_HUMAN] = sFarore;
-    sFaroreSet = false;
+    gSaveContext.respawn[RESPAWN_MODE_HUMAN] = rando.comboFw;
+    rando.comboFwState = CFW_NONE;
+    FwPeer(CFW_CLEAR_IF_CROSS);
     gSaveContext.respawnFlag = RESPAWN_MODE_HUMAN + 1;
-    play->nextEntrance = sFarore.entrance;
+    play->nextEntrance = rando.comboFw.entrance;
     play->transitionTrigger = TRANS_TRIGGER_START;
     play->transitionType = TRANS_TYPE_FADE_WHITE_FAST;
     Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_VANISH);
@@ -415,11 +445,72 @@ extern "C" void Combo_Spells_OnPlayerUpdate(PlayState* play, Player* player) {
     UpdateNayrus(play, player);
 }
 
+bool Combo_MmIsForeground(void); // BenPort.cpp
+
+// Cross-Games Farore's Wind (combo/rando/CrossFw.h), on MM's own save; the launcher calls it while MM is dormant too.
+extern "C" COMBO_EXPORT int MM_ComboFw(int op) {
+    if ((gSaveContext.fileNum > 2) || !CrossFwOn()) {
+        return -1;
+    }
+    RandoSaveInfo& rando = gSaveContext.save.shipSaveInfo.rando;
+    int result = 0;
+    bool changed = false;
+    switch (op) {
+        case CFW_STATE:
+            return rando.comboFwState;
+        case CFW_MARK_CROSS:
+            changed = (rando.comboFwState != CFW_CROSS);
+            rando.comboFwState = CFW_CROSS;
+            break;
+        case CFW_CLEAR_IF_CROSS:
+            changed = (rando.comboFwState == CFW_CROSS);
+            if (changed) {
+                rando.comboFwState = CFW_NONE;
+            }
+            break;
+        case CFW_ENTRANCE:
+            return (rando.comboFwState == CFW_HERE) ? rando.comboFw.entrance : -1;
+        case CFW_ARM_ARRIVAL:
+            if (rando.comboFwState != CFW_HERE) {
+                return -1;
+            }
+            sFwArrivalArmed = true;
+            return 0;
+        default:
+            return -1;
+    }
+    if (changed && !Combo_MmIsForeground()) {
+        SaveManager_SaveCurrentForCombo(); // dormant: persist now, like a dormant item grant
+    }
+    return result;
+}
+
+extern "C" COMBO_EXPORT void MM_SetComboFwPeer(ComboFwPeerFn peer) {
+    sFwPeer = peer;
+}
+
+// title_setup.c, after a cross-game arrival entrance was applied: an armed Farore's Wind arrival spawns at the point
+// instead (and uses it up), like returning to it from Termina.
+extern "C" void Combo_MM_ApplyFwArrival(void) {
+    if (!sFwArrivalArmed) {
+        return;
+    }
+    sFwArrivalArmed = false;
+    RandoSaveInfo& rando = gSaveContext.save.shipSaveInfo.rando;
+    if (rando.comboFwState != CFW_HERE) {
+        return;
+    }
+    gSaveContext.save.entrance = rando.comboFw.entrance;
+    gSaveContext.respawn[RESPAWN_MODE_HUMAN] = rando.comboFw;
+    gSaveContext.respawnFlag = RESPAWN_MODE_HUMAN + 1;
+    rando.comboFwState = CFW_NONE;
+}
+
 void Rando::MiscBehavior::CrossSpells() {
     const bool on = IS_RANDO && (RANDO_SAVE_OPTIONS[RO_CROSS_SPELL_FIRE] || RANDO_SAVE_OPTIONS[RO_CROSS_SPELL_WIND] ||
                                  RANDO_SAVE_OPTIONS[RO_CROSS_SPELL_LOVE]);
     ResetSpellEffects();
-    sFaroreSet = false;
+    sFwArrivalArmed = false;
     COND_ID_HOOK(OnActorDraw, ACTOR_PLAYER, on, [](Actor* actor) {
         DrawDins(gPlayState);
         DrawNayrus(gPlayState, (Player*)actor);

@@ -477,6 +477,7 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_CROSS_OCARINA_FAIRY",
                                                                    "gRando.Options.RO_CROSS_HOOKSHOT_SHORT",
                                                                    "gRando.Options.RO_CROSS_STICKS_NUTS",
+                                                                   "gRando.Options.RO_CROSS_GAME_FW",
 #endif
                                                                });
 
@@ -1100,6 +1101,10 @@ static void DrawItemPoolTab() {
     ItemPoolCheckbox("Nayru's Love", RO_CROSS_SPELL_LOVE,
                      "Adds Ocarina of Time's Nayru's Love to the item pool (Letter to Kafei / Pendant slot). Cast by "
                      "human Link in Termina for 24 magic, nothing can hurt him for about a minute.",
+                     1);
+    ItemPoolCheckbox("Cross-Games Farore's Wind", RO_CROSS_GAME_FW,
+                     "With Farore's Wind above, there is one Farore's Wind point across both games: set it in "
+                     "Termina and casting Farore's Wind in Hyrule warps you back to it, or the other way round.",
                      1);
     ItemPoolCheckbox("Megaton Hammer", RO_CROSS_HAMMER,
                      "Adds Ocarina of Time's Megaton Hammer to the item pool (Moon's Tear / Title Deed slot). Human "

@@ -38,6 +38,7 @@
 #include "rando/CrossWorldRando.h"
 #include "rando/ComboPlaythrough.h"
 #include "rando/CrossHints.h"
+#include "rando/CrossFw.h"
 #include "gui/ComboGenProgress.h"
 #include "ComboExtract.h"
 #include "ComboSettingsImport.h"
@@ -846,6 +847,13 @@ static FnSetSharedChangedCb SOH_SetSharedChangedCb = nullptr;
 static FnSetSharedChangedCb MM_SetSharedChangedCb = nullptr;
 static FnSetSharedTickCb SOH_SetSharedTickCb = nullptr;
 static FnSetSharedTickCb MM_SetSharedTickCb = nullptr;
+// Cross-Games Farore's Wind (combo/rando/CrossFw.h): each game's op on its own save, and the peer setters.
+typedef int (*FnComboFw)(int);
+typedef void (*FnSetComboFwPeer)(ComboFwPeerFn);
+static FnComboFw SOH_ComboFw = nullptr;
+static FnComboFw MM_ComboFw = nullptr;
+static FnSetComboFwPeer SOH_SetComboFwPeer = nullptr;
+static FnSetComboFwPeer MM_SetComboFwPeer = nullptr;
 // Shared-items mask of the LOADED slot (seed-bound, like g_goalHunt/g_startingGameMM). Absent key = 0.
 static ComboRando::SharedMask g_sharedMask = 0;
 static bool g_sharedReconcilePending = false;
@@ -1523,6 +1531,20 @@ static void Combo_SharedTick() try {
 } catch (const std::exception& e) {
     std::cerr << "[ComboShip] Combo_SharedTick threw: " << e.what() << std::endl;
 } catch (...) { std::cerr << "[ComboShip] Combo_SharedTick threw a non-std exception" << std::endl; }
+
+// Cross-Games Farore's Wind peers (combo/rando/CrossFw.h): forward an op to the other game's save, only while both
+// halves of the current slot are resident (otherwise -1: the caller behaves as if the other game had no point).
+static int Combo_FwPeerForOot(int op) {
+    if (!MM_ComboFw || g_comboCompletionSlot < 0 || g_MmSaveInMemorySlot != g_comboCompletionSlot)
+        return -1;
+    return MM_ComboFw(op);
+}
+static int Combo_FwPeerForMm(int op) {
+    if (!SOH_ComboFw || g_comboCompletionSlot < 0 || g_MmSaveInMemorySlot != g_comboCompletionSlot)
+        return -1;
+    // MM owns the setting; it only asks OOT while it is on.
+    return SOH_ComboFw(op);
+}
 
 // Seed utilities — Ship_Hash/Ship_Random are not exported from libultraship, so implement inline.
 // FNV-1a 32-bit hash: deterministic string-to-uint32 used to derive the master seed.
@@ -3113,6 +3135,10 @@ int main(int argc, char** argv) {
     MM_SetSharedChangedCb = (FnSetSharedChangedCb)GetSym(mmModule, "MM_SetSharedChangedCb");
     SOH_SetSharedTickCb = (FnSetSharedTickCb)GetSym(sohModule, "SOH_SetSharedTickCb");
     MM_SetSharedTickCb = (FnSetSharedTickCb)GetSym(mmModule, "MM_SetSharedTickCb");
+    SOH_ComboFw = (FnComboFw)GetSym(sohModule, "SOH_ComboFw");
+    MM_ComboFw = (FnComboFw)GetSym(mmModule, "MM_ComboFw");
+    SOH_SetComboFwPeer = (FnSetComboFwPeer)GetSym(sohModule, "SOH_SetComboFwPeer");
+    MM_SetComboFwPeer = (FnSetComboFwPeer)GetSym(mmModule, "MM_SetComboFwPeer");
 
     // Oracle exports
     Combo_SOH_Rando_Reset = (FnOracleVoid)GetSym(sohModule, "Combo_SOH_Rando_Reset");
@@ -3328,6 +3354,11 @@ int main(int argc, char** argv) {
         SOH_SetSharedTickCb(Combo_SharedTick);
     if (MM_SetSharedTickCb)
         MM_SetSharedTickCb(Combo_SharedTick);
+    // Cross-Games Farore's Wind: each game reaches the other's point through the launcher.
+    if (SOH_SetComboFwPeer)
+        SOH_SetComboFwPeer(Combo_FwPeerForOot);
+    if (MM_SetComboFwPeer)
+        MM_SetComboFwPeer(Combo_FwPeerForMm);
     if (SOH_SetCrossDeliver || MM_SetCrossDeliver) {
         std::cout << "[ComboShip] Cross-game item delivery seam registered." << std::endl;
     }
