@@ -48,6 +48,7 @@
 #include "2s2h/BenPort.h"
 #ifdef COMBO_BUILD
 #include "2s2h/Rando/MiscBehavior/CrossGear.h" // ComboShip: cross-game items (OOT gear in MM)
+#include "2s2h/Rando/MiscBehavior/AdultLink.h" // ComboShip: Cross-Games Age (adult Link in MM)
 #include "align_asset_macro.h"
 // ComboShip (cross-game items): OOT's own boomerang animations for human Link (MM keeps only the aim loop), loaded
 // from OOT's archive through "@oot:" routing (ResourceMgr_LoadAnimByName, BenPort.cpp).
@@ -11455,6 +11456,12 @@ void Player_Init(Actor* thisx, PlayState* play) {
     }
 
     this->ageProperties = &sPlayerAgeProperties[this->transformation];
+#ifdef COMBO_BUILD
+    // ComboShip (Cross-Games Age): adult human Link takes OOT adult Link's body measurements.
+    if (Combo_AdultLink_OnPlayerInit(this)) {
+        this->ageProperties = Combo_AdultLink_AgeProperties(&sPlayerAgeProperties[PLAYER_FORM_FIERCE_DEITY]);
+    }
+#endif
 
     this->itemAction = PLAYER_IA_NONE;
     this->heldItemAction = PLAYER_IA_NONE;
@@ -11463,7 +11470,13 @@ void Player_Init(Actor* thisx, PlayState* play) {
     Player_UseItem(play, this, ITEM_NONE);
     Player_SetEquipmentData(play, this);
     this->prevBoots = this->currentBoots;
+#ifdef COMBO_BUILD
+    // ComboShip (Cross-Games Age): Fierce Deity's skeleton is OOT's adult Link skeleton.
+    Player_InitCommon(this, play,
+                      gPlayerSkeletons[Combo_AdultLink_Is(this) ? PLAYER_FORM_FIERCE_DEITY : this->transformation]);
+#else
     Player_InitCommon(this, play, gPlayerSkeletons[this->transformation]);
+#endif
 
     if (this->actor.shape.rot.z != 0) {
         EffectTireMark* tireMark;

@@ -283,8 +283,12 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
     // unbalanceable pool ("no discardable junk") instead of the rebuild it actually needs.
     std::string missingCategory;
 
+    bool mmAgeNeedsAdult = false; // Cross-Games Age: MM has adult-only (or Random) items (MM dump "ageNeedsAdult")
     auto parsePool = [&](Game game, const std::string& dumpJson) {
         auto d = nlohmann::json::parse(dumpJson);
+        if (game == GAME_MM) {
+            mmAgeNeedsAdult = d.value("ageNeedsAdult", false);
+        }
 
         // Fillable checks (name only; the pool below feeds the items).
         for (auto& c : d.value("checks", nlohmann::json::array())) {
@@ -839,6 +843,7 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
     bool fillOk = false;
     int passesUsed = 0;
     std::string lastPassError; // names the terminal cause instead of a generic "fill failed"
+    bool sawAdultInMm = false; // Cross-Games Age: some search let adult Link into Termina
 
     // Expected post-balance multiset, for the per-pass backstop below: every pool item must reach
     // `placements`. This is the assertion that catches item loss from ANY cause, not just truncation.
@@ -979,6 +984,7 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
             }
 
             auto fr = reachableFixpoint(ootRemaining, mmRemaining);
+            sawAdultInMm = sawAdultInMm || fr.cross.mmAdultIn;
             auto& ootReachable = fr.ootReachable;
             auto& mmReachable = fr.mmReachable;
 
@@ -1243,6 +1249,12 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
     if (!fillOk) {
         result.error = "assumed fill failed after " + std::to_string(kMaxPasses) +
                        " passes; last cause: " + (lastPassError.empty() ? "unknown (see log)" : lastPassError);
+        // Cross-Games Age: name the usual culprit when MM wanted adult Link and logic never got him to Termina.
+        if (mmAgeNeedsAdult && !sawAdultInMm) {
+            result.error += ". Some MM items are for adult Link only, but in this seed adult Link never reaches "
+                            "Termina: he gets there by playing the Song of Soaring in Hyrule (Song of Soaring (OoT), "
+                            "Shared Song of Soaring, or starting with it) onto an owl statue";
+        }
         return result;
     }
 

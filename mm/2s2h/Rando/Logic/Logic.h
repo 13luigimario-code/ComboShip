@@ -26,10 +26,17 @@ extern "C" {
 #endif
 
 #ifdef COMBO_BUILD
+#include "Rando/MiscBehavior/AgeRequirements.h"
+#endif
+
+#ifdef COMBO_BUILD
 // ComboShip (cross-game items): OOT masks MM logic credits, like OoTMM's can_enter_deku_palace (Skull Mask)
 // and can_evade_gerudo (Gerudo Mask). Owned = RandoInf flag (set by GiveItem and the combo oracle alike).
-#define HAS_COMBO_MASK_SKULL (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SKULL))
-#define HAS_COMBO_MASK_GERUDO (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_GERUDO))
+// Cross-Games Age: only at an age that may use them (MiscBehavior/AgeRequirements.h).
+#define HAS_COMBO_MASK_SKULL \
+    (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_SKULL) && Combo_AgeReq_LogicAllowsItem(ITEM_COMBO_MASK_SKULL))
+#define HAS_COMBO_MASK_GERUDO \
+    (Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_GERUDO) && Combo_AgeReq_LogicAllowsItem(ITEM_COMBO_MASK_GERUDO))
 // ComboShip (teleport songs): 1 while the combined fill's oracle knows OOT can play Song of Soaring.
 extern "C" int gMMComboOracleOotSoaring;
 #define CAN_SOAR_TO_OWL (CAN_PLAY_SONG(SOARING) || gMMComboOracleOotSoaring != 0)
@@ -204,11 +211,16 @@ void ValidateRegionTimeOwnership(RandoRegionId regionId, RandoCheckId checkId, u
 #ifdef COMBO_BUILD
 // ComboShip (cross-game items): the Short Hookshot is MM's Hookshot in the inventory with OOT's shorter range; logic
 // only counts the full Hookshot (CrossUpgrades.cpp). The item test folds away for every other item.
-#define HAS_ITEM(item)              \
-    ((INV_CONTENT(item) == item) && \
-     (((item) != ITEM_HOOKSHOT) || !Flags_GetRandoInf(RANDO_INF_COMBO_HOOKSHOT_IS_SHORT)))
+// Cross-Games Age: and only at an age that may use it (MiscBehavior/AgeRequirements.h; gComboLogicAge).
+#define HAS_ITEM(item)                                                                       \
+    ((INV_CONTENT(item) == item) &&                                                          \
+     (((item) != ITEM_HOOKSHOT) || !Flags_GetRandoInf(RANDO_INF_COMBO_HOOKSHOT_IS_SHORT)) && \
+     Combo_AgeReq_LogicAllowsItem(item))
+// Trade items MM logic tracks by their "obtained" flag (they share inventory slots): the flag, at a usable age.
+#define HAS_TRADE_ITEM(flag, item) (Flags_GetRandoInf(flag) && Combo_AgeReq_LogicAllowsItem(item))
 #else
 #define HAS_ITEM(item) (INV_CONTENT(item) == item)
+#define HAS_TRADE_ITEM(flag, item) (Flags_GetRandoInf(flag))
 #endif
 #define CAN_BE_DEKU (IS_DEKU || HAS_ITEM(ITEM_MASK_DEKU))
 #define CAN_BE_ZORA (IS_ZORA || HAS_ITEM(ITEM_MASK_ZORA))

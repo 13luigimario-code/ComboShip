@@ -50,6 +50,9 @@ static const ALIGN_ASSET(2) char sDekuShieldBackDL[] = COMBO_OOT_LINK_CHILD_DL("
 // CrossUpgrades.cpp: OOT's Fairy Ocarina in human Link's hand while he plays it.
 static const ALIGN_ASSET(2) char sFairyOcarinaHandDL[] =
     COMBO_OOT_LINK_CHILD_DL("gLinkChildRightHandHoldingFairyOcarinaNearDL");
+// Cross-Games Age: OOT adult Link's hand holding the Megaton Hammer.
+static const ALIGN_ASSET(2) char sHammerAdultHandDL[] =
+    "__OTR__@oot:objects/object_link_boy/gLinkAdultLeftHandHoldingHammerNearDL";
 // The textured half of OOT's held boomerang (OoTMM makeEqBoomerang appends it to the cut fist list).
 static const ALIGN_ASSET(2) char sBoomerangTexturedDL[] = COMBO_OOT_LINK_CHILD_DL("gLinkChildDL_18580");
 
@@ -92,16 +95,33 @@ struct CutDL {
 };
 CutDL sHammerCut;
 CutDL sBoomerangCut;
+// Cross-Games Age: OOT child tools without child Link's hand, for adult Link's fist.
+CutDL sSlingshotAdultCut;
+CutDL sDekuShieldAdultCut;
+CutDL sFairyOcarinaAdultCut;
+CutDL sAdultAimHandCut; // OOT adult Link's first-person bow hand without the bow
 
 void ReleaseCuts() { // CrossRMRegistry teardown: drop cross-module refs while OOT's RM is still mapped
     sHammerCut = CutDL();
     sBoomerangCut = CutDL();
+    sSlingshotAdultCut = CutDL();
+    sDekuShieldAdultCut = CutDL();
+    sFairyOcarinaAdultCut = CutDL();
+    sAdultAimHandCut = CutDL();
 }
 
 // `path`'s commands up to the material that loads a texture named like `fistTexture`, backed up over the pipe sync /
 // othermode / texture commands that open that material, then `tail` (if any) and an end. Drawn inside a
 // G_COMBO_RM_PUSH("oot") bracket, so the copied hash references resolve against OOT's archive.
-Gfx* CutOotDL(CutDL& cut, const char* path, const char* fistTexture, const char* tail) {
+// How CutOotDL separates the tool from the hand.
+enum CutMode {
+    CUT_BEFORE_TEXTURE,    // keep the commands before `texture` is loaded (the tool is drawn first)
+    DROP_TRIANGLES_BEFORE, // keep everything, minus the triangles drawn before `texture` (the hand is drawn first;
+                           // its texture, palette and vertex state stay, the tool may use them)
+};
+
+Gfx* CutOotDL(CutDL& cut, const char* path, const char* fistTexture, const char* tail,
+              CutMode mode = CUT_BEFORE_TEXTURE) {
     if (cut.tried) {
         return cut.gfx.empty() ? nullptr : cut.gfx.data();
     }
@@ -148,6 +168,31 @@ Gfx* CutOotDL(CutDL& cut, const char* path, const char* fistTexture, const char*
     if (cutAt == SIZE_MAX) {
         SPDLOG_ERROR("[ComboShip] no '{}' material in {}; not drawing that tool", fistTexture, path);
         return nullptr;
+    }
+    if (mode == DROP_TRIANGLES_BEFORE) {
+        for (size_t k = 0; k < starts.size(); k++) {
+            const size_t i = starts[k];
+            const uint8_t op = (uint8_t)(in[i].words.w0 >> 24);
+            const bool triangle = (op == G_TRI1) || (op == G_TRI2) || (op == G_QUAD);
+            if ((k >= cutAt) || !triangle) {
+                const size_t words = IsTwoWordOpcode(op) ? 2 : 1;
+                cut.gfx.insert(cut.gfx.end(), in.begin() + i, in.begin() + i + words);
+            }
+        }
+        // The rest of the list, after the texture that ended the scan.
+        const size_t restAt = starts.back() + (IsTwoWordOpcode((uint8_t)(in[starts.back()].words.w0 >> 24)) ? 2 : 1);
+        for (size_t i = restAt; i < in.size();) {
+            const uint8_t op = (uint8_t)(in[i].words.w0 >> 24);
+            if (op == G_ENDDL) {
+                break;
+            }
+            const size_t words = IsTwoWordOpcode(op) ? 2 : 1;
+            cut.gfx.insert(cut.gfx.end(), in.begin() + i, in.begin() + i + words);
+            i += words;
+        }
+        Gfx end = gsSPEndDisplayList();
+        cut.gfx.push_back(end);
+        return cut.gfx.data();
     }
     while (cutAt > 0) {
         const uint8_t op = (uint8_t)(in[starts[cutAt - 1]].words.w0 >> 24);
@@ -298,6 +343,59 @@ extern "C" void* Combo_Tools_RightHandDL(Player* player, int rightHandType) {
         return (void*)sFairyOcarinaHandDL;
     }
     return nullptr;
+}
+
+extern "C" void* Combo_Tools_AdultHandToolDL(Player* player, int limbIndex, int handType, int* wholeHand) {
+    *wholeHand = 0;
+    if (limbIndex == PLAYER_LIMB_LEFT_HAND) {
+        // OOT adult Link's own hand holding the Hammer (the whole hand: no cut needed at this age).
+        if ((handType == PLAYER_MODELTYPE_LH_TWO_HAND_SWORD) && Combo_Tools_IsHeld(player, ITEM_COMBO_HAMMER)) {
+            *wholeHand = 1;
+            return (void*)sHammerAdultHandDL;
+        }
+        // The Boomerang cut is already the tool alone.
+        if ((handType == PLAYER_MODELTYPE_LH_4) && Combo_Tools_IsHeld(player, ITEM_COMBO_BOOMERANG) &&
+            !(player->stateFlags1 & PLAYER_STATE1_ZORA_BOOMERANG_THROWN)) {
+            return CutOotDL(sBoomerangCut, "objects/object_link_child/gLinkChildLeftFistAndBoomerangFarDL",
+                            "gLinkChildHandTex", sBoomerangTexturedDL);
+        }
+        return nullptr;
+    }
+    if (limbIndex != PLAYER_LIMB_RIGHT_HAND) {
+        return nullptr;
+    }
+    if ((handType == PLAYER_MODELTYPE_RH_BOW) && Combo_Tools_IsHeld(player, ITEM_COMBO_SLINGSHOT)) {
+        return CutOotDL(sSlingshotAdultCut, "objects/object_link_child/gLinkChildRightHandHoldingSlingshotNearDL",
+                        "gLinkChildSlingshotTex", nullptr, DROP_TRIANGLES_BEFORE);
+    }
+    if ((handType == PLAYER_MODELTYPE_RH_SHIELD) && IsDekuShield(player)) {
+        return CutOotDL(sDekuShieldAdultCut, "objects/object_link_child/gLinkChildRightFistAndDekuShieldNearDL",
+                        "gLinkChildHandTex", nullptr);
+    }
+    if ((handType == PLAYER_MODELTYPE_RH_INSTRUMENT) && Combo_Upgrades_OcarinaIsFairy()) {
+        return CutOotDL(sFairyOcarinaAdultCut, "objects/object_link_child/gLinkChildRightHandHoldingFairyOcarinaNearDL",
+                        "gLinkChildHandTex", nullptr);
+    }
+    return nullptr;
+}
+
+extern "C" void* Combo_Tools_AdultFirstPersonRightHandDL(PlayState* play, Player* player) {
+    if (!Combo_Tools_IsHeld(player, ITEM_COMBO_SLINGSHOT)) {
+        return nullptr;
+    }
+    // OoTMM's adult slingshot aim: OOT adult Link's first-person bow hand minus the bow, and OOT's stretched slingshot.
+    Gfx* hand = CutOotDL(sAdultAimHandCut, "objects/object_link_boy/gLinkAdultRightHandHoldingBowFirstPersonDL",
+                         "gLinkAdultDefaultGauntlet1Tex", nullptr, DROP_TRIANGLES_BEFORE);
+    Gfx* dl = (Gfx*)GRAPH_ALLOC(play->state.gfxCtx, 5 * sizeof(Gfx));
+    Gfx* d = dl;
+    gSPDisplayList(d++, (Gfx*)sSlingshotFirstPersonDL);
+    if (hand != nullptr) {
+        gSPComboRMPush(d++, "oot"); // the cut list carries OOT's own resource references
+        gSPDisplayList(d++, hand);
+        gSPComboRMPop(d++);
+    }
+    gSPEndDisplayList(d++);
+    return dl;
 }
 
 extern "C" void* Combo_Tools_FirstPersonRightHandDL(Player* player) {

@@ -76,6 +76,15 @@ inline void to_json(json& j, const RandoSaveInfo& rando) {
         { "tempSwitchFlags", rando.comboFw.tempSwitchFlags },
         { "tempCollectFlags", rando.comboFw.tempCollectFlags },
     };
+    // ComboShip (Cross-Games Age): Link's age in Termina and each age's loadout.
+    j["comboLinkAdult"] = rando.comboLinkAdult;
+    j["comboAgeLoadoutSet"] = rando.comboAgeLoadoutSet;
+    j["comboAgeLoadout"] = json::array();
+    for (const auto& loadout : rando.comboAgeLoadout) {
+        j["comboAgeLoadout"].push_back({ { "buttonItems", loadout.buttonItems },
+                                         { "cButtonSlots", loadout.cButtonSlots },
+                                         { "wear", loadout.wear } });
+    }
 #endif
 }
 
@@ -126,6 +135,22 @@ inline void from_json(const json& j, RandoSaveInfo& rando) {
         rando.comboFw.roomIndex = fw.value("roomIndex", (u8)0);
         rando.comboFw.tempSwitchFlags = fw.value("tempSwitchFlags", (u32)0);
         rando.comboFw.tempCollectFlags = fw.value("tempCollectFlags", (u32)0);
+    }
+    // ComboShip (Cross-Games Age): tolerant, a save from before it is child Link with no stored loadouts.
+    rando.comboLinkAdult = j.value("comboLinkAdult", (u8)0);
+    rando.comboAgeLoadoutSet = j.value("comboAgeLoadoutSet", (u8)0);
+    memset(rando.comboAgeLoadout, 0, sizeof(rando.comboAgeLoadout));
+    if (j.contains("comboAgeLoadout") && j["comboAgeLoadout"].is_array()) {
+        for (size_t n = 0; n < 2 && n < j["comboAgeLoadout"].size(); n++) {
+            const json& l = j["comboAgeLoadout"][n];
+            for (size_t b = 0; b < 4; b++) {
+                if (l.contains("buttonItems") && b < l["buttonItems"].size())
+                    rando.comboAgeLoadout[n].buttonItems[b] = l["buttonItems"][b].get<u8>();
+                if (l.contains("cButtonSlots") && b < l["cButtonSlots"].size())
+                    rando.comboAgeLoadout[n].cButtonSlots[b] = l["cButtonSlots"][b].get<u8>();
+            }
+            rando.comboAgeLoadout[n].wear = l.value("wear", (u8)0);
+        }
     }
 #endif
 }

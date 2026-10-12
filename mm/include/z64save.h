@@ -397,6 +397,15 @@ typedef struct RandoSaveInfo {
     // (Cross-Games Farore's Wind: casting here warps there).
     u8 comboFwState;
     RespawnData comboFw;
+    // ComboShip (Cross-Games Age, AdultLink.cpp): Link's age in Termina (0 child, 1 adult), and each age's C buttons and
+    // worn OOT boots/tunic (comboAgeLoadoutSet bit n: comboAgeLoadout[n] holds one).
+    u8 comboLinkAdult;
+    u8 comboAgeLoadoutSet;
+    struct {
+        u8 buttonItems[4];  // [EQUIP_SLOT_C_LEFT..C_RIGHT] used; [0] (B) unused
+        u8 cButtonSlots[4]; // likewise
+        u8 wear;            // bit 0 Iron Boots, 1 Hover Boots, 2 Goron Tunic, 3 Zora Tunic
+    } comboAgeLoadout[2];
 #endif
 } RandoSaveInfo;
 

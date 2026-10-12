@@ -104,7 +104,12 @@ void Combo_Tools_OnPlayerUpdate(struct PlayState* play, struct Player* player);
 // right hand, the first-person slingshot arm, the slingshot string, the Deku Shield on the back.
 void* Combo_Tools_LeftHandToolDL(struct Player* player, int leftHandType);
 void* Combo_Tools_RightHandDL(struct Player* player, int rightHandType);
+// Cross-Games Age: what adult Link holds for a cross-game tool on that hand limb. *wholeHand = 1: a complete hand
+// (OOT's adult Hammer hand); otherwise just the tool, drawn after adult Link's closed fist. NULL: nothing to change.
+void* Combo_Tools_AdultHandToolDL(struct Player* player, int limbIndex, int handType, int* wholeHand);
 void* Combo_Tools_FirstPersonRightHandDL(struct Player* player);
+// Cross-Games Age: adult Link's first-person right hand aiming the Slingshot (a frame-allocated list), or NULL.
+void* Combo_Tools_AdultFirstPersonRightHandDL(struct PlayState* play, struct Player* player);
 void* Combo_Tools_SlingshotStringDL(struct Player* player);
 void* Combo_Tools_BackShieldDL(struct Player* player);
 
