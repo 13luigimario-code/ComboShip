@@ -4495,6 +4495,7 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
                                                     : gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);
             if (comboAdultShield) {
                 Matrix_Pop();
+                Combo_AdultLink_RestoreTunicColor(play); // MM's shields set their own environment color
             }
 #else
             CosmeticEditor_DrawBackShield(play, gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);

@@ -118,6 +118,10 @@ struct BuiltList {
 std::map<std::pair<std::string, int>, BuiltList> sBuilt;
 Mtx sGearScaleMtx;
 bool sGearScaleMtxReady = false;
+// Adult Link's tunic color, put back after MM gear: MM's sword, sheath and shield lists set their own environment
+// color, and OOT's tunic is shaded with it, so the limbs drawn after them (the torso) came out black. Rewritten each
+// frame by Combo_AdultLink_SetupDraw; the built gear lists call it last.
+Gfx sTunicEnvDL[3] = { gsDPPipeSync(), gsDPSetEnvColor(30, 105, 27, 0), gsSPEndDisplayList() };
 
 // mmPath: "__OTR__objects/..." (MM's own resource). childFist: the fist list to swap ("objects/..."), or nullptr.
 Gfx* AdultGear(const char* mmPath, const char* childFist, const LodPair* adultFist, int lod) {
@@ -172,6 +176,8 @@ Gfx* AdultGear(const char* mmPath, const char* childFist, const LodPair* adultFi
         Gfx pop = gsSPPopMatrix(G_MTX_MODELVIEW);
         built.gfx.push_back(pop);
     }
+    Gfx tunic = gsSPDisplayList(sTunicEnvDL);
+    built.gfx.push_back(tunic);
     Gfx end = gsSPEndDisplayList();
     built.gfx.push_back(end);
     return built.gfx.data();
@@ -365,6 +371,12 @@ extern "C" int Combo_AdultLink_Is(Player* player) {
     return (player != nullptr) && (player == sAdultPlayer) && (player->transformation == PLAYER_FORM_HUMAN);
 }
 
+extern "C" float Combo_AdultLink_RiderDrop(Player* player) {
+    // MM's riding animations are human Link's: on adult Link's skeleton his hips end up this much higher than human
+    // Link's (measured: waist 59.8 vs 47.1 over the same root), so he floated above Epona's saddle.
+    return Combo_AdultLink_Is(player) ? 12.7f : 0.0f;
+}
+
 extern "C" PlayerAgeProperties* Combo_AdultLink_AgeProperties(const PlayerAgeProperties* fierceDeity) {
     // Fierce Deity's entry is OOT adult Link's (vectors, voice, surface sounds, animations) with the sizes x1.5;
     // take OOT's own adult values for the sizes.
@@ -412,6 +424,16 @@ extern "C" void Combo_AdultLink_SetupDraw(PlayState* play, Player* player, int e
     gSPSegment(POLY_OPA_DISP++, 0x08, (uintptr_t)kEyes[eyeIndex]);
     gSPSegment(POLY_OPA_DISP++, 0x09, (uintptr_t)kMouths[mouthIndex]);
     gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);
+    CLOSE_DISPS(play->state.gfxCtx);
+    Gfx* tunicEnv = sTunicEnvDL;
+    gDPPipeSync(tunicEnv++);
+    gDPSetEnvColor(tunicEnv++, color.r, color.g, color.b, 0);
+    gSPEndDisplayList(tunicEnv++);
+}
+
+extern "C" void Combo_AdultLink_RestoreTunicColor(PlayState* play) {
+    OPEN_DISPS(play->state.gfxCtx);
+    gSPDisplayList(POLY_OPA_DISP++, sTunicEnvDL);
     CLOSE_DISPS(play->state.gfxCtx);
 }
 
@@ -501,9 +523,16 @@ extern "C" void Combo_AdultLink_RemapLimb(PlayState* play, Player* player, int l
                 return;
             case PLAYER_LIMB_RIGHT_HAND: {
                 void* slingshot = Combo_Tools_AdultFirstPersonRightHandDL(play, player);
-                *dList = (slingshot != nullptr)             ? slingshot
-                         : Player_IsHoldingHookshot(player) ? (void*)kAimHookshot
-                                                            : (void*)kAimBow;
+                if (slingshot != nullptr) {
+                    *dList = slingshot;
+                    return;
+                }
+                // MM's own Bow and Hookshot in adult Link's fist, as in third person (OOT's adult bow and hookshot
+                // looked out of place in Termina).
+                const bool hookshot = Player_IsHoldingHookshot(player);
+                Gfx* gear = AdultGear(hookshot ? gLinkHumanRightHandHoldingHookshotDL : gLinkHumanRightHandHoldingBowDL,
+                                      CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed, 0);
+                *dList = (gear != nullptr) ? (void*)gear : hookshot ? (void*)kAimHookshot : (void*)kAimBow;
                 return;
             }
             default:

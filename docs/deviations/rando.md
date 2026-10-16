@@ -2515,6 +2515,19 @@ created (`Player_Init`, human form only, `Combo_AdultLink_IsAdultAge`).
   and Fairy Ocarina (child items in OOT) are cut out of OOT child Link's meshes and drawn in adult Link's fist. The
   Slingshot mesh draws the hand first, so its cut drops only the hand's triangles. In first person the Slingshot uses
   OOT adult Link's bow hand without the bow (as OoTMM does), and its string stretches up to OoTMM's adult 1.65.
+- **Fixes (2026-10-16):**
+  - *Tunic color:* MM's sword, sheath and shield lists set their own environment color, which OOT's tunic is shaded
+    with, so a limb drawn after them could come out the wrong color (a player's Goron Tunic chest turned black with the
+    Mirror Shield and Razor Sword, likely with a sheath mod installed). Every MM gear list built for adult Link now ends
+    by restoring the tunic color (`sTunicEnvDL`, rewritten each frame), and so does the shield on his back
+    (`Combo_AdultLink_RestoreTunicColor`).
+  - *Items held overhead:* the rando's get-item model (`CustomItem.cpp`) sat at human Link's height, in front of adult
+    Link's face; it now uses adult heights (72 in the get-item pose, 68 for quick pickups).
+  - *Riding Epona:* MM's riding animations put adult Link's hips 12.7 units higher than human Link's, so he floated
+    over the saddle; he now sits 12.7 lower while riding and when mounting (`Combo_AdultLink_RiderDrop`, `z_player.c`).
+    Epona is still MM's young horse (OoTMM swaps in its own adult Epona).
+  - *First person:* the Bow and Hookshot are MM's own in adult Link's fist, as in third person, instead of OOT's
+    adult first-person bow and hookshot hands.
 - **Known gaps:** a held Deku Stick and the transformation-mask cutscene items keep MM's child placement. The
   All-Night and Kamaro masks fit closely enough that adult Link's face shows through at the edges.
 
