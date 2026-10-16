@@ -3291,6 +3291,12 @@ void* Interpreter::SegAddr(uintptr_t w1) {
 
         uint32_t offset = w1 & 0x00FFFFFE;
 
+        // ComboShip: an odd value too big for a segment number (a garbage pointer) isn't segmented; reading the
+        // segment table with it went out of bounds. The callers' address checks then reject it.
+        if (segNum >= MAX_SEGMENT_POINTERS) {
+            return (void*)w1;
+        }
+
         if (mSegmentPointers[segNum] != 0) {
             return (void*)(mSegmentPointers[segNum] + offset);
         } else {
@@ -4181,6 +4187,19 @@ bool gfx_othermode_h_handler_f3d(F3DGfx** cmd0) {
 // failed to resolve it (segment not set up). Keep it only if it belongs to a loaded module,
 // where it's a real low pointer (e.g. a static TLUT) rather than an unresolved segment addr.
 static bool IsValidResolvedAddress(uintptr_t addr) {
+#if UINTPTR_MAX > 0xFFFFFFFFu
+    // ComboShip: a texture pointer past the 48-bit user address space is garbage (an uninitialized or stale
+    // pointer). Loading from it crashed MM's HUD (a non-canonical read in ImportTextureRgba32), so skip the
+    // texture instead and say so once.
+    if ((uint64_t)addr >= (1ull << 48)) {
+        static bool sReported = false;
+        if (!sReported) {
+            sReported = true;
+            SPDLOG_ERROR("G_SETTIMG: skipped an invalid texture address 0x{:016X}", (uint64_t)addr);
+        }
+        return false;
+    }
+#endif
     if (addr > 0x0FFFFFFF) {
         return true;
     }
