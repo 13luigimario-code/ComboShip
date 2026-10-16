@@ -19,10 +19,17 @@
 #include "soh/Enhancements/game-interactor/GameInteractor_Hooks.h"
 #include "soh/Enhancements/randomizer/randomizer.h"
 
+#include <libultraship/bridge/consolevariablebridge.h>
+
 extern "C" {
 #include "z64.h"
 #include "macros.h"
+#include "functions.h"
 #include "variables.h"
+#include "objects/object_link_boy/object_link_boy.h"
+#include "objects/object_link_child/object_link_child.h"
+extern PlayState* gPlayState;
+Gfx* ResourceMgr_LoadGfxByName(const char* path);
 }
 
 namespace {
@@ -113,6 +120,67 @@ RandomizerSettingKey SlotSetting(s32 slot) {
     }
 }
 
+// Link's tunic color this frame (VB_APPLY_TUNIC_COLOR): OOT adult Link's sheath display lists set their own environment
+// color, which OOT's tunic is shaded with, so it is put back for the limbs drawn after the sheath (the torso).
+Color_RGB8 sTunicColor = { 30, 105, 27 };
+
+// The sheath on child Link's back when he carries an adult sword (Master Sword, Giant's Knife, Biggoron's Sword) with
+// no shield or the Deku Shield. OOT then draws its swordless child models (nothing, or the Deku Shield alone), so the
+// sword vanished from his back. With SoH's "Show Age-Dependent Equipment" he wears adult Link's sheath (scaled down
+// like SoH's other adult equipment on child Link when "Scale Adult Equipment as Child" is on), with the Deku Shield
+// over it; without it, his own sheath, matching the Kokiri Sword his hand shows.
+void OverrideChildAdultSwordSheath(s32 limbIndex, Gfx** dList, Player* player, PlayState* play) {
+    if ((limbIndex != PLAYER_LIMB_SHEATH) || (dList == nullptr) || (play == nullptr) || (player != GET_PLAYER(play)) ||
+        LINK_IS_ADULT) {
+        return;
+    }
+    const u8 sword = gSaveContext.equips.buttonItems[0];
+    const s32 shield = player->currentShield;
+    if (((sword != ITEM_SWORD_MASTER) && (sword != ITEM_SWORD_BGS)) ||
+        ((shield != PLAYER_SHIELD_NONE) && (shield != PLAYER_SHIELD_DEKU))) {
+        return;
+    }
+    const bool shieldOnBack =
+        (player->sheathType == PLAYER_MODELTYPE_SHEATH_18) || (player->sheathType == PLAYER_MODELTYPE_SHEATH_19);
+    const bool swordInSheath =
+        (player->sheathType == PLAYER_MODELTYPE_SHEATH_16) || (player->sheathType == PLAYER_MODELTYPE_SHEATH_18);
+    const bool deku = (shield == PLAYER_SHIELD_DEKU);
+
+    if (!CVarGetInteger(CVAR_ENHANCEMENT("EquipmentAlwaysVisible"), 0)) {
+        if (shieldOnBack) { // in hand, OOT already draws the child sheath
+            const char* child =
+                deku ? (swordInSheath ? gLinkChildDekuShieldSwordAndSheathNearDL : gLinkChildDekuShieldAndSheathNearDL)
+                     : (swordInSheath ? gLinkChildSwordAndSheathNearDL : gLinkChildSheathNearDL);
+            *dList = ResourceMgr_LoadGfxByName(child);
+        }
+        return;
+    }
+
+    Gfx* buf = (Gfx*)Graph_Alloc(play->state.gfxCtx, 8 * sizeof(Gfx));
+    Gfx* p = buf;
+    // With the shield in hand, SoH already moves and scales this limb for the adult sheath.
+    const bool scale = shieldOnBack && CVarGetInteger(CVAR_ENHANCEMENT("ScaleAdultEquipmentAsChild"), 0);
+    if (scale) {
+        Matrix_Push();
+        Matrix_Translate(218.0f, -100.0f, 62.0f, MTXMODE_NEW);
+        Matrix_Scale(0.8f, 0.8f, 0.8f, MTXMODE_APPLY);
+        gSPMatrix(p++, MATRIX_NEWMTX(play->state.gfxCtx), G_MTX_PUSH | G_MTX_MUL | G_MTX_MODELVIEW);
+        Matrix_Pop();
+    }
+    gSPDisplayList(
+        p++, ResourceMgr_LoadGfxByName(swordInSheath ? gLinkAdultMasterSwordAndSheathNearDL : gLinkAdultSheathNearDL));
+    if (scale) {
+        gSPPopMatrix(p++, G_MTX_MODELVIEW);
+    }
+    if (deku && shieldOnBack) {
+        gSPDisplayList(p++, ResourceMgr_LoadGfxByName(gLinkChildDekuShieldWithMatrixDL));
+    }
+    gDPPipeSync(p++);
+    gDPSetEnvColor(p++, sTunicColor.r, sTunicColor.g, sTunicColor.b, 0);
+    gSPEndDisplayList(p++);
+    *dList = buf;
+}
+
 } // namespace
 
 extern "C" int Combo_Ageless_Equip(s32 equipType) {
@@ -148,6 +216,20 @@ static void RegisterComboAgeless() {
         RandomizerSettingKey key = SlotSetting(slot);
         if (!*should && (key != RSK_MAX) && Ageless(key)) {
             *should = true;
+        }
+    });
+    COND_VB_SHOULD(VB_PLAYER_OVERRIDE_LIMB_DRAW, on, {
+        s32 limbIndex = va_arg(args, s32);
+        Gfx** dList = va_arg(args, Gfx**);
+        Player* player = (Player*)va_arg(args, void*);
+        PlayState* play = va_arg(args, PlayState*);
+        OverrideChildAdultSwordSheath(limbIndex, dList, player, play);
+    });
+    COND_VB_SHOULD(VB_APPLY_TUNIC_COLOR, on, {
+        va_arg(args, void*); // the skeleton's draw data
+        Color_RGB8* color = va_arg(args, Color_RGB8*);
+        if (color != nullptr) {
+            sTunicColor = *color;
         }
     });
 }
