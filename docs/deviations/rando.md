@@ -2193,6 +2193,21 @@ clears the underwater hazard (MM still carries OOT's tunic checks in `Interface_
 human Link's dive depth 120 → 240 → 360 (OoTMM's table, 8-step dive counter); Silver Gauntlets give human
 Link Zora strength (heavy blocks), Golden give Goron strength (boulders, kegs via `Player_GetStrength`).
 
+**Fixes (2026-10-16):**
+- *Strength:* with OOT's strength in the MM pool (`RO_CROSS_STRENGTH`), human Link's strength *is* OOT's, like
+  OoTMM's `Player_GetStrengthCustom`: nothing without the Goron's Bracelet (bomb flowers and bushes don't come up,
+  MM's Deku-strength check), human strength with it, Zora with Silver, Goron with Golden. Before, the gauntlets only
+  raised it, so Link could lift everything without the Bracelet. Under Cross-Games Age, gauntlets restricted to the
+  other age count as the Bracelet (OoTMM's `Player_GetEffectiveHumanStrength`); item conversion and progressive
+  gives use the owned tier (`Combo_Gear_GetStrengthOwned`), which the age check used to zero.
+- *Hover Boots glow:* OOT's glowing ring under the boots while hovering (`Combo_Gear_DrawHoverGlow` from
+  `Player_Draw`, OOT's `gHoverBootsCircleDL` through "@oot:").
+- *Colors:* the MM cosmetic editor (Link) gains "Goron Tunic (OoT)", "Zora Tunic (OoT)", "Adult Link Tunic",
+  "Silver Gauntlets (OoT)" and "Golden Gauntlets (OoT)" (`CosmeticEditor_GetComboColor`, OOT's colors by default).
+  MM's own "Goron Tunic"/"Zora Tunic" entries are the transformation forms' tunics, which is why editing them never
+  changed OOT's tunics.
+- *Short Hookshot:* shows MM's Hookshot icon.
+
 **Logic:** none yet. MM's logic never requires these items (no new MM routes), so the fill places them as
 non-required majors. OoTMM's MM logic uses them heavily (hover routes, `underwater_walking`,
 `can_lift_*`); porting those to 2ship's regions is follow-up work.
@@ -2404,8 +2419,8 @@ off). Gameplay in `mm/2s2h/Rando/MiscBehavior/CrossUpgrades.cpp` (C ABI in `Cros
   human Link's hand (`Combo_Tools_RightHandDL`, `PLAYER_MODELTYPE_RH_INSTRUMENT`).
 - **Short Hookshot:** a second `RI_HOOKSHOT`; the first becomes `RI_HOOKSHOT_SHORT` (MM's Hookshot plus
   `RANDO_INF_COMBO_HOOKSHOT_IS_SHORT`). `ArmsHook_Wait` flies 13 frames instead of 26 (OoTMM's
-  `ArmsHook_SetTimerAndParent`) and the first-person reticle uses OOT's Hookshot range (38600 vs 77600); OOT's
-  Hookshot icon. MM's logic `HAS_ITEM(ITEM_HOOKSHOT)` (`Logic.h`) ignores a Short Hookshot, so logic needs both copies
+  `ArmsHook_SetTimerAndParent`) and the first-person reticle uses OOT's Hookshot range (38600 vs 77600); MM's
+  Hookshot icon (OOT's until 2026-10-16). MM's logic `HAS_ITEM(ITEM_HOOKSHOT)` (`Logic.h`) ignores a Short Hookshot, so logic needs both copies
   (OoTMM's `can_hookshot`; its `can_hookshot_short` uses are not ported).
 - **Deku Stick & Nut upgrades:** `RI_PROGRESSIVE_STICK_UPGRADE` / `RI_PROGRESSIVE_NUT_UPGRADE` x2 each, raising MM's
   leftover `UPG_DEKU_STICKS` / `UPG_DEKU_NUTS` (sticks 10/20/30, nuts 20/30/40) and refilling what is owned. They don't

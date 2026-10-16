@@ -12,6 +12,7 @@
 #include "AgeRequirements.h"
 #include "CrossItemAssets.h"
 #include "2s2h/Rando/Rando.h"
+#include "2s2h/Enhancements/FrameInterpolation/FrameInterpolation.h"
 
 extern "C" {
 #include "variables.h"
@@ -28,6 +29,7 @@ extern Gfx gComboLinkLeftHoverBootDL[];
 extern Gfx gComboLinkRightHoverBootDL[];
 // BenGui/CosmeticEditor.cpp: OOT tunic color over the human tunic (nullptr restores the cosmetic setting).
 void CosmeticEditor_SetHumanTunicOverride(const Color_RGB8* color);
+Color_RGB8 CosmeticEditor_GetComboColor(const char* id, Color_RGB8 defaultColor);
 }
 
 unsigned char gComboHoverBootsTimer = 0;
@@ -99,31 +101,25 @@ void SyncBootIndex(PlayState* play, Player* player) {
     }
 }
 
-// Tunic color: reuse the cosmetic editor's human-tunic display-list patch with an override color.
+// Tunic color: reuse the cosmetic editor's human-tunic display-list patch with an override color. The colors are the
+// cosmetic editor's "Goron Tunic (OoT)" / "Zora Tunic (OoT)" (OOT's own by default), re-applied when they change.
 s32 sAppliedTunic = -1;
+Color_RGB8 sAppliedTunicColor = { 0, 0, 0 };
 
 void UpdateTunicColor(Player* player) {
     s32 tunic = (player != nullptr && player->transformation == PLAYER_FORM_HUMAN) ? Combo_Gear_GetTunic(player)
                                                                                    : (s32)COMBO_TUNIC_NONE;
-    if (tunic == sAppliedTunic) {
+    Color_RGB8 color = { 0, 0, 0 };
+    if (tunic != COMBO_TUNIC_NONE) {
+        color = Combo_Gear_TunicColor(tunic, color);
+    }
+    if ((tunic == sAppliedTunic) && (color.r == sAppliedTunicColor.r) && (color.g == sAppliedTunicColor.g) &&
+        (color.b == sAppliedTunicColor.b)) {
         return;
     }
     sAppliedTunic = tunic;
-    switch (tunic) {
-        case COMBO_TUNIC_GORON: {
-            Color_RGB8 goron = { 100, 20, 0 }; // OOT's Goron Tunic color
-            CosmeticEditor_SetHumanTunicOverride(&goron);
-            break;
-        }
-        case COMBO_TUNIC_ZORA: {
-            Color_RGB8 zora = { 0, 60, 100 }; // OOT's Zora Tunic color
-            CosmeticEditor_SetHumanTunicOverride(&zora);
-            break;
-        }
-        default:
-            CosmeticEditor_SetHumanTunicOverride(nullptr);
-            break;
-    }
+    sAppliedTunicColor = color;
+    CosmeticEditor_SetHumanTunicOverride((tunic != COMBO_TUNIC_NONE) ? &color : nullptr);
 }
 
 // OOT masks (OoTMM's custom masks): putting one on takes off any MM mask and the other OOT masks; using
@@ -163,6 +159,22 @@ extern "C" int Combo_Gear_GetBoots(Player* player) {
         return COMBO_BOOTS_HOVER;
     }
     return COMBO_BOOTS_NONE;
+}
+
+extern "C" Color_RGB8 Combo_Gear_TunicColor(int tunic, Color_RGB8 kokiri) {
+    switch (tunic) {
+        case COMBO_TUNIC_GORON:
+            return CosmeticEditor_GetComboColor("Player.OotGoronTunic", { 100, 20, 0 });
+        case COMBO_TUNIC_ZORA:
+            return CosmeticEditor_GetComboColor("Player.OotZoraTunic", { 0, 60, 100 });
+        default:
+            return kokiri;
+    }
+}
+
+extern "C" Color_RGB8 Combo_Gear_GauntletColor(int strength) {
+    return (strength >= 3) ? CosmeticEditor_GetComboColor("Player.GoldenGauntlets", { 254, 207, 15 })
+                           : CosmeticEditor_GetComboColor("Player.SilverGauntlets", { 255, 255, 255 });
 }
 
 extern "C" int Combo_Gear_GetTunic(Player* player) {
@@ -215,10 +227,11 @@ extern "C" int Combo_Gear_GetScale(void) {
     return HasFlag(RANDO_INF_OBTAINED_SCALE_SILVER) ? 1 : 0;
 }
 
-extern "C" int Combo_Gear_GetStrength(void) {
-    if (!Combo_AgeReq_StrengthAllowed()) {
-        return 0; // Cross-Games Age: strength restricted to the other age
-    }
+extern "C" int Combo_Gear_StrengthReplacesHuman(void) {
+    return IS_RANDO && (RANDO_SAVE_OPTIONS[RO_CROSS_STRENGTH] == RO_GENERIC_YES);
+}
+
+extern "C" int Combo_Gear_GetStrengthOwned(void) {
     if (HasFlag(RANDO_INF_OBTAINED_STRENGTH_GOLDEN_GAUNTLETS)) {
         return 3;
     }
@@ -226,6 +239,16 @@ extern "C" int Combo_Gear_GetStrength(void) {
         return 2;
     }
     return HasFlag(RANDO_INF_OBTAINED_STRENGTH_GORONS_BRACELET) ? 1 : 0;
+}
+
+extern "C" int Combo_Gear_GetStrength(void) {
+    const int owned = Combo_Gear_GetStrengthOwned();
+    // Cross-Games Age (OoTMM's Player_GetEffectiveHumanStrength): gauntlets restricted to the other age work as the
+    // Goron's Bracelet.
+    if ((owned > 1) && !Combo_AgeReq_StrengthAllowed()) {
+        return 1;
+    }
+    return owned;
 }
 
 extern "C" int Combo_CrossItem_TryUse(PlayState* play, Player* player, int item) {
@@ -324,6 +347,43 @@ extern "C" void Combo_Gear_UpdateHoverTimer(Player* player, int canHoverOnGround
     if ((player->actor.bgCheckFlags & BGCHECKFLAG_GROUND) && !canHoverOnGround) {
         gComboHoverBootsTimer = 19;
     }
+}
+
+// OOT's glowing ring under the Hover Boots while Link hovers (Player_Draw, OOT decomp), with OOT's own display list.
+extern "C" void Combo_Gear_DrawHoverGlow(PlayState* play, Player* player) {
+    static const ALIGN_ASSET(2) char kHoverBootsCircleDL[] = "__OTR__@oot:objects/gameplay_keep/gHoverBootsCircleDL";
+    static Vec3s sNoRotation = { 0, 0, 0 };
+    static s32 sAlpha = 255;
+    if ((Combo_Gear_GetBoots(player) != COMBO_BOOTS_HOVER) || (player->actor.bgCheckFlags & BGCHECKFLAG_GROUND) ||
+        (player->stateFlags1 & PLAYER_STATE1_800000) || (gComboHoverBootsTimer == 0) || (gComboHoverBootsTimer >= 19)) {
+        return;
+    }
+    const s32 timer = gComboHoverBootsTimer;
+    if (timer >= 15) {
+        sAlpha = (19 - timer) * 51.0f;
+    } else {
+        const s32 t = (timer > 9) ? 9 : timer;
+        sAlpha = (-t * 4) + 36;
+        sAlpha = sAlpha * sAlpha;
+        sAlpha = (s32)((Math_CosS(sAlpha) * 100.0f) + 100.0f) + 55.0f;
+        sAlpha = sAlpha * (t * (1.0f / 9.0f));
+    }
+
+    OPEN_DISPS(play->state.gfxCtx);
+    FrameInterpolation_RecordActorPosRotMatrix();
+    Matrix_Push();
+    Matrix_SetTranslateRotateYXZ(player->actor.world.pos.x, player->actor.world.pos.y + 2.0f, player->actor.world.pos.z,
+                                 &sNoRotation);
+    Matrix_Scale(4.0f, 4.0f, 4.0f, MTXMODE_APPLY);
+    MATRIX_FINALIZE_AND_LOAD(POLY_XLU_DISP++, play->state.gfxCtx);
+    Matrix_Pop();
+    gSPSegment(POLY_XLU_DISP++, 0x08,
+               (uintptr_t)Gfx_TwoTexScrollEx(play->state.gfxCtx, 0, 0, 0, 16, 32, 1, 0,
+                                             (play->gameplayFrames * -15) % 128, 16, 32, 0, 0, 0, -15));
+    gDPSetPrimColor(POLY_XLU_DISP++, 0x80, 0x80, 255, 255, 255, sAlpha);
+    gDPSetEnvColor(POLY_XLU_DISP++, 120, 90, 30, 128);
+    gSPDisplayList(POLY_XLU_DISP++, (Gfx*)kHoverBootsCircleDL);
+    CLOSE_DISPS(play->state.gfxCtx);
 }
 
 extern "C" float Combo_Gear_MaxDiveDepth(void) {
@@ -516,7 +576,7 @@ bool Rando::CrossGearGive(RandoItemId randoItemId) {
             Combo_Tools_EquipDekuShield();
             return true;
         case RI_PROGRESSIVE_STRENGTH: {
-            s32 tier = Combo_Gear_GetStrength();
+            s32 tier = Combo_Gear_GetStrengthOwned();
             return CrossGearGive(tier == 0   ? RI_STRENGTH_GORONS_BRACELET
                                  : tier == 1 ? RI_STRENGTH_SILVER_GAUNTLETS
                                              : RI_STRENGTH_GOLDEN_GAUNTLETS);
@@ -609,7 +669,7 @@ bool Rando::CrossGearRemove(RandoItemId randoItemId) {
             Combo_Tools_LoseDekuShield();
             return true;
         case RI_PROGRESSIVE_STRENGTH: {
-            s32 tier = Combo_Gear_GetStrength();
+            s32 tier = Combo_Gear_GetStrengthOwned();
             return CrossGearRemove(tier >= 3   ? RI_STRENGTH_GOLDEN_GAUNTLETS
                                    : tier == 2 ? RI_STRENGTH_SILVER_GAUNTLETS
                                                : RI_STRENGTH_GORONS_BRACELET);

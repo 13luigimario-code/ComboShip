@@ -14,6 +14,8 @@
 
 #ifdef COMBO_BUILD
 
+#include "color.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,6 +56,10 @@ int Combo_Gear_GetTunic(struct Player* player);
 // Passive upgrades. Scale: 0 none, 1 silver, 2 golden. Strength: 0 none .. 3 golden gauntlets.
 int Combo_Gear_GetScale(void);
 int Combo_Gear_GetStrength(void);
+// The strength upgrades owned (0 none, 1 Goron's Bracelet, 2 Silver, 3 Golden), ignoring age requirements.
+int Combo_Gear_GetStrengthOwned(void);
+// RO_CROSS_STRENGTH is on: human Link's strength is OOT's (none without the Goron's Bracelet), like OoTMM.
+int Combo_Gear_StrengthReplacesHuman(void);
 
 // Player_UseItem: toggles boots/tunic for an ITEM_COMBO_* id. Returns 1 when the item was a cross-game
 // item (handled, including "can't use now"), 0 to let vanilla handle it.
@@ -80,6 +86,12 @@ void Combo_Spells_OnPlayerUpdate(struct PlayState* play, struct Player* player);
 // Draws worn OOT gear (boots on the feet, masks on the head); called after the skeleton draw while segment
 // 0x0D holds Link's limb matrices.
 void Combo_Gear_DrawBoots(struct PlayState* play, struct Player* player);
+// OOT tunic colors (Goron/Zora from the cosmetic editor's "(OoT)" options; kokiri for anything else) and gauntlet
+// colors (2 silver, 3 golden).
+Color_RGB8 Combo_Gear_TunicColor(int tunic, Color_RGB8 kokiri);
+Color_RGB8 Combo_Gear_GauntletColor(int strength);
+// Player_Draw: OOT's glowing ring under the Hover Boots while Link hovers.
+void Combo_Gear_DrawHoverGlow(struct PlayState* play, struct Player* player);
 
 // ---- CrossTools.cpp: Megaton Hammer, Boomerang, Fairy Slingshot and Deku Shield for human Link ----
 #define COMBO_SLINGSHOT_MAX_SEEDS 30 // OOT's first bullet bag

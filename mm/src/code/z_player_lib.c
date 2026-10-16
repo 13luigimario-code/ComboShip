@@ -1684,13 +1684,11 @@ bool Player_IsBurningStickInRange(PlayState* play, Vec3f* pos, f32 xzRange, f32 
 
 u8 Player_GetStrength(void) {
 #ifdef COMBO_BUILD
-    // ComboShip (cross-game items): OOT gauntlets raise human Link's strength (Silver = Zora's heavy-block
-    // pushing, Golden = Goron's boulder/keg lifting), like OoTMM's Strength (MM). Never lowers it.
-    if (GET_PLAYER_FORM == PLAYER_FORM_HUMAN) {
-        u8 comboStrength = (u8)Combo_Gear_GetStrength();
-        if (comboStrength > sPlayerStrengths[PLAYER_FORM_HUMAN]) {
-            return comboStrength;
-        }
+    // ComboShip (cross-game items): with OOT's strength in the item pool, human Link's strength is OOT's, like
+    // OoTMM's Strength (MM): nothing without the Goron's Bracelet (he can't lift what human Link normally can), the
+    // Bracelet human Link's own, Silver = Zora's heavy-block pushing, Golden = Goron's boulder/keg lifting.
+    if ((GET_PLAYER_FORM == PLAYER_FORM_HUMAN) && Combo_Gear_StrengthReplacesHuman()) {
+        return (u8)Combo_Gear_GetStrength();
     }
 #endif
     return sPlayerStrengths[GET_PLAYER_FORM];

@@ -258,13 +258,13 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
         case RI_SCALE_GOLDEN:
             return Combo_Gear_GetScale() < 2;
         case RI_PROGRESSIVE_STRENGTH:
-            return !hasObtainedCheck && (Combo_Gear_GetStrength() < 3);
+            return !hasObtainedCheck && (Combo_Gear_GetStrengthOwned() < 3);
         case RI_STRENGTH_GORONS_BRACELET:
-            return Combo_Gear_GetStrength() < 1;
+            return Combo_Gear_GetStrengthOwned() < 1;
         case RI_STRENGTH_SILVER_GAUNTLETS:
-            return Combo_Gear_GetStrength() < 2;
+            return Combo_Gear_GetStrengthOwned() < 2;
         case RI_STRENGTH_GOLDEN_GAUNTLETS:
-            return Combo_Gear_GetStrength() < 3;
+            return Combo_Gear_GetStrengthOwned() < 3;
         case RI_MASK_GERUDO:
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_MASK_GERUDO);
         case RI_MASK_SKULL:
@@ -805,7 +805,7 @@ RandoItemId Rando::ConvertItem(RandoItemId randoItemId, RandoCheckId randoCheckI
             case RI_PROGRESSIVE_SCALE:
                 return (Combo_Gear_GetScale() == 0) ? RI_SCALE_SILVER : RI_SCALE_GOLDEN;
             case RI_PROGRESSIVE_STRENGTH: {
-                s32 tier = Combo_Gear_GetStrength();
+                s32 tier = Combo_Gear_GetStrengthOwned();
                 return (tier == 0)   ? RI_STRENGTH_GORONS_BRACELET
                        : (tier == 1) ? RI_STRENGTH_SILVER_GAUNTLETS
                                      : RI_STRENGTH_GOLDEN_GAUNTLETS;

@@ -101,6 +101,8 @@ const char* Pick(const LodPair& pair, int lod) {
     return (lod == 0) ? pair.nearDL : pair.farDL;
 }
 
+extern "C" Color_RGB8 CosmeticEditor_GetComboColor(const char* id, Color_RGB8 defaultColor); // CosmeticEditor.cpp
+
 // ---- MM's gear on adult Link ----
 // MM's human item hands are a call to the closed fist followed by calls to the item. Rebuilt for adult Link: the fist
 // call becomes OOT adult Link's fist, and the rest is drawn kGearScale bigger. Lists without the fist (sheaths) are
@@ -405,13 +407,9 @@ extern "C" PlayerAgeProperties* Combo_AdultLink_AgeProperties(const PlayerAgePro
 }
 
 extern "C" void Combo_AdultLink_SetupDraw(PlayState* play, Player* player, int eyeIndex, int mouthIndex) {
-    static const Color_RGB8 kTunics[] = {
-        { 30, 105, 27 }, // Kokiri
-        { 100, 20, 0 },  // Goron
-        { 0, 60, 100 },  // Zora
-    };
-    const int tunic = Combo_Gear_GetTunic(player);
-    const Color_RGB8& color = kTunics[(tunic == COMBO_TUNIC_GORON) ? 1 : (tunic == COMBO_TUNIC_ZORA) ? 2 : 0];
+    // The cosmetic editor's "Adult Link Tunic" and "Goron/Zora Tunic (OoT)" colors (OOT's own by default).
+    const Color_RGB8 color = Combo_Gear_TunicColor(Combo_Gear_GetTunic(player),
+                                                   CosmeticEditor_GetComboColor("Player.AdultTunic", { 30, 105, 27 }));
     if ((eyeIndex < 0) || (eyeIndex >= PLAYER_EYES_MAX)) {
         eyeIndex = 0;
     }
@@ -440,12 +438,11 @@ extern "C" void Combo_AdultLink_RestoreTunicColor(PlayState* play) {
 extern "C" void Combo_AdultLink_DrawGear(PlayState* play, Player* player) {
     // OOT's Silver and Golden Gauntlets (Player_DrawImpl, OOT decomp): plates over the forearms and the backs of the
     // hands, tinted by the environment color. Segment 0x0D still holds this skeleton's limb matrices.
-    static const Color_RGB8 kGauntletColors[] = { { 255, 255, 255 }, { 254, 207, 15 } };
     const int strength = Combo_Gear_GetStrength(); // 2 silver, 3 golden
     if (!Combo_AdultLink_Is(player) || (strength < 2)) {
         return;
     }
-    const Color_RGB8& color = kGauntletColors[(strength >= 3) ? 1 : 0];
+    const Color_RGB8 color = Combo_Gear_GauntletColor(strength); // the cosmetic editor's gauntlet colors
     OPEN_DISPS(play->state.gfxCtx);
     gDPPipeSync(POLY_OPA_DISP++);
     gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);

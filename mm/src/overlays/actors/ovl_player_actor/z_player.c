@@ -13643,6 +13643,9 @@ void Player_Draw(Actor* thisx, PlayState* play) {
             }
 
             Player_DrawGameplay(play, this, lod, gCullBackDList, sp84);
+#ifdef COMBO_BUILD
+            Combo_Gear_DrawHoverGlow(play, this); // ComboShip (cross-game items): OOT's hover glow
+#endif
         }
 
         func_801229A0(play, this);
