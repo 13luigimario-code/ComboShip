@@ -120,6 +120,14 @@ std::map<std::string, CosmeticOption> cosmeticOptions = {
     COSMETIC_OPTION("Player.KafeiHair",             "Kafei Hair",                       COSMETICS_GROUP_PLAYER,             ColorRGBA8( 64,   0, 163, 255), false, true, false),
     COSMETIC_OPTION("Player.MirrorShield",          "Mirror Shield",                    COSMETICS_GROUP_PLAYER,             ColorRGBA8(128,  90,  20, 255), false, true, false),
     COSMETIC_OPTION("Player.MirrorShieldMirror",    "Mirror Shield Reflection",         COSMETICS_GROUP_PLAYER,             ColorRGBA8(120, 120, 120, 255), false, true, false),
+#ifdef COMBO_BUILD
+    // ComboShip: Ocarina of Time's gear worn in Termina (CrossGear.cpp) and OOT's adult Link (AdultLink.cpp).
+    COSMETIC_OPTION("Player.OotGoronTunic",         "Goron Tunic (OoT)",                COSMETICS_GROUP_PLAYER,             ColorRGBA8(100,  20,   0, 255), false, true, false),
+    COSMETIC_OPTION("Player.OotZoraTunic",          "Zora Tunic (OoT)",                 COSMETICS_GROUP_PLAYER,             ColorRGBA8(  0,  60, 100, 255), false, true, false),
+    COSMETIC_OPTION("Player.AdultTunic",            "Adult Link Tunic",                 COSMETICS_GROUP_PLAYER,             ColorRGBA8( 30, 105,  27, 255), false, true, false),
+    COSMETIC_OPTION("Player.SilverGauntlets",       "Silver Gauntlets (OoT)",           COSMETICS_GROUP_PLAYER,             ColorRGBA8(255, 255, 255, 255), false, true, false),
+    COSMETIC_OPTION("Player.GoldenGauntlets",       "Golden Gauntlets (OoT)",           COSMETICS_GROUP_PLAYER,             ColorRGBA8(254, 207,  15, 255), false, true, false),
+#endif
     COSMETIC_OPTION("Dungeon.Woodfall",             "Woodfall",                         COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(255, 170, 246, 255), false, true, false),
     COSMETIC_OPTION("Dungeon.Snowhead",             "Snowhead",                         COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(116, 226,  61, 255), false, true, false),
     COSMETIC_OPTION("Dungeon.GreatBay",             "Great Bay",                        COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(143, 103, 226, 255), false, true, false),
@@ -1188,6 +1196,17 @@ static RegisterShipInitFunc humanTunicPatch([]() { HumanTunicApplyPatch(); }, { 
 static RegisterShipInitFunc humanTunicColor([]() { HumanTunicApplyColor(); }, { kHumanTunicOption.colorCvar });
 
 #ifdef COMBO_BUILD
+// ComboShip: a ComboShip cosmetic color (Player.Oot*Tunic, Player.AdultTunic, Player.*Gauntlets), or its default when
+// the player hasn't changed it.
+extern "C" Color_RGB8 CosmeticEditor_GetComboColor(const char* id, Color_RGB8 defaultColor) {
+    auto it = cosmeticOptions.find(id);
+    if ((it == cosmeticOptions.end()) || !CVarGetInteger(it->second.colorChangedCvar, 0)) {
+        return defaultColor;
+    }
+    Color_RGBA8 color = CVarGetColor(it->second.colorCvar, {});
+    return { color.r, color.g, color.b };
+}
+
 extern "C" void CosmeticEditor_SetHumanTunicOverride(const Color_RGB8* color) {
     sComboTunicOverrideActive = (color != nullptr);
     if (color != nullptr) {

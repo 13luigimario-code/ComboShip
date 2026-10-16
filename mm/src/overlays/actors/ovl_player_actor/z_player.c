@@ -9592,6 +9592,9 @@ s32 Player_ActionHandler_3(Player* this, PlayState* play) {
                 this->actor.world.pos.z =
                     rideActor->actor.world.pos.z + rideActor->riderPos.z + ((temp_fv1 * sp28) - (temp_fv0 * sp24));
                 this->unk_B48 = rideActor->actor.world.pos.y - this->actor.world.pos.y;
+#ifdef COMBO_BUILD
+                this->unk_B48 -= Combo_AdultLink_RiderDrop(this); // ComboShip (Cross-Games Age): land in the saddle
+#endif
 
                 this->yaw = this->actor.shape.rot.y = rideActor->actor.shape.rot.y;
 
@@ -13640,6 +13643,9 @@ void Player_Draw(Actor* thisx, PlayState* play) {
             }
 
             Player_DrawGameplay(play, this, lod, gCullBackDList, sp84);
+#ifdef COMBO_BUILD
+            Combo_Gear_DrawHoverGlow(play, this); // ComboShip (cross-game items): OOT's hover glow
+#endif
         }
 
         func_801229A0(play, this);
@@ -17320,6 +17326,11 @@ void Player_Action_52(Player* this, PlayState* play) {
 
         this->actor.world.pos.x = rideActor->actor.world.pos.x + rideActor->riderPos.x;
         this->actor.world.pos.y = rideActor->actor.world.pos.y + rideActor->riderPos.y - 27.0f;
+#ifdef COMBO_BUILD
+        // ComboShip (Cross-Games Age): MM's riding animations put adult Link's hips higher than human Link's; sit
+        // him in the saddle (AdultLink.cpp).
+        this->actor.world.pos.y -= Combo_AdultLink_RiderDrop(this);
+#endif
         this->actor.world.pos.z = rideActor->actor.world.pos.z + rideActor->riderPos.z;
 
         this->yaw = this->actor.shape.rot.y = rideActor->actor.shape.rot.y;

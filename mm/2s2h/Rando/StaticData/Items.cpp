@@ -534,7 +534,7 @@ const char* GetIconTexturePath(RandoItemId randoItemId) {
         case RI_OCARINA_FAIRY:
             return gComboIconOcarinaFairyTex;
         case RI_HOOKSHOT_SHORT:
-            return gComboIconHookshotShortTex;
+            return (const char*)gItemIconHookshotTex; // MM's own Hookshot icon
         case RI_PROGRESSIVE_STICK_UPGRADE:
         case RI_DEKU_STICK_UPGRADE_20:
         case RI_DEKU_STICK_UPGRADE_30:

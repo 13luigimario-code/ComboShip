@@ -32,6 +32,10 @@ int Combo_AdultLink_IsAdultAge(void);
 void Combo_AdultLink_SetEntryAge(int ootAdult);
 // title_setup.c, once the MM save is loaded: Link takes that age, swapping each age's C buttons and worn gear.
 void Combo_AdultLink_ApplyEntryAge(void);
+// Riding Epona: how much lower adult Link sits than MM's riding animations put him (0 for human Link).
+float Combo_AdultLink_RiderDrop(struct Player* player);
+// After MM gear drawn outside the limb lists (the shield on his back): put adult Link's tunic color back.
+void Combo_AdultLink_RestoreTunicColor(struct PlayState* play);
 // Player_Init: decides whether this player is adult (human form only). Returns 1 when adult.
 int Combo_AdultLink_OnPlayerInit(struct Player* player);
 // This player is the adult Link set up by the last Player_Init.

@@ -101,6 +101,8 @@ const char* Pick(const LodPair& pair, int lod) {
     return (lod == 0) ? pair.nearDL : pair.farDL;
 }
 
+extern "C" Color_RGB8 CosmeticEditor_GetComboColor(const char* id, Color_RGB8 defaultColor); // CosmeticEditor.cpp
+
 // ---- MM's gear on adult Link ----
 // MM's human item hands are a call to the closed fist followed by calls to the item. Rebuilt for adult Link: the fist
 // call becomes OOT adult Link's fist, and the rest is drawn kGearScale bigger. Lists without the fist (sheaths) are
@@ -118,6 +120,10 @@ struct BuiltList {
 std::map<std::pair<std::string, int>, BuiltList> sBuilt;
 Mtx sGearScaleMtx;
 bool sGearScaleMtxReady = false;
+// Adult Link's tunic color, put back after MM gear: MM's sword, sheath and shield lists set their own environment
+// color, and OOT's tunic is shaded with it, so the limbs drawn after them (the torso) came out black. Rewritten each
+// frame by Combo_AdultLink_SetupDraw; the built gear lists call it last.
+Gfx sTunicEnvDL[3] = { gsDPPipeSync(), gsDPSetEnvColor(30, 105, 27, 0), gsSPEndDisplayList() };
 
 // mmPath: "__OTR__objects/..." (MM's own resource). childFist: the fist list to swap ("objects/..."), or nullptr.
 Gfx* AdultGear(const char* mmPath, const char* childFist, const LodPair* adultFist, int lod) {
@@ -172,6 +178,8 @@ Gfx* AdultGear(const char* mmPath, const char* childFist, const LodPair* adultFi
         Gfx pop = gsSPPopMatrix(G_MTX_MODELVIEW);
         built.gfx.push_back(pop);
     }
+    Gfx tunic = gsSPDisplayList(sTunicEnvDL);
+    built.gfx.push_back(tunic);
     Gfx end = gsSPEndDisplayList();
     built.gfx.push_back(end);
     return built.gfx.data();
@@ -365,6 +373,12 @@ extern "C" int Combo_AdultLink_Is(Player* player) {
     return (player != nullptr) && (player == sAdultPlayer) && (player->transformation == PLAYER_FORM_HUMAN);
 }
 
+extern "C" float Combo_AdultLink_RiderDrop(Player* player) {
+    // MM's riding animations are human Link's: on adult Link's skeleton his hips end up this much higher than human
+    // Link's (measured: waist 59.8 vs 47.1 over the same root), so he floated above Epona's saddle.
+    return Combo_AdultLink_Is(player) ? 12.7f : 0.0f;
+}
+
 extern "C" PlayerAgeProperties* Combo_AdultLink_AgeProperties(const PlayerAgeProperties* fierceDeity) {
     // Fierce Deity's entry is OOT adult Link's (vectors, voice, surface sounds, animations) with the sizes x1.5;
     // take OOT's own adult values for the sizes.
@@ -393,13 +407,9 @@ extern "C" PlayerAgeProperties* Combo_AdultLink_AgeProperties(const PlayerAgePro
 }
 
 extern "C" void Combo_AdultLink_SetupDraw(PlayState* play, Player* player, int eyeIndex, int mouthIndex) {
-    static const Color_RGB8 kTunics[] = {
-        { 30, 105, 27 }, // Kokiri
-        { 100, 20, 0 },  // Goron
-        { 0, 60, 100 },  // Zora
-    };
-    const int tunic = Combo_Gear_GetTunic(player);
-    const Color_RGB8& color = kTunics[(tunic == COMBO_TUNIC_GORON) ? 1 : (tunic == COMBO_TUNIC_ZORA) ? 2 : 0];
+    // The cosmetic editor's "Adult Link Tunic" and "Goron/Zora Tunic (OoT)" colors (OOT's own by default).
+    const Color_RGB8 color = Combo_Gear_TunicColor(Combo_Gear_GetTunic(player),
+                                                   CosmeticEditor_GetComboColor("Player.AdultTunic", { 30, 105, 27 }));
     if ((eyeIndex < 0) || (eyeIndex >= PLAYER_EYES_MAX)) {
         eyeIndex = 0;
     }
@@ -413,17 +423,26 @@ extern "C" void Combo_AdultLink_SetupDraw(PlayState* play, Player* player, int e
     gSPSegment(POLY_OPA_DISP++, 0x09, (uintptr_t)kMouths[mouthIndex]);
     gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);
     CLOSE_DISPS(play->state.gfxCtx);
+    Gfx* tunicEnv = sTunicEnvDL;
+    gDPPipeSync(tunicEnv++);
+    gDPSetEnvColor(tunicEnv++, color.r, color.g, color.b, 0);
+    gSPEndDisplayList(tunicEnv++);
+}
+
+extern "C" void Combo_AdultLink_RestoreTunicColor(PlayState* play) {
+    OPEN_DISPS(play->state.gfxCtx);
+    gSPDisplayList(POLY_OPA_DISP++, sTunicEnvDL);
+    CLOSE_DISPS(play->state.gfxCtx);
 }
 
 extern "C" void Combo_AdultLink_DrawGear(PlayState* play, Player* player) {
     // OOT's Silver and Golden Gauntlets (Player_DrawImpl, OOT decomp): plates over the forearms and the backs of the
     // hands, tinted by the environment color. Segment 0x0D still holds this skeleton's limb matrices.
-    static const Color_RGB8 kGauntletColors[] = { { 255, 255, 255 }, { 254, 207, 15 } };
     const int strength = Combo_Gear_GetStrength(); // 2 silver, 3 golden
     if (!Combo_AdultLink_Is(player) || (strength < 2)) {
         return;
     }
-    const Color_RGB8& color = kGauntletColors[(strength >= 3) ? 1 : 0];
+    const Color_RGB8 color = Combo_Gear_GauntletColor(strength); // the cosmetic editor's gauntlet colors
     OPEN_DISPS(play->state.gfxCtx);
     gDPPipeSync(POLY_OPA_DISP++);
     gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);
@@ -501,9 +520,16 @@ extern "C" void Combo_AdultLink_RemapLimb(PlayState* play, Player* player, int l
                 return;
             case PLAYER_LIMB_RIGHT_HAND: {
                 void* slingshot = Combo_Tools_AdultFirstPersonRightHandDL(play, player);
-                *dList = (slingshot != nullptr)             ? slingshot
-                         : Player_IsHoldingHookshot(player) ? (void*)kAimHookshot
-                                                            : (void*)kAimBow;
+                if (slingshot != nullptr) {
+                    *dList = slingshot;
+                    return;
+                }
+                // MM's own Bow and Hookshot in adult Link's fist, as in third person (OOT's adult bow and hookshot
+                // looked out of place in Termina).
+                const bool hookshot = Player_IsHoldingHookshot(player);
+                Gfx* gear = AdultGear(hookshot ? gLinkHumanRightHandHoldingHookshotDL : gLinkHumanRightHandHoldingBowDL,
+                                      CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed, 0);
+                *dList = (gear != nullptr) ? (void*)gear : hookshot ? (void*)kAimHookshot : (void*)kAimBow;
                 return;
             }
             default:

@@ -56,7 +56,6 @@ s16 sAgonyAlpha = 0;
 f32 sAgonyOffset = 0.0f;
 
 TexturePtr sMmOcarinaIcon = nullptr; // MM's own gItemIcons entries, restored when the marker is off
-TexturePtr sMmHookshotIcon = nullptr;
 
 void ReloadButtonIcons(u8 item) {
     if (gPlayState == nullptr) {
@@ -87,7 +86,6 @@ void SwapIcon(u8 item, TexturePtr& mmIcon, bool useOot, const char* ootIcon) {
 
 void UpdateIcons() {
     SwapIcon(ITEM_OCARINA_OF_TIME, sMmOcarinaIcon, Combo_Upgrades_OcarinaIsFairy() != 0, gComboIconOcarinaFairyTex);
-    SwapIcon(ITEM_HOOKSHOT, sMmHookshotIcon, Combo_Upgrades_HookshotIsShort() != 0, gComboIconHookshotShortTex);
 }
 
 // OoTMM's Interface_AgonyIconDraw: fades out from a tick, shaking more the stronger it is.
