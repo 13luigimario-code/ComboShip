@@ -2286,11 +2286,17 @@ OoTMM's `blastMaskOot`, `stoneMaskOot`, `kamaroMaskOot` and their `sharedMask*` 
 
 OoTMM's `elegyOot`, `songHealingOot`, `songAwakeningOot`, `songGoronOot`, `songZoraOot`, `songOrderOot` (one OOT
 toggle, `RSK_COMBO_MM_SONGS`) and `songZeldaLullabyMm` (MM `RO_CROSS_SONG_ZELDA`). Like OoTMM they have no
-effect in the other game; their use is as items and with Shared Items.
+effect in the other game except the Elegy's statue in OOT; their use is as items and with Shared Items.
 
 - **OOT (`ComboMmSongs.cpp`):** `RG_COMBO_SONG_*` / `RAND_INF_OBTAINED_COMBO_SONG_*`; recognized by a note ring
   on `OnOcarinaNote` (the Song of Soaring's rules, OOT's song table untouched) during free play: chime, ocarina
   put away, an `OCEFF_WIPE3` flash (Elegy: OoTMM's green time-block flash). Drawn as song notes in MM's colors.
+- **Elegy statue in OOT (2026-10-16, `ComboElegyShell.cpp`):** like OoTMM's `Custom_Torch2` (MM's `En_Torch2`), the
+  Elegy leaves a statue of Link where he stood: one at a time (a replay moves it), fading in, solid once he steps
+  away; it blocks him, holds down switches and can be hookshotted. MM's human shell model (`gElegyShellHumanDL`,
+  "@mm:"), a dynamic-id actor (ActorDB, `ACTORCAT_PROP`). Found while testing: an `EnWood02` spawner over the void
+  kills itself right after spawning its trees, which then write into its freed memory; the statue reused it and
+  crashed. `EnWood02_Destroy` (guarded) now orphans its trees.
 - **MM (`MiscBehavior/CrossSongs.cpp`):** `RI_SONG_ZELDA` / `RANDO_INF_OBTAINED_SONG_ZELDA` make MM's leftover
   `OCARINA_SONG_ZELDAS_LULLABY` recognizable through `VB_SONG_AVAILABLE_TO_PLAY` (yielding to the Termina wall
   like the warp songs); its name box (`0x1B72 + 21`) is supplied in `OnOpenText`. In free play MM treats it
