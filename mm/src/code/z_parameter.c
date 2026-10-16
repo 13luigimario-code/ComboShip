@@ -4065,7 +4065,12 @@ void Interface_Dpad_LoadItemIconImpl(PlayState* play, u8 btn) {
     if (DPAD_GET_CUR_FORM_BTN_ITEM(btn) < ARRAY_COUNT(gItemIcons)) {
         interfaceCtx->iconItemSegment[DPAD_BUTTON(btn) + EQUIP_SLOT_MAX] = gItemIcons[DPAD_GET_CUR_FORM_BTN_ITEM(btn)];
     } else {
+#ifdef COMBO_BUILD
+        // ComboShip: blank this D-pad slot's icon; upstream wrote iconItemSegment[btn] (a B/C button's icon).
+        interfaceCtx->iconItemSegment[DPAD_BUTTON(btn) + EQUIP_SLOT_MAX] = gEmptyTexture;
+#else
         interfaceCtx->iconItemSegment[btn] = gEmptyTexture;
+#endif
     }
 }
 
@@ -6792,7 +6797,13 @@ void Interface_DrawPauseMenuEquippingIcons(PlayState* play) {
         ItemId equipAnimDrawItem = pauseCtx->equipTargetItem;
         if (GameInteractor_Should(VB_KALEIDO_DRAW_EQUIP_ANIM_ICON, true, &equipAnimDrawItem)) {
 
+#ifdef COMBO_BUILD
+            // ComboShip (cross-game items): OOT's items (ITEM_COMBO_*) sit past the magic arrows (0xB5..0xB7) and
+            // fly to the C button as their own icon, not as a magic arrow effect (which indexed past its colors).
+            if ((pauseCtx->equipTargetItem < 0xB5) || IS_COMBO_CROSS_ITEM(pauseCtx->equipTargetItem)) {
+#else
             if (pauseCtx->equipTargetItem < 0xB5) {
+#endif
                 // Normal Equip (icon goes from the inventory slot to the C button when equipping it)
                 gDPSetPrimColor(OVERLAY_DISP++, 0, 0, 255, 255, 255, pauseCtx->equipAnimAlpha);
                 gSPVertex(OVERLAY_DISP++, &pauseCtx->cursorVtx[16], 4, 0);
