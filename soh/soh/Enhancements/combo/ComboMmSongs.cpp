@@ -1,6 +1,6 @@
 // ComboShip (cross-game items): Majora's Mask songs playable in OOT (OoTMM's elegyOot / songHealingOot /
 // songAwakeningOot / songGoronOot / songZoraOot / songOrderOot). Like OoTMM they do nothing in Hyrule beyond
-// being played (the Elegy leaves a green flash where Link stands, OoTMM's shell effect without the shell); their
+// being played, except the Elegy, which leaves a statue of Link with a green flash (ComboElegyShell.cpp); their
 // use is as items, and with Shared Items one copy counts for both games.
 //
 // Recognition mirrors ComboOwlWarp.cpp's Song of Soaring: a note ring fed from OnOcarinaNote (OOT's own song
@@ -19,6 +19,7 @@ extern "C" {
 #include "variables.h"
 #include "src/overlays/actors/ovl_Demo_Effect/z_demo_effect.h"
 extern PlayState* gPlayState;
+void Combo_ElegyShell_Place(PlayState* play);
 }
 
 namespace {
@@ -112,6 +113,7 @@ void OnSongPlayed(PlayState* play, int song) {
 
     Player* player = GET_PLAYER(play);
     if (song == kElegy) {
+        Combo_ElegyShell_Place(play); // ComboElegyShell.cpp: a statue of Link where he stands
         DemoEffect* effect = (DemoEffect*)Actor_Spawn(
             &play->actorCtx, play, ACTOR_DEMO_EFFECT, player->actor.world.pos.x, player->actor.world.pos.y,
             player->actor.world.pos.z, 0, player->actor.shape.rot.y, 0, DEMO_EFFECT_TIMEWARP_TIMEBLOCK_SMALL);
