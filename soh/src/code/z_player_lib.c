@@ -1041,6 +1041,18 @@ Color_RGB8 sGauntletColors[] = {
     { 96, 6, 2 },
 };
 
+#ifdef COMBO_BUILD
+// ComboShip (ageless boots / strength): child-sized gear meshes (soh/soh/Enhancements/combo/ComboChildGearMeshes.c).
+extern Gfx gComboChildLeftIronBootDL[];
+extern Gfx gComboChildRightIronBootDL[];
+extern Gfx gComboChildLeftHoverBootDL[];
+extern Gfx gComboChildRightHoverBootDL[];
+extern Gfx gComboChildLeftGauntletPlate1DL[];
+extern Gfx gComboChildRightGauntletPlate1DL[];
+extern Gfx gComboChildLeftGauntletPlate3DL[];
+extern Gfx gComboChildRightGauntletPlate3DL[];
+#endif
+
 Gfx* sBootDListGroups[][2] = {
     { gLinkAdultLeftIronBootDL, gLinkAdultRightIronBootDL },   // PLAYER_BOOTS_IRON
     { gLinkAdultLeftHoverBootDL, gLinkAdultRightHoverBootDL }, // PLAYER_BOOTS_HOVER
@@ -1145,7 +1157,39 @@ void Player_DrawImpl(PlayState* play, void** skeleton, Vec3s* jointTable, s32 dL
                 gSPDisplayList(POLY_OPA_DISP++, bootDLists[1]);
             }
         } else {
-            if (Player_GetStrength() > PLAYER_STR_NONE) {
+            s32 drawGoronBracelet = Player_GetStrength() > PLAYER_STR_NONE;
+#ifdef COMBO_BUILD
+            // ComboShip (ageless boots / strength): child Link wears the Iron/Hover Boots and Silver/Golden Gauntlets
+            // too, with OoTMM's child-sized meshes (ComboChildGearMeshes.c), colored like adult Link's gauntlets.
+            if ((boots == PLAYER_BOOTS_IRON) || (boots == PLAYER_BOOTS_HOVER)) {
+                gSPDisplayList(POLY_OPA_DISP++,
+                               (boots == PLAYER_BOOTS_IRON) ? gComboChildLeftIronBootDL : gComboChildLeftHoverBootDL);
+                gSPDisplayList(POLY_OPA_DISP++,
+                               (boots == PLAYER_BOOTS_IRON) ? gComboChildRightIronBootDL : gComboChildRightHoverBootDL);
+            }
+            if (Player_GetStrength() >= PLAYER_STR_SILVER_G) {
+                s32 strengthUpgrade = Player_GetStrength();
+
+                gDPPipeSync(POLY_OPA_DISP++);
+                color = &sGauntletColors[strengthUpgrade - 2];
+                if (strengthUpgrade == PLAYER_STR_SILVER_G &&
+                    CVarGetInteger(CVAR_COSMETIC("Gloves.SilverGauntlets.Changed"), 0)) {
+                    sTemp = CVarGetColor24(CVAR_COSMETIC("Gloves.SilverGauntlets.Value"), *color);
+                    color = &sTemp;
+                } else if (strengthUpgrade == PLAYER_STR_GOLD_G &&
+                           CVarGetInteger(CVAR_COSMETIC("Gloves.GoldenGauntlets.Changed"), 0)) {
+                    sTemp = CVarGetColor24(CVAR_COSMETIC("Gloves.GoldenGauntlets.Value"), *color);
+                    color = &sTemp;
+                }
+                gDPSetEnvColor(POLY_OPA_DISP++, color->r, color->g, color->b, 0);
+                gSPDisplayList(POLY_OPA_DISP++, gComboChildLeftGauntletPlate1DL);
+                gSPDisplayList(POLY_OPA_DISP++, gComboChildRightGauntletPlate1DL);
+                gSPDisplayList(POLY_OPA_DISP++, gComboChildLeftGauntletPlate3DL);
+                gSPDisplayList(POLY_OPA_DISP++, gComboChildRightGauntletPlate3DL);
+                drawGoronBracelet = false;
+            }
+#endif
+            if (drawGoronBracelet) {
                 gSPDisplayList(POLY_OPA_DISP++, gLinkChildGoronBraceletDL);
             }
         }

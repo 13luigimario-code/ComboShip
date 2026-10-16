@@ -2434,6 +2434,18 @@ CHILD_TRADE/STRENGTH` (`ComboAgeless*` CVars, Logic section of the OOT randomize
   left alone, so logic under-credits ageless items there rather than assuming a child can make an adult-only reach.
 - **Not ported:** `agelessGFS` (OOT has no Great Fairy's Sword) and `agelessSoaring` (ComboShip's Song of Soaring in
   OOT already works and is in logic at both ages).
+- **Child Link's gear (2026-10-16):** child Link now wears what he can use.
+  - Iron and Hover Boots, and Silver and Golden Gauntlets, use OoTMM's child-sized meshes
+    (`soh/soh/Enhancements/combo/ComboChildGearMeshes.c`). The boots are the same meshes MM's human Link wears; the
+    gauntlets are OoTMM's `DrawChildGauntlets`. They are drawn in `Player_DrawImpl` (`z_player_lib.c`, guarded), with
+    OOT adult Link's textures and the cosmetics editor's gauntlet colors. The Goron Bracelet shows only at bracelet
+    strength.
+  - An adult sword (Master Sword, Giant's Knife, Biggoron's Sword) with no shield or the Deku Shield: OOT drew its
+    swordless child models, so the sword was missing from his back. With SoH's "Show Age-Dependent Equipment" he now
+    wears adult Link's sheath (moved and scaled like SoH's other adult gear when "Scale Adult Equipment as Child" is on)
+    with the Deku Shield over it; without it, his own sheath, matching the Kokiri Sword model in his hand
+    (`OverrideChildAdultSwordSheath`, `ComboAgeless.cpp`, through `VB_PLAYER_OVERRIDE_LIMB_DRAW`). The Hylian and
+    Mirror Shield cases were already handled by SoH. The pause-menu Link is unchanged.
 
 ## Cross-Games Farore's Wind (OoTMM `crossGameFw`) (2026-10-12)
 
