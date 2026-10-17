@@ -2723,3 +2723,28 @@ both bag modes, key rings (4/4 keys from 1/4), the bombchu bag and key ring mode
 (`GeneratePools` on a live save); headless `comborando`: 3/3 seeds pass with Set By Wallet prices, Tycoon's Wallet,
 Progressive Infinite Upgrades, Progressive Bags, Random key rings and the stick & nut upgrades all on.
 
+## Strength upgrades on human Link in MM, and MM colors for OOT's Link models (2026-10-17)
+
+**Strength (`CrossGear.cpp` `Combo_Gear_DrawStrength`):** with OOT strength in MM (`RO_CROSS_STRENGTH`), human Link
+now wears what he owns, as in OoTMM's MM `Player_Draw` (`DrawGauntlets` / `DrawChildGauntlets`):
+- Goron's Bracelet: OOT child Link's own bracelet (`gLinkChildGoronBraceletDL`, "@oot:" routed).
+- Silver / Golden Gauntlets: OoTMM's child-sized plates (`CrossGearGauntlets.c`, ported from OoTMM's
+  `common/gauntlets.c` + `gauntlets.vtx.inc`; textures are OOT adult Link's), tinted with the cosmetic editor's
+  "Silver/Golden Gauntlets (OoT)" colors; the gem's color is a sub-list rewritten each draw.
+- Adult Link (Cross-Games Age) keeps OOT's adult gauntlets (`AdultLink.cpp`) and, as in OOT, no bracelet.
+
+Drawn from `Player_DrawImpl` (`mm/src/code/z_player_lib.c`, guarded) after the boots, with the same limb matrices.
+
+**Colors (`CrossGearColors.cpp`, `BenGui/CosmeticEditor.cpp`):** new MM cosmetic options, beside "Adult Link Tunic"
+and the gauntlet colors: Adult Link Hair, Adult Link Linen, Adult Link Boots, Goron's Bracelet (OoT), Gauntlets Gem
+(OoT). SoH colors these by patching OOT's display lists in place; MM draws the same lists from OOT's archive, so that
+would recolor OOT's Link too. Instead, while one of these options is set, MM draws its own copy of the list with SoH's
+patches applied at SoH's command indices (`gsDPSetPrimColor` / `gsDPSetGrayscaleColor` / `gsSPGrayscale`), inside a
+`G_COMBO_RM_PUSH("oot")` bracket so the copy's references still resolve in OOT's archive. Unset, MM draws OOT's list,
+so the color follows OOT's cosmetic editor as before. Copies are dropped on the CrossRMRegistry teardown; custom
+(mod) models are left alone, like SoH. Hooked in `Combo_AdultLink_RemapLimb` (every adult limb), the adult gauntlet
+hand plates, and the child bracelet.
+
+Tested in game: the bracelet and both gauntlets on child Link; adult Link with every new color set (hair, linen,
+boots, gauntlets); the bracelet and gem colors on child Link.
+

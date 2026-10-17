@@ -27,9 +27,16 @@ extern Gfx gComboLinkLeftIronBootDL[];
 extern Gfx gComboLinkRightIronBootDL[];
 extern Gfx gComboLinkLeftHoverBootDL[];
 extern Gfx gComboLinkRightHoverBootDL[];
+// CrossGearGauntlets.c: OoTMM's child-sized gauntlet plates.
+extern Gfx gComboHumanLeftGauntletPlate1DL[];
+extern Gfx gComboHumanRightGauntletPlate1DL[];
+extern Gfx gComboHumanLeftGauntletPlate3DL[];
+extern Gfx gComboHumanRightGauntletPlate3DL[];
+extern Gfx gComboHumanGauntletGemDL[];
 // BenGui/CosmeticEditor.cpp: OOT tunic color over the human tunic (nullptr restores the cosmetic setting).
 void CosmeticEditor_SetHumanTunicOverride(const Color_RGB8* color);
 Color_RGB8 CosmeticEditor_GetComboColor(const char* id, Color_RGB8 defaultColor);
+extern "C" int CosmeticEditor_IsComboColorChanged(const char* id);
 }
 
 unsigned char gComboHoverBootsTimer = 0;
@@ -714,6 +721,39 @@ extern "C" void Combo_Gear_DrawBoots(PlayState* play, Player* player) {
             Matrix_Pop();
         }
         gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kMaskDLs[mask - COMBO_MASK_GERUDO]);
+    }
+    CLOSE_DISPS(play->state.gfxCtx);
+}
+
+// OoTMM's MM Player_Draw: on human Link the Goron's Bracelet is OOT child Link's own bracelet, the Silver and Golden
+// Gauntlets OoTMM's child-sized plates tinted with the cosmetic editor's gauntlet colors. Adult Link (Cross-Games Age)
+// wears OOT's adult gauntlets instead (AdultLink.cpp) and, as in OOT, no bracelet.
+extern "C" void Combo_Gear_DrawStrength(PlayState* play, Player* player) {
+    static const ALIGN_ASSET(2) char kGoronBraceletDL[] = COMBO_OOT_LINK_CHILD("gLinkChildGoronBraceletDL");
+    if (!Combo_Gear_StrengthReplacesHuman() || (Combo_AdultLink_Is(player) != 0)) {
+        return;
+    }
+    const int strength = Combo_Gear_GetStrength();
+    if (strength <= 0) {
+        return;
+    }
+    OPEN_DISPS(play->state.gfxCtx);
+    if (strength == 1) {
+        gSPDisplayList(POLY_OPA_DISP++, (Gfx*)Combo_Gear_Recolor(kGoronBraceletDL)); // its cosmetic color
+    } else {
+        const Color_RGB8 color = Combo_Gear_GauntletColor(strength);
+        // The gem: the cosmetic editor's "Gauntlets Gem (OoT)", else the plates' own red.
+        const Color_RGB8 gem = CosmeticEditor_IsComboColorChanged("Player.OotGauntletsGem")
+                                   ? Combo_Gear_CosmeticColor(4)
+                                   : Color_RGB8{ 254, 15, 15 };
+        Gfx* gemDL = gComboHumanGauntletGemDL;
+        gDPSetPrimColor(gemDL++, 0, 0, gem.r, gem.g, gem.b, 255);
+        gDPPipeSync(POLY_OPA_DISP++);
+        gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);
+        gSPDisplayList(POLY_OPA_DISP++, gComboHumanLeftGauntletPlate1DL);
+        gSPDisplayList(POLY_OPA_DISP++, gComboHumanRightGauntletPlate1DL);
+        gSPDisplayList(POLY_OPA_DISP++, gComboHumanLeftGauntletPlate3DL);
+        gSPDisplayList(POLY_OPA_DISP++, gComboHumanRightGauntletPlate3DL);
     }
     CLOSE_DISPS(play->state.gfxCtx);
 }

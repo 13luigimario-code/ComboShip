@@ -86,10 +86,17 @@ void Combo_Spells_OnPlayerUpdate(struct PlayState* play, struct Player* player);
 // Draws worn OOT gear (boots on the feet, masks on the head); called after the skeleton draw while segment
 // 0x0D holds Link's limb matrices.
 void Combo_Gear_DrawBoots(struct PlayState* play, struct Player* player);
+// The Goron's Bracelet / Silver and Golden Gauntlets on human Link (after the boots, same limb matrices).
+void Combo_Gear_DrawStrength(struct PlayState* play, struct Player* player);
 // OOT tunic colors (Goron/Zora from the cosmetic editor's "(OoT)" options; kokiri for anything else) and gauntlet
 // colors (2 silver, 3 golden).
 Color_RGB8 Combo_Gear_TunicColor(int tunic, Color_RGB8 kokiri);
 Color_RGB8 Combo_Gear_GauntletColor(int strength);
+// CrossGearColors.cpp: MM's cosmetic colors for OOT's Link models. Recolor returns a copy of an "@oot:" display list
+// with the set colors (adult hair, linen, boots, the Goron's Bracelet, gauntlet gems), or the list itself.
+const void* Combo_Gear_Recolor(const void* dList);
+// 3 = Goron's Bracelet, 4 = gauntlet gem (the cosmetic color, or the model's own).
+Color_RGB8 Combo_Gear_CosmeticColor(int option);
 // Player_Draw: OOT's glowing ring under the Hover Boots while Link hovers.
 void Combo_Gear_DrawHoverGlow(struct PlayState* play, struct Player* player);
 
