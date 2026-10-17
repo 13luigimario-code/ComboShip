@@ -14651,13 +14651,13 @@ s32 Player_UpperAction_14(Player* this, PlayState* play) {
                 (this->focusActor != NULL) ? this->actor.shape.rot.y + 14000 : this->actor.shape.rot.y, 0,
                 ZORA_BOOMERANG_LEFT);
 
-            this->zoraBoomerangActor = &boomerang->actor;
+            this->zoraBoomerangActor = (Actor*)boomerang;
             if (boomerang != NULL) {
+                // OOT's flight (EnBoom_ComboOotFly): its 20-frame return timer and 1 damage.
+                boomerang->comboOot = true;
                 boomerang->moveTo = this->focusActor;
-                if (boomerang->moveTo != NULL) {
-                    boomerang->unk_1CF = 0x10;
-                }
-                boomerang->unk_1CC = boomerang->unk_1CF + 0x24;
+                boomerang->unk_1CC = 20;
+                boomerang->collider.elem.atDmgInfo.damage = 1;
                 this->stateFlags1 |= PLAYER_STATE1_ZORA_BOOMERANG_THROWN;
                 this->stateFlags3 &= ~PLAYER_STATE3_ZORA_BOOMERANG_CAUGHT;
                 if (!Player_CheckHostileLockOn(this)) {
@@ -14751,6 +14751,13 @@ s32 Player_UpperAction_16(Player* this, PlayState* play) {
         if (this->stateFlags1 & PLAYER_STATE1_ZORA_BOOMERANG_THROWN) {
             Player_SetUpperAction(play, this, Player_UpperAction_15);
             this->unk_ACC = 0;
+#ifdef COMBO_BUILD
+        } else if (COMBO_HUMAN_BOOMERANG(this)) {
+            // ComboShip: back to the held Boomerang's own upper action, which throws on the next press. Zora Link
+            // throws with B (Player_ActionHandler_8), so MM's Player_UpperAction_0 left the human throw dead after
+            // the first catch.
+            Player_SetUpperAction(play, this, Player_UpperAction_11);
+#endif
         } else {
             Player_SetUpperAction(play, this, Player_UpperAction_0);
         }

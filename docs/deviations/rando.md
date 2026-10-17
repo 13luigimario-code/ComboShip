@@ -2350,7 +2350,13 @@ OoTMM's `hammerMm`, `boomerangMm`, `slingshotMm`, `dekuShieldMm` and the `shared
   (`link_boom_throw_wait2waitR`, `throwR`, `catch` from OOT's archive; the `waitR` loop is MM's own) and
   `Player_UpperAction_14` spawns one `EnBoom` (left half, no partner: `EnBoom_Destroy` already clears the thrown
   state when it has neither child nor parent) like OOT's `func_808359FC`. `EnBoom_Draw` uses OOT's `gBoomerangRefDL`
-  when the player is human.
+  for it. It flies like OOT's boomerang, not a Zora fin (`EnBoom::comboOot` -> `EnBoom_ComboOotFly`, a port of OOT's
+  `EnBoom_Fly`, 2026-10-17): straight at a locked-on actor with no outward sweep, OOT's 12 units a frame (8 in MM,
+  whose `Actor_UpdatePos` scales speed by 1.5), back after 20 frames, turning back on hitting an actor as well as a
+  wall, 1 damage (OOT's) with MM's `DMG_ZORA_BOOMERANG` flag so MM enemies react to it. MM's fin behavior stays for
+  water splashes and for not grabbing heart pieces / containers. After the catch, `Player_UpperAction_16` returns
+  to the Boomerang's own `Player_UpperAction_11` (MM went to `Player_UpperAction_0`, which never throws again: Zora
+  Link throws with B), so it can be thrown again.
 - Fairy Slingshot → `PLAYER_IA_BOW`. `func_808305BC` returns `ITEM_COMBO_SLINGSHOT` + `ARROW_TYPE_SLINGSHOT` (MM's
   EnArrow still has the seed) with its own ammo, `RandoSaveInfo::comboSlingshotSeeds` (30 max, OOT's first bullet bag;
   full on grant; JSON `comboSlingshotSeeds`, tolerant). Seeds hit as `DMG_DEKU_BUBBLE` (OoTMM). `Inventory_ChangeAmmo`

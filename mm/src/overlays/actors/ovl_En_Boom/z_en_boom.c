@@ -10,8 +10,8 @@
 #ifdef COMBO_BUILD
 #include "align_asset_macro.h"
 // ComboShip (cross-game items): human Link's OOT Boomerang flies as OOT's model (OOT EnBoom_Draw: gBoomerangRefDL),
-// loaded from OOT's archive through "@oot:" routing. Only human Link throws a boomerang as human
-// (Player_UpperAction_14).
+// loaded from OOT's archive through "@oot:" routing. Player_UpperAction_14 marks it (comboOot); it also flies as OOT's
+// (EnBoom_ComboOotFly).
 static const ALIGN_ASSET(2) char sComboOotBoomerangDL[] = "__OTR__@oot:objects/gameplay_keep/gBoomerangRefDL";
 #endif
 
@@ -184,6 +184,103 @@ void EnBoom_Destroy(Actor* thisx, PlayState* play) {
     }
 }
 
+#ifdef COMBO_BUILD
+// ComboShip (cross-game items): human Link's OOT Boomerang flies like OOT's EnBoom_Fly instead of a Zora fin: straight
+// at a locked-on actor (no outward sweep), back to Link after a fixed 20 frames (Player_UpperAction_14 sets unk_1CC),
+// and it turns back on hitting an actor as well as a wall. MM's own fin behavior is kept for water splashes and for
+// not grabbing heart pieces / containers.
+static void EnBoom_ComboOotFly(EnBoom* this, PlayState* play) {
+    Player* player = GET_PLAYER(play);
+    Actor* target = this->moveTo;
+    s32 collided;
+
+    if (target != NULL) {
+        s16 yawTarget = Actor_WorldYawTowardPoint(&this->actor, &target->focus.pos);
+        s16 yawDiff = this->actor.world.rot.y - yawTarget;
+        s16 pitchTarget = Actor_WorldPitchTowardPoint(&this->actor, &target->focus.pos);
+        s16 pitchDiff = this->actor.world.rot.x - pitchTarget;
+        f32 distScale = (200.0f - Math_Vec3f_DistXYZ(&this->actor.world.pos, &target->focus.pos)) * 0.005f;
+
+        if (distScale < 0.12f) {
+            distScale = 0.12f;
+        }
+        if ((target != &player->actor) && ((target->update == NULL) || (ABS_ALT(yawDiff) > 0x4000))) {
+            this->moveTo = NULL; // OOT's: passed the target, keep flying straight until the timer runs out
+        } else {
+            Math_ScaledStepToS(&this->actor.world.rot.y, yawTarget, TRUNCF_BINANG(ABS_ALT(yawDiff) * distScale));
+            Math_ScaledStepToS(&this->actor.world.rot.x, pitchTarget, TRUNCF_BINANG(ABS_ALT(pitchDiff) * distScale));
+        }
+    }
+
+    // OOT's 12 units a frame: MM's Actor_UpdatePos scales speed by R_UPDATE_RATE * 0.5 (1.5), OOT's does not.
+    Actor_SetSpeeds(&this->actor, 8.0f);
+    Actor_MoveWithGravity(&this->actor);
+    func_808A24DC(this, play);
+    Actor_PlaySfx_Flagged(&this->actor, NA_SE_IT_BOOMERANG_FLY - SFX_FLAG);
+
+    collided = (this->collider.base.atFlags & AT_HIT) != 0;
+    if (collided && (((this->collider.base.at->id == ACTOR_EN_ITEM00) &&
+                      (this->collider.base.at->params != ITEM00_HEART_CONTAINER) &&
+                      (this->collider.base.at->params != ITEM00_HEART_PIECE)) ||
+                     (this->collider.base.at->id == ACTOR_EN_SI))) {
+        this->unk_1C8 = this->collider.base.at;
+        if (this->collider.base.at->id == ACTOR_EN_SI) {
+            this->collider.base.at->flags |= ACTOR_FLAG_HOOKSHOT_ATTACHED;
+        }
+    }
+
+    if (DECR(this->unk_1CC) == 0) {
+        this->moveTo = &player->actor;
+        if (Math_Vec3f_DistXYZ(&this->actor.world.pos, &player->actor.focus.pos) < 40.0f) {
+            target = this->unk_1C8;
+            if (target != NULL) {
+                Math_Vec3f_Copy(&target->world.pos, &player->actor.world.pos);
+                if (target->id == ACTOR_EN_ITEM00) {
+                    target->gravity = -0.9f;
+                    target->bgCheckFlags &= ~(BGCHECKFLAG_GROUND | BGCHECKFLAG_GROUND_TOUCH);
+                } else {
+                    target->flags &= ~ACTOR_FLAG_HOOKSHOT_ATTACHED;
+                }
+            }
+            Actor_Kill(&this->actor); // EnBoom_Destroy tells the player it was caught
+            return;
+        }
+    } else {
+        if (collided) {
+            Math_Vec3f_Copy(&this->actor.world.pos, &this->actor.prevPos); // hit an actor: bounce back from it
+        } else {
+            s32 bgId;
+            Vec3f hitPoint;
+
+            collided = BgCheck_EntityLineTest1(&play->colCtx, &this->actor.prevPos, &this->actor.world.pos, &hitPoint,
+                                               &this->actor.wallPoly, true, true, true, true, &bgId);
+            if (collided) {
+                if (func_800B90AC(play, &this->actor, this->actor.wallPoly, bgId, &hitPoint)) {
+                    collided = false;
+                } else {
+                    CollisionCheck_SpawnShieldParticlesMetal(play, &hitPoint);
+                }
+            }
+        }
+        if (collided) {
+            this->actor.world.rot.x = -this->actor.world.rot.x;
+            this->actor.world.rot.y += 0x8000;
+            this->moveTo = &player->actor;
+            this->unk_1CC = 0;
+        }
+    }
+
+    target = this->unk_1C8;
+    if (target != NULL) {
+        if (target->update == NULL) {
+            this->unk_1C8 = NULL;
+        } else {
+            Math_Vec3f_Copy(&target->world.pos, &this->actor.world.pos);
+        }
+    }
+}
+#endif
+
 void func_808A2918(EnBoom* this, PlayState* play) {
     Actor* targetActor;
     Player* player = GET_PLAYER(play);
@@ -196,6 +293,12 @@ void func_808A2918(EnBoom* this, PlayState* play) {
     f32 sp64;
     f32 distXYZ;
 
+#ifdef COMBO_BUILD
+    if (this->comboOot) {
+        EnBoom_ComboOotFly(this, play);
+        return;
+    }
+#endif
     targetActor = this->moveTo;
 
     if (targetActor != NULL) {
@@ -349,7 +452,7 @@ void EnBoom_Draw(Actor* thisx, PlayState* play) {
 
     Matrix_RotateYS(this->actor.world.rot.y, MTXMODE_APPLY);
 #ifdef COMBO_BUILD
-    s32 comboOotBoomerang = (GET_PLAYER(play)->transformation == PLAYER_FORM_HUMAN);
+    s32 comboOotBoomerang = this->comboOot;
     // OOT tilts its boomerang the other way from MM's left fin.
     Matrix_RotateZS(((this->actor.params != ZORA_BOOMERANG_LEFT) || comboOotBoomerang) ? 0x1F40 : -0x1F40,
                     MTXMODE_APPLY);
