@@ -914,6 +914,30 @@ static FnReadComboStartingGameCVar SOH_ReadComboStartingGameCVar = nullptr;
 // Starting game of the LOADED slot (seed-bound, like g_goalHunt).
 static bool g_startingGameMM = false;
 
+// Games (combo/rando/ComboGames.h): Combo, OoT only or MM only. Read from soh.dll's CVar at generation, seed-bound
+// after (spoiler "games"), pushed to both DLLs, which keep a solo seed from crossing between the games.
+typedef int (*FnReadComboGamesCVar)(void);
+typedef void (*FnSetComboGames)(int games);
+static FnReadComboGamesCVar SOH_ReadComboGamesCVar = nullptr;
+static FnSetComboGames SOH_SetComboGames = nullptr;
+static FnSetComboGames MM_SetComboGames = nullptr;
+// Games of the LOADED slot.
+static ComboRando::ComboGames g_comboGames = ComboRando::COMBO_GAMES_BOTH;
+static void PushComboGames(ComboRando::ComboGames games) {
+    if (SOH_SetComboGames)
+        SOH_SetComboGames(static_cast<int>(games));
+    if (MM_SetComboGames)
+        MM_SetComboGames(static_cast<int>(games));
+}
+// The run is complete: both final bosses, or the played game's in a solo seed.
+static bool ComboBossesComplete(const bool completion[2]) {
+    if (g_comboGames == ComboRando::COMBO_GAMES_OOT)
+        return completion[0];
+    if (g_comboGames == ComboRando::COMBO_GAMES_MM)
+        return completion[1];
+    return completion[0] && completion[1];
+}
+
 // Shared Items (OoTMM-style, combo/rando/SharedItems.h). SOH_SetComboSharedItems is OOT-only — it
 // shapes OOT's gen-time wallet force (settings.cpp); nothing on the MM side depends on the mask.
 typedef void (*FnSetComboSharedItems)(ComboRando::SharedMask mask);
@@ -1356,6 +1380,7 @@ static void LoadComboCompletion(int slot) {
     g_goalTotal = -1;
     g_startingGameMM = false;
     g_sharedMask = 0;
+    g_comboGames = ComboRando::COMBO_GAMES_BOTH;
     if (MM_SetComboSharedItems)
         MM_SetComboSharedItems(0); // clear before the slot read below re-pushes the loaded value (or stays 0)
     {
@@ -1376,12 +1401,15 @@ static void LoadComboCompletion(int slot) {
         g_startingGameMM = rando.value("startingGame", std::string("OOT")) == "MM";
         // Shared Items: absent key = mask 0 = feature off (old seeds unaffected).
         g_sharedMask = ComboRando::SharedMaskFromKeys(rando.value("sharedItems", nlohmann::json::array()));
+        // Games: absent = combo (every seed before the setting).
+        g_comboGames = ComboRando::ComboGamesFromKey(rando.value("games", std::string("ootmm")));
     }
     // Push outside the container lock — the DLL setters must never re-enter the sidecar.
+    PushComboGames(g_comboGames);
     if (SOH_SetComboGoal)
-        SOH_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwOotPieces(g_goalTotal));
+        SOH_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwOotPieces(g_goalTotal, g_comboGames));
     if (MM_SetComboGoal)
-        MM_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwMmPieces(g_goalTotal));
+        MM_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwMmPieces(g_goalTotal, g_comboGames));
     if (SOH_SetComboStartingGame)
         SOH_SetComboStartingGame(g_startingGameMM ? 1 : 0);
     if (SOH_SetComboSharedItems)
@@ -1389,7 +1417,7 @@ static void LoadComboCompletion(int slot) {
     if (MM_SetComboSharedItems)
         MM_SetComboSharedItems(g_sharedMask);
     if (ComboUI_SetComboComplete)
-        ComboUI_SetComboComplete((g_comboCompletion[0] && g_comboCompletion[1]) ? 1 : 0);
+        ComboUI_SetComboComplete(ComboBossesComplete(g_comboCompletion) ? 1 : 0);
 }
 
 // Generation pushes the MENU goal into both DLLs. If a slot is loaded, put its own (seed-bound) goal
@@ -1397,10 +1425,11 @@ static void LoadComboCompletion(int slot) {
 static void RestoreLoadedSlotGoal() {
     if (g_comboCompletionSlot < 0)
         return;
+    PushComboGames(g_comboGames);
     if (SOH_SetComboGoal)
-        SOH_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwOotPieces(g_goalTotal));
+        SOH_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwOotPieces(g_goalTotal, g_comboGames));
     if (MM_SetComboGoal)
-        MM_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwMmPieces(g_goalTotal));
+        MM_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwMmPieces(g_goalTotal, g_comboGames));
     if (SOH_SetComboStartingGame)
         SOH_SetComboStartingGame(g_startingGameMM ? 1 : 0);
     if (SOH_SetComboSharedItems)
@@ -1421,7 +1450,7 @@ static void SaveComboCompletion(int slot) {
     // #173: tints the timer overlay's total green. Pushed outside the container lock — comboui must
     // never re-enter the sidecar.
     if (ComboUI_SetComboComplete)
-        ComboUI_SetComboComplete((g_comboCompletion[0] && g_comboCompletion[1]) ? 1 : 0);
+        ComboUI_SetComboComplete(ComboBossesComplete(g_comboCompletion) ? 1 : 0);
 }
 
 // ComboShip (#164): push the slot's hints slice + read state into comboui's Hint Tracker. Reads the
@@ -1513,7 +1542,7 @@ static void Combo_OnMmHintRevealed(int fileNum, int kind, int poolIndex, const c
 } catch (...) { std::cerr << "[ComboShip] Combo_OnMmHintRevealed threw a non-std exception" << std::endl; }
 
 // Registered into both games: record THIS game's final-boss kill for its slot and return 1 iff BOTH
-// games' bosses are now dead. game/fileNum use the GameId convention (0=OOT, 1=MM).
+// games' bosses are now dead (a solo seed: the played game's). game/fileNum use the GameId convention (0=OOT, 1=MM).
 static int Combo_OnFinalBossDefeated(int game, int fileNum) {
     if ((game != 0 && game != 1) || !ComboIsValidSlot(fileNum))
         return 0;
@@ -1525,9 +1554,10 @@ static int Combo_OnFinalBossDefeated(int game, int fileNum) {
         g_comboCompletion[game] = true;
         SaveComboCompletion(fileNum);
         std::cout << "[ComboShip] Final boss defeated: game=" << game << " slot=" << fileNum
-                  << " both=" << (g_comboCompletion[0] && g_comboCompletion[1]) << std::endl;
+                  << " complete=" << ComboBossesComplete(g_comboCompletion)
+                  << " games=" << ComboRando::ComboGamesKey(g_comboGames) << std::endl;
     }
-    return (g_comboCompletion[0] && g_comboCompletion[1]) ? 1 : 0;
+    return ComboBossesComplete(g_comboCompletion) ? 1 : 0;
 }
 
 // ComboShip (#136): each game's piece-count getter, handed to the OTHER game so its pickup messages
@@ -1756,12 +1786,20 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         fail("Triforce Hunt needs at least 1 required piece");
         return;
     }
+    // Games (ComboGames.h): Combo, OoT only or MM only. A solo seed starts in its game and has no Shared Items.
+    const ComboRando::ComboGames games =
+        ComboRando::ComboGamesFromInt(SOH_ReadComboGamesCVar ? SOH_ReadComboGamesCVar() : 0);
+    const bool solo = ComboRando::ComboGamesSolo(games);
     // ComboShip (#135): 0 = OOT, 1 = MM, 2 = Random (resolved per attempt below).
-    const int startCfg = SOH_ReadComboStartingGameCVar ? SOH_ReadComboStartingGameCVar() : 0;
+    const int startCfg = ComboRando::ComboGamesStartingGameCfg(
+        games, SOH_ReadComboStartingGameCVar ? SOH_ReadComboStartingGameCVar() : 0);
     bool pinStartOot = false; // Random: after an MM-start attempt fails, fall back silently to OOT
     bool resolvedMmStart = false;
     // Shared Items: read via soh.dll — the launcher has no CVar access.
-    const ComboRando::SharedMask sharedMask = SOH_ReadComboSharedCVars ? SOH_ReadComboSharedCVars() : 0;
+    const ComboRando::SharedMask sharedMask = solo ? 0 : (SOH_ReadComboSharedCVars ? SOH_ReadComboSharedCVars() : 0);
+    if (solo)
+        std::cout << "[ComboShip] RunComboFill: games = " << ComboRando::ComboGamesKey(games)
+                  << " (solo: items stay in their own game, no Shared Items)\n";
 
     std::string sohDump, mmDump, spoiler, lastFillError, sohHintDump;
     bool usedCombinedFill = false;
@@ -1829,9 +1867,9 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         // Must precede the dumps: OOT's FinalizeSettings and MM's GeneratePools shape their pools
         // (wincon, Majora soul removal, piece count) from the goal.
         if (SOH_SetComboGoal)
-            SOH_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwOotPieces(goal.total));
+            SOH_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwOotPieces(goal.total, games));
         if (MM_SetComboGoal)
-            MM_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwMmPieces(goal.total));
+            MM_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwMmPieces(goal.total, games));
         // Same reason (#135): an MM start forces OOT's age/forest/exclusions, which shape its pool.
         if (SOH_SetComboStartingGame)
             SOH_SetComboStartingGame(mmStart ? 1 : 0);
@@ -1899,7 +1937,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         ComboRando::OotAccess ootAccess = ComboRando::OotAccessFromDump(sohDump);
         auto result = ComboRando::CrossWorldCombinedFill(
             sohDump, mmDump, masterSeed, ootOracle, mmOracle, progress, forcedOot, ootAccess, goal,
-            mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, sharedMask);
+            mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, sharedMask, games);
         if (cancelled()) // before the success/retry branch, so a cancel never retries
             return;
 
@@ -1924,15 +1962,19 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
                 // Any piece substitutes for any other and OOT may be unbeatable by design, so nothing
                 // is meaningfully "required" — same compromise as MmOnlyMajoraGoal.
                 std::cout << "[ComboShip] RunComboFill: pare-down skipped (No Logic + Triforce Hunt)\n";
+            } else if (noLogic && games == ComboRando::COMBO_GAMES_OOT) {
+                std::cout << "[ComboShip] RunComboFill: pare-down skipped (No Logic + OoT only)\n";
             } else if (ComboRando::NeedsRequirednessPareDown(sohHintDump, mmDump)) {
-                // NO_LOGIC: gate requiredness on MM only (OOT may be unbeatable by design).
-                pareDownResult =
-                    ComboRando::PareDownPlaythrough(result.spoilerJson, ootOracle, mmOracle, nullptr, sohDump, mmDump,
-                                                    ootCheckAreasCache, buildMmCheckAreas(mmDump),
-                                                    goal.hunt ? ComboRando::MakeTriforceHuntGoal(goal.required)
-                                                    : noLogic ? ComboRando::MmOnlyMajoraGoal
-                                                              : ComboRando::DefaultGanonMajoraGoal,
-                                                    !noLogic, mmStart, progress);
+                // NO_LOGIC: gate requiredness on MM only (OOT may be unbeatable by design). A solo seed: its
+                // game's boss only.
+                pareDownResult = ComboRando::PareDownPlaythrough(
+                    result.spoilerJson, ootOracle, mmOracle, nullptr, sohDump, mmDump, ootCheckAreasCache,
+                    buildMmCheckAreas(mmDump),
+                    goal.hunt                                          ? ComboRando::MakeTriforceHuntGoal(goal.required)
+                    : (noLogic || games == ComboRando::COMBO_GAMES_MM) ? ComboRando::MmOnlyMajoraGoal
+                    : games == ComboRando::COMBO_GAMES_OOT             ? ComboRando::OotOnlyGanonGoal
+                                                                       : ComboRando::DefaultGanonMajoraGoal,
+                    !noLogic, mmStart, progress);
             } else {
                 std::cout << "[ComboShip] RunComboFill: pare-down skipped (no enabled hint surface needs "
                              "requiredness)\n";
@@ -1963,7 +2005,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
             std::string("combined fill failed after ") + std::to_string(kFillAttempts) + " attempts — " + lastFillError;
         // #135: explicit MM start hard-fails (Random would have fallen back to OOT by now), and the
         // usual cause is an OOT that an itemless strayed player cannot walk back out of.
-        if (startCfg == 1)
+        if (startCfg == 1 && !solo)
             msg += " | Starting Game is Majora's Mask, which also requires the OOT->MM portal to stay "
                    "re-openable from an empty OOT start — loosen the OOT access settings (Closed Forest, "
                    "Door of Time, Lock Overworld Doors) or set Starting Game back to Ocarina of Time";
@@ -2136,6 +2178,8 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
                                  { "totalPieces", goal.total } };
         // ComboShip (#135): the resolved starting game — seed-bound like the goal, never re-rolled.
         consolidated["startingGame"] = resolvedMmStart ? "MM" : "OOT";
+        // Games (ComboGames.h): seed-bound too. Absent on older seeds = combo.
+        consolidated["games"] = ComboRando::ComboGamesKey(games);
         // ComboShip (#90): OOT entrance layout — informational, reload re-derives it from masterSeed.
         {
             nlohmann::json ootEnt = nlohmann::json::array();
@@ -2150,7 +2194,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         // pare-down computed above. usedCombinedFill guards the no-logic fallback path (no oracles/
         // pare-down data there): that path ships with an empty hints payload, same as before Phase 3.
         consolidated["hints"] = usedCombinedFill ? ComboRando::Generate(masterSeed, sohDump, sohHintDump, mmDump,
-                                                                        foreignEnriched, spoiler, pareDownResult)
+                                                                        foreignEnriched, spoiler, pareDownResult, games)
                                                  : nlohmann::json{ { "version", 1 } };
         if (cancelled())
             return;
@@ -2620,10 +2664,12 @@ static int Combo_OnReloadRequest(const char* path) {
             const int required = hunt ? g.value("requiredPieces", 0) : 0;
             // Absent on seeds made before the combined total — -1 leaves each game's own slider alone.
             const int total = g.value("totalPieces", -1);
+            const auto seedGames = ComboRando::ComboGamesFromKey(j.value("games", std::string("ootmm")));
+            PushComboGames(seedGames);
             if (SOH_SetComboGoal)
-                SOH_SetComboGoal(hunt, required, ComboRando::CwOotPieces(total));
+                SOH_SetComboGoal(hunt, required, ComboRando::CwOotPieces(total, seedGames));
             if (MM_SetComboGoal)
-                MM_SetComboGoal(hunt, required, ComboRando::CwMmPieces(total));
+                MM_SetComboGoal(hunt, required, ComboRando::CwMmPieces(total, seedGames));
             // Log-only sanity check: a hand-edited/plandomized spoiler could ask for more pieces than it
             // actually places, which is unwinnable. Loud, but the load still proceeds (the file is the
             // player's own artifact and the rest of it may be perfectly fine).
@@ -2957,6 +3003,78 @@ static void Combo_OnMMReturn(int kind) {
     g_pendingOOTReturn = true;
 }
 
+// ---------- Title screen + file select front end (#27) ----------
+// Majora's Mask's title screen and file select instead of OOT's. MM's file select hands every file action (load, new)
+// to OOT's file select, which runs it exactly like its own (so slot binding, seed binding and "resume in the game it
+// was last saved in" are unchanged); the title screen, wherever a game would go back to it, is MM's.
+typedef int (*FnReadComboFrontEndCVar)(void);
+typedef void (*FnSetComboMmOnFileSelect)(int (*)(void));
+typedef int (*FnIntVoid)(void);
+typedef void (*FnSetComboFileSelectAction)(int kind, int slot, const unsigned char* name8);
+typedef void (*FnSetComboFrontEndTitleCb)(int (*)(void));
+typedef void (*FnMMSetComboFrontEnd)(int on, int (*seedReady)(void), void (*frame)(void), void (*copy)(int, int),
+                                     int (*busy)(void));
+typedef int (*FnMMTakeComboFrontEndAction)(int* slot, unsigned char* name8);
+typedef void (*FnRefreshSaveMeta)(int fileNum);
+static FnRefreshSaveMeta SOH_RefreshSaveMeta = nullptr;
+static FnReadComboFrontEndCVar SOH_ReadComboFrontEndCVar = nullptr;
+static FnSetComboMmOnFileSelect SOH_SetComboMmOnFileSelect = nullptr;
+static FnIntVoid SOH_IsComboGenerating = nullptr;
+static FnIntVoid SOH_IsComboSeedReady = nullptr;
+static FnIntVoid SOH_PollComboFinalizeExport = nullptr;
+static int (*SOH_RequestComboReloadExport)(const char*) = nullptr;
+static FnSetComboFileSelectAction SOH_SetComboFileSelectAction = nullptr;
+static FnSetComboFrontEndTitleCb SOH_SetComboFrontEndTitleCallback = nullptr;
+static FnMMSetComboFrontEnd MM_SetComboFrontEnd = nullptr;
+static FnMMTakeComboFrontEndAction MM_TakeComboFrontEndAction = nullptr;
+static FnIntVoid MM_IsOnFileSelect = nullptr;
+static bool g_frontEndMM = false;        // re-read every time the title screen comes up
+static bool g_frontEndToMmTitle = false; // OOT handed its title screen to MM's
+
+static bool Combo_ReadFrontEndMM() {
+    return SOH_ReadComboFrontEndCVar != nullptr && SOH_ReadComboFrontEndCVar() == 1 && MM_SetComboFrontEnd != nullptr &&
+           MM_TakeComboFrontEndAction != nullptr && SOH_SetComboFileSelectAction != nullptr;
+}
+// A combo seed is ready for a new file (the remembered one is reloaded first, as OOT's file select does on entry).
+static int Combo_FrontEndSeedReady() {
+    if (SOH_IsComboGenerating && SOH_IsComboGenerating())
+        return 0;
+    if (SOH_IsComboSeedReady && !SOH_IsComboSeedReady() && SOH_RequestComboReloadExport)
+        SOH_RequestComboReloadExport(nullptr);
+    return (SOH_IsComboSeedReady && SOH_IsComboSeedReady()) ? 1 : 0;
+}
+// Once a frame on MM's file select: drive a generation's main-thread finalize, as OOT's file select does.
+static void Combo_FrontEndFrame() {
+    if (SOH_IsComboGenerating && SOH_IsComboGenerating() && SOH_PollComboFinalizeExport)
+        SOH_PollComboFinalizeExport();
+}
+static int Combo_FrontEndBusy() {
+    return (SOH_IsComboGenerating && SOH_IsComboGenerating()) ? 1 : 0;
+}
+static int Combo_FrontEndMmOnFileSelect() {
+    return (g_frontEndMM && MM_IsOnFileSelect && MM_IsOnFileSelect()) ? 1 : 0;
+}
+// MM's file select copied a file: the whole slot goes with it (both saves and the seed), as OOT's copy does.
+static void Combo_FrontEndCopy(int from, int to) {
+    if (ComboIsValidSlot(from) && ComboIsValidSlot(to) && from != to)
+        Combo_CopyContainer(from, to);
+}
+static void Combo_PushFrontEnd() {
+    if (MM_SetComboFrontEnd)
+        MM_SetComboFrontEnd(g_frontEndMM ? 1 : 0, Combo_FrontEndSeedReady, Combo_FrontEndFrame, Combo_FrontEndCopy,
+                            Combo_FrontEndBusy);
+}
+// OOT is about to show its own title: with MM's front end, take the player to MM's title instead.
+static int Combo_FrontEndTakeOotTitle() {
+    g_frontEndMM = Combo_ReadFrontEndMM();
+    Combo_PushFrontEnd();
+    if (!g_frontEndMM)
+        return 0;
+    std::cout << "[ComboShip] OOT title -> Majora's Mask's title screen (front end)" << std::endl;
+    g_frontEndToMmTitle = true;
+    return 1;
+}
+
 // ---------- Data-file location ----------
 
 // The launcher runs BEFORE libultraship's Context exists, so it cannot call
@@ -3232,6 +3350,24 @@ int main(int argc, char** argv) {
     // Starting game seam (#135) — OOT-side only; MM needs no setter (nothing there reads it).
     SOH_SetComboStartingGame = (FnSetComboStartingGame)GetSym(sohModule, "SOH_SetComboStartingGame");
     SOH_ReadComboStartingGameCVar = (FnReadComboStartingGameCVar)GetSym(sohModule, "SOH_ReadComboStartingGameCVar");
+    // Games seam (ComboGames.h): optional, a missing export reads as combo.
+    SOH_ReadComboGamesCVar = (FnReadComboGamesCVar)GetSym(sohModule, "SOH_ReadComboGamesCVar");
+    SOH_SetComboGames = (FnSetComboGames)GetSym(sohModule, "SOH_SetComboGames");
+    MM_SetComboGames = (FnSetComboGames)GetSym(mmModule, "MM_SetComboGames");
+    // Title screen + file select front end (#27): optional, a missing export keeps OOT's.
+    SOH_ReadComboFrontEndCVar = (FnReadComboFrontEndCVar)GetSym(sohModule, "SOH_ReadComboFrontEndCVar");
+    SOH_SetComboMmOnFileSelect = (FnSetComboMmOnFileSelect)GetSym(sohModule, "SOH_SetComboMmOnFileSelect");
+    SOH_IsComboGenerating = (FnIntVoid)GetSym(sohModule, "SOH_IsComboGenerating");
+    SOH_IsComboSeedReady = (FnIntVoid)GetSym(sohModule, "SOH_IsComboSeedReady");
+    SOH_PollComboFinalizeExport = (FnIntVoid)GetSym(sohModule, "SOH_PollComboFinalize");
+    SOH_RequestComboReloadExport = (int (*)(const char*))GetSym(sohModule, "SOH_RequestComboReload");
+    SOH_SetComboFileSelectAction = (FnSetComboFileSelectAction)GetSym(sohModule, "SOH_SetComboFileSelectAction");
+    SOH_SetComboFrontEndTitleCallback =
+        (FnSetComboFrontEndTitleCb)GetSym(sohModule, "SOH_SetComboFrontEndTitleCallback");
+    MM_SetComboFrontEnd = (FnMMSetComboFrontEnd)GetSym(mmModule, "MM_SetComboFrontEnd");
+    MM_TakeComboFrontEndAction = (FnMMTakeComboFrontEndAction)GetSym(mmModule, "MM_TakeComboFrontEndAction");
+    MM_IsOnFileSelect = (FnIntVoid)GetSym(mmModule, "MM_IsOnFileSelect");
+    SOH_RefreshSaveMeta = (FnRefreshSaveMeta)GetSym(sohModule, "SOH_RefreshSaveMeta");
 
     // Shared Items seam — SOH_SetComboSharedItems is OOT-only (shapes the gen-time wallet force).
     SOH_SetComboSharedItems = (FnSetComboSharedItems)GetSym(sohModule, "SOH_SetComboSharedItems");
@@ -3644,6 +3780,29 @@ int main(int argc, char** argv) {
     // MM was already booted at startup (eager boot) — the first portal transition must RESUME MM,
     // not run MM_RunGame (which would re-run MM_RunMain on an already-initialized MM).
     bool mmBooted = mmEagerBooted;
+    // #27: Majora's Mask's title screen + file select. MM's title opens first; OOT boots when a file is picked.
+    bool ootNeedsForeground = false; // OOT's RM/audio/GUI were handed to MM before OOT ever ran
+    if (SOH_SetComboFrontEndTitleCallback)
+        SOH_SetComboFrontEndTitleCallback(Combo_FrontEndTakeOotTitle);
+    if (SOH_SetComboMmOnFileSelect)
+        SOH_SetComboMmOnFileSelect(Combo_FrontEndMmOnFileSelect);
+    g_frontEndMM = mmEagerBooted && MM_ResumeGame && Combo_ReadFrontEndMM();
+    Combo_PushFrontEnd();
+    auto enterMmTitle = [&]() {
+        std::cout << "[ComboShip] Majora's Mask title screen (front end)\n";
+        if (MM_SetOnComboReturnCallback)
+            MM_SetOnComboReturnCallback(Combo_OnMMReturn);
+        ComboAnchor::SetActiveGame(1);
+        Combo_SetForegroundGame(ComboRando::GAME_MM);
+        g_PendingMMFileNum = -1; // no file: MM boots to its title
+        current = GAME_MM;
+    };
+    if (g_frontEndMM) {
+        if (SOH_PrepareForTransition)
+            SOH_PrepareForTransition(); // OOT's RM/audio go dormant, as on a portal hand-off
+        ootNeedsForeground = true;
+        enterMmTitle();
+    }
     for (;;) {
         if (current == GAME_OOT) {
             g_PendingMMFileNum = -1;
@@ -3657,12 +3816,23 @@ int main(int argc, char** argv) {
             }
             if (!ootBooted) {
                 std::cout << "[ComboShip] OOT boot\n";
+                if (ootNeedsForeground && SOH_ResumeForeground)
+                    SOH_ResumeForeground(); // #27: MM's front end ran first
+                ootNeedsForeground = false;
                 SOH_RunMain(argc, argv);
                 ootBooted = true;
             } else {
                 std::cout << "[ComboShip] OOT resume\n";
                 if (SOH_ResumeGame)
                     SOH_ResumeGame();
+            }
+            if (g_frontEndToMmTitle && MM_ResumeGame) {
+                // #27: OOT went back to its title screen (reset, credits, a failed file action): MM's title instead.
+                g_frontEndToMmTitle = false;
+                if (SOH_PrepareForTransition)
+                    SOH_PrepareForTransition();
+                enterMmTitle();
+                continue;
             }
             if (g_PendingMMFileNum >= 0 && MM_RunGame) {
                 if (SOH_PrepareForTransition)
@@ -3699,6 +3869,37 @@ int main(int argc, char** argv) {
                 std::cout << "[ComboShip] MM resume\n";
                 if (MM_ResumeGame)
                     MM_ResumeGame(g_PendingMMFileNum);
+            }
+            if (g_pendingOOTReturn && g_mmReturnKind == 3) {
+                // #27: MM's file select picked a file: OOT's file select loads (or creates) it.
+                int slot = -1;
+                unsigned char name[8] = { 0 };
+                const int kind = MM_TakeComboFrontEndAction ? MM_TakeComboFrontEndAction(&slot, name) : 0;
+                std::cout << "[ComboShip] MM file select -> OOT file select (action " << kind << ", slot " << slot
+                          << ")\n";
+                if (SOH_RefreshSaveMeta && slot >= 0)
+                    SOH_RefreshSaveMeta(slot); // MM's file select may have copied/erased slots since OOT read them
+                if (SOH_SetComboFileSelectAction)
+                    SOH_SetComboFileSelectAction(kind, slot, name);
+                if (MM_PrepareForTransition)
+                    MM_PrepareForTransition();
+                ComboAnchor::SetActiveGame(0);
+                Combo_SetForegroundGame(ComboRando::GAME_OOT);
+                g_MmSaveInMemorySlot = -1; // MM's title/file select left no save of a slot in memory
+                current = GAME_OOT;
+                continue;
+            }
+            if (g_pendingOOTReturn && g_mmReturnKind != 0) {
+                // #27: a reset or owl-save quit ends the session on the title screen: MM's, with MM's front end.
+                g_frontEndMM = Combo_ReadFrontEndMM();
+                Combo_PushFrontEnd();
+                if (g_frontEndMM) {
+                    if (MM_PrepareForTransition)
+                        MM_PrepareForTransition();
+                    g_MmSaveInMemorySlot = -1; // post-quit state: re-read from the container on the next load
+                    enterMmTitle();
+                    continue;
+                }
             }
             if (g_pendingOOTReturn) {
                 if (MM_PrepareForTransition)

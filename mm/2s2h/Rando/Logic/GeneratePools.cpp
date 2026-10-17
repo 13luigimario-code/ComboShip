@@ -425,6 +425,9 @@ void GeneratePools(RandoSaveInfo& saveInfo, std::vector<RandoCheckId>& checkPool
     if (saveInfo.randoSaveOptions[RO_CROSS_STONE_AGONY] == RO_GENERIC_YES) {
         itemPool.push_back(RI_STONE_OF_AGONY);
     }
+    if (saveInfo.randoSaveOptions[RO_CROSS_ROCS_FEATHER] == RO_GENERIC_YES) {
+        itemPool.push_back(RI_ROCS_FEATHER);
+    }
     // A second ocarina / hookshot: the first copy resolves to the Fairy Ocarina / Short Hookshot (ConvertItem).
     if (saveInfo.randoSaveOptions[RO_CROSS_OCARINA_FAIRY] == RO_GENERIC_YES) {
         itemPool.push_back(RI_OCARINA);

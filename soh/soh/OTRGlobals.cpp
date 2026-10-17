@@ -149,6 +149,7 @@
 #include "ComboMenuSharedContext.h" // ComboShip: shared per-DLL ImGui context helper (combo-owned)
 #include "rando/CrossForeign.h"     // ComboShip (#164): g_comboForeignJson for the hint-key map replay
 #include "rando/SharedItems.h"      // ComboShip: Shared Items family table
+#include "rando/ComboGames.h"       // ComboShip: Games (OoT only / MM only / Combo)
 #include "rando/CrossWarpLogic.h"   // ComboShip (teleport songs): cross-game warp logic bits
 #include "soh/Enhancements/randomizer/hook_handlers.h" // ComboShip (#164): OOT_ForeignMapGen
 #include <functional>                                  // ComboShip (#164): shared hint-resolution callbacks
@@ -1594,6 +1595,7 @@ bool VerifyArchiveVersion(OTRVersion version) {
 
 // ComboShip: forward declarations — defined further down with the combo exports.
 extern "C" void (*gComboSceneSwitchCallback)(int fileNum);
+extern "C" int Combo_GamesSolo(void); // ComboShip: Games (combo/rando/ComboGames.h), defined below
 #ifdef COMBO_BUILD
 // ComboShip (teleport songs): pending switch to MM, acted on at the next clean frame.
 static bool sComboSwitchPending = false;
@@ -1831,8 +1833,9 @@ static void Combo_FinishInit() {
     GameInteractor::Instance->RegisterGameHook<GameInteractor::OnSceneInit>([](int16_t sceneNum) {
         // A combo-driven arrival is over once the first scene has loaded.
         gComboCrossArrival = 0;
-        // Cross-game OOT->MM trigger: entering the Happy Mask Shop.
-        if (sceneNum == SCENE_HAPPY_MASK_SHOP) {
+        // Cross-game OOT->MM trigger: entering the Happy Mask Shop. Not in a solo seed (ComboGames.h): the shop is
+        // just OOT's shop there.
+        if (sceneNum == SCENE_HAPPY_MASK_SHOP && !Combo_GamesSolo()) {
             sComboSwitchFileNum = (int)gSaveContext.fileNum;
             sComboSwitchPending = true;
         }
@@ -3286,6 +3289,19 @@ extern "C" COMBO_EXPORT void SOH_SetComboStartingGame(int mmStart) {
 extern "C" COMBO_EXPORT int SOH_ReadComboStartingGameCVar(void) {
     return CVarGetInteger("gCombo.Rando.StartingGame", 0);
 }
+// ComboShip: Games (combo/rando/ComboGames.h) — Combo, OoT only or MM only. The menu CVar, read for the launcher at
+// generation; the loaded seed's value, pushed by the launcher, keeps a solo seed from crossing into the other game
+// (Happy Mask Shop, teleports).
+extern "C" int gComboGames = ComboRando::COMBO_GAMES_BOTH;
+extern "C" COMBO_EXPORT void SOH_SetComboGames(int games) {
+    gComboGames = ComboRando::ComboGamesFromInt(games);
+}
+extern "C" COMBO_EXPORT int SOH_ReadComboGamesCVar(void) {
+    return ComboRando::ComboGamesFromInt(CVarGetInteger(ComboRando::kComboGamesCVar, 0));
+}
+extern "C" int Combo_GamesSolo(void) {
+    return ComboRando::ComboGamesSolo(static_cast<ComboRando::ComboGames>(gComboGames)) ? 1 : 0;
+}
 // An explicit MM start forces these three, so grey them out. Under Random they stay editable — the
 // force is silent when MM rolls. HandleStartingAgeUI owns RSK_STARTING_AGE in both directions.
 extern "C" COMBO_EXPORT void SOH_RefreshComboStartingGameUI(void) {
@@ -3294,10 +3310,12 @@ extern "C" COMBO_EXPORT void SOH_RefreshComboStartingGameUI(void) {
         return;
     }
     settings->HandleStartingAgeUI();
-    const bool mmStart = CVarGetInteger("gCombo.Rando.StartingGame", 0) == 1;
+    // Games = MM only starts in MM too (ComboGames.h).
+    const bool mmOnly = CVarGetInteger(ComboRando::kComboGamesCVar, 0) == ComboRando::COMBO_GAMES_MM;
+    const bool mmStart = mmOnly || CVarGetInteger("gCombo.Rando.StartingGame", 0) == 1;
     for (const RandomizerSettingKey key : { RSK_EXCLUDE_MASK_SHOP_KEY, RSK_EXCLUDE_MASK_SHOP_ENTRANCE }) {
         if (mmStart) {
-            settings->GetOption(key).Disable("Starting Game is Majora's Mask");
+            settings->GetOption(key).Disable(mmOnly ? "Games is Majora's Mask only" : "Starting Game is Majora's Mask");
         } else {
             settings->GetOption(key).Enable();
         }
@@ -3413,6 +3431,8 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
             return CUR_UPG_VALUE(UPG_BULLET_BAG);
         case ComboRando::SF_STONE_OF_AGONY:
             return CHECK_QUEST_ITEM(QUEST_STONE_OF_AGONY) ? 1 : 0;
+        case ComboRando::SF_ROCS_FEATHER:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_ROCS_FEATHER) ? 1 : 0;
         // Upgrades past the first capacity (10 sticks / 20 nuts, or the shuffled Deku Stick / Nut Bag).
         case ComboRando::SF_STICK_UPGRADES:
             return std::max(0, (int)CUR_UPG_VALUE(UPG_STICKS) - 1);
@@ -3592,6 +3612,9 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_STONE_OF_AGONY:
                 rg = RG_STONE_OF_AGONY;
+                break;
+            case ComboRando::SF_ROCS_FEATHER:
+                rg = RG_ROCS_FEATHER;
                 break;
             case ComboRando::SF_STICK_UPGRADES:
                 rg = cur == 0 ? RG_DEKU_STICK_CAPACITY_20 : RG_DEKU_STICK_CAPACITY_30;
@@ -3919,6 +3942,10 @@ extern "C" void Combo_RequestCrossSwitch(int mmEntrance) {
         SPDLOG_WARN("[ComboShip] Combo_RequestCrossSwitch: no save loaded (fileNum={})", (int)gSaveContext.fileNum);
         return;
     }
+    if (Combo_GamesSolo()) { // a solo seed never goes to the other game (ComboGames.h)
+        SPDLOG_WARN("[ComboShip] Combo_RequestCrossSwitch: refused, this seed is one game only");
+        return;
+    }
     sComboCrossTargetMM = mmEntrance;
     sComboSwitchFileNum = (int)gSaveContext.fileNum;
     sComboSwitchPending = true;
@@ -3936,6 +3963,7 @@ extern "C" COMBO_EXPORT void SOH_SetTargetEntrance(int entrance) {
     gComboTargetEntrance = entrance;
 }
 
+extern "C" int gComboFsActionKind; // ComboShip (#27), defined with the front-end exports below
 extern "C" COMBO_EXPORT void SOH_ResumeGame(void) {
     auto ctx = Ship::Context::GetRawInstance();
     // Flush every log line immediately so the resume diagnostics survive a hard crash (the console
@@ -3966,7 +3994,8 @@ extern "C" COMBO_EXPORT void SOH_ResumeGame(void) {
     if (sComboResetPending && gSaveContext.fileNum != 0xFF) {
         GameInteractor_ExecuteOnExitGame(gSaveContext.fileNum);
     }
-    gComboReturnFileNum = sComboResetPending ? -1 : (s32)gSaveContext.fileNum;
+    // ComboShip (#27): a file action from MM's file select goes to OOT's file select, never straight into a slot.
+    gComboReturnFileNum = (sComboResetPending || gComboFsActionKind != 0) ? -1 : (s32)gSaveContext.fileNum;
     if (sComboResetPending) {
         gComboTargetEntrance = -1; // a reset return boots to the title; never carry an armed target there
     }
@@ -5536,6 +5565,8 @@ extern "C" COMBO_EXPORT void SOH_SetOnComboFinalizeCallback(int (*cb)()) {
 // Called every frame on the main thread from the file-select loop. Runs the launcher's pending
 // main-thread apply; returns nonzero once generation is fully resolved (finalized or failed).
 extern "C" COMBO_EXPORT int SOH_PollComboFinalize(void) {
+    // OOT's archive is the active one even when MM's file select (#27 front end) is the screen polling this.
+    Ship::ResourceManagerScope rmScope(Ship::CrossRMRegistry::Get("oot"));
     const int resolved = gComboFinalizeCallback ? gComboFinalizeCallback() : 1;
     if (resolved) {
         SetComboRandoGenerating(false); // finalized or failed: the file-select loop plays the result sfx
@@ -5551,6 +5582,7 @@ extern "C" COMBO_EXPORT void SOH_SetOnComboReloadCallback(int (*cb)(const char*)
     gComboReloadCallback = cb;
 }
 extern "C" COMBO_EXPORT int SOH_RequestComboReload(const char* path) {
+    Ship::ResourceManagerScope rmScope(Ship::CrossRMRegistry::Get("oot")); // see SOH_PollComboFinalize
     return gComboReloadCallback ? gComboReloadCallback(path) : 0;
 }
 
@@ -5662,6 +5694,51 @@ extern "C" COMBO_EXPORT void SOH_TriggerComboGenerate(void) {
 extern "C" void FileChoose_Main(GameState* thisx);
 extern "C" COMBO_EXPORT uint8_t SOH_IsOnFileSelect(void) {
     return (gPlayState == NULL && gGameState != NULL && gGameState->main == (GameStateFunc)FileChoose_Main) ? 1 : 0;
+}
+
+// ComboShip (#27): title screen + file select front end. 0 = Ocarina of Time's (OOT boots first, as always), 1 =
+// Majora's Mask's: the launcher opens MM's title and file select, and MM's file select hands each file action to OOT's
+// file select (combo/ComboShip.cpp, mm/2s2h/BenPort.cpp). See docs/deviations/rando.md "Majora's Mask title screen".
+extern "C" COMBO_EXPORT int SOH_ReadComboFrontEndCVar(void) {
+    return CVarGetInteger("gCombo.FrontEnd", 0) == 1 ? 1 : 0;
+}
+// MM's file select is up (pushed by the launcher): generation may run there too.
+static int (*gComboMmOnFileSelect)(void) = nullptr;
+extern "C" COMBO_EXPORT void SOH_SetComboMmOnFileSelect(int (*fn)(void)) {
+    gComboMmOnFileSelect = fn;
+}
+// Either game's file select (the combo menu's Generate / plando Save gate).
+extern "C" COMBO_EXPORT uint8_t SOH_IsOnComboFileSelect(void) {
+    return (SOH_IsOnFileSelect() || (gComboMmOnFileSelect != nullptr && gComboMmOnFileSelect() != 0)) ? 1 : 0;
+}
+extern "C" COMBO_EXPORT int SOH_IsComboGenerating(void) {
+    return IsRandoGenerating() ? 1 : 0;
+}
+extern "C" COMBO_EXPORT int SOH_IsComboSeedReady(void) {
+    return (Randomizer_IsSeedGenerated() || Randomizer_IsSpoilerLoaded()) ? 1 : 0;
+}
+// A file action MM's file select asked for, run by OOT's file select the moment it opens (z_file_choose.c): 1 = load
+// the slot, 2 = create it with this name (OOT's filename characters) and load it. TitleSetup goes straight to the file
+// select while one is pending.
+extern "C" int gComboFsActionKind = 0;
+extern "C" int gComboFsActionSlot = -1;
+extern "C" uint8_t gComboFsActionName[8] = { 0 };
+extern "C" COMBO_EXPORT void SOH_SetComboFileSelectAction(int kind, int slot, const uint8_t* name8) {
+    gComboFsActionKind = (slot >= 0 && slot <= 2 && (kind == 1 || kind == 2)) ? kind : 0;
+    gComboFsActionSlot = gComboFsActionKind ? slot : -1;
+    memset(gComboFsActionName, 0, sizeof(gComboFsActionName));
+    if (name8 != nullptr) {
+        memcpy(gComboFsActionName, name8, sizeof(gComboFsActionName));
+    }
+}
+// TitleSetup is about to show OOT's title while the MM front end is on: the launcher takes the player to MM's title
+// instead (returns 1, and OOT then leaves its game loop).
+static int (*gComboFrontEndTitleCb)(void) = nullptr;
+extern "C" COMBO_EXPORT void SOH_SetComboFrontEndTitleCallback(int (*cb)(void)) {
+    gComboFrontEndTitleCb = cb;
+}
+extern "C" int Combo_FrontEndTakeTitle(void) {
+    return (gComboFrontEndTitleCb != nullptr && gComboFrontEndTitleCb() != 0) ? 1 : 0;
 }
 
 // ComboShip (Cross-Games Age): OOT Link's age as he leaves Hyrule; the launcher passes it to MM, which

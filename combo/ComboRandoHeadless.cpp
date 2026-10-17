@@ -9,6 +9,7 @@
 //   comborando.exe --playthrough <spoiler.json>    forward-traverse a finished seed to judge beatability
 //
 // --starting-game <oot|mm|random> overrides the menu's Starting Game CVar for generate mode (#135).
+// --games <ootmm|oot|mm> overrides the menu's Games CVar (combo/rando/ComboGames.h) for generate mode.
 //
 // Exact-seed repro (generate mode): --settings <consolidated.json> restores that seed's OOT/MM settings
 // and tricks, and --master-seed <n> uses n directly instead of hashing --seed. Together they reproduce a
@@ -128,6 +129,8 @@ static int Run(int argc, char** argv) {
     int startingGameArg = -1;
     // Shared Items: "all", "none", or a comma-separated key list (see SharedItems.h). Empty => menu CVars.
     std::string sharedItemsArg;
+    // Games (ComboGames.h). Absent (-1) => the menu CVar, same as in-game.
+    int gamesArg = -1;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--triforce-required" && i + 1 < argc)
@@ -143,6 +146,13 @@ static int Run(int argc, char** argv) {
             }
         } else if (a == "--shared-items" && i + 1 < argc) {
             sharedItemsArg = argv[++i];
+        } else if (a == "--games" && i + 1 < argc) {
+            std::string v = argv[++i];
+            gamesArg = v == "ootmm" ? 0 : v == "oot" ? 1 : v == "mm" ? 2 : -2;
+            if (gamesArg == -2) {
+                std::cerr << "[comborando] --games must be ootmm, oot or mm (got '" << v << "')\n";
+                return 2;
+            }
         } else if (a == "--seed" && i + 1 < argc)
             seed = argv[++i];
         else if (a == "--count" && i + 1 < argc)
@@ -202,6 +212,7 @@ static int Run(int argc, char** argv) {
     // #135: starting game — also pushed before every dump (it forces OOT's age/forest/exclusions).
     auto SOH_SetComboStartingGame = Sym<void (*)(int)>(soh, "SOH_SetComboStartingGame");
     auto SOH_ReadComboStartingGameCVar = Sym<int (*)(void)>(soh, "SOH_ReadComboStartingGameCVar");
+    auto SOH_ReadComboGamesCVar = Sym<int (*)(void)>(soh, "SOH_ReadComboGamesCVar");
     // Shared Items: also pushed before every dump (shapes OOT's wallet force + MM's trimmed pool).
     auto SOH_SetComboSharedItems = Sym<void (*)(ComboRando::SharedMask)>(soh, "SOH_SetComboSharedItems");
     auto SOH_ReadComboSharedCVars = Sym<ComboRando::SharedMask (*)(void)>(soh, "SOH_ReadComboSharedCVars");
@@ -267,6 +278,9 @@ static int Run(int argc, char** argv) {
         // Shared Items: absent on old spoilers -> mask 0 -> feature off.
         const ComboRando::SharedMask sharedMask =
             ComboRando::SharedMaskFromKeys(spoiler.value("sharedItems", nlohmann::json::array()));
+        // Games: absent on old spoilers -> combo.
+        const ComboRando::ComboGames seedGames =
+            ComboRando::ComboGamesFromKey(spoiler.value("games", std::string("ootmm")));
 
         auto ootEnabledTricks =
             spoiler.value("oot", nlohmann::json::object()).value("enabledTricks", nlohmann::json::array());
@@ -307,9 +321,9 @@ static int Run(int argc, char** argv) {
             if (MM_SetSeed)
                 MM_SetSeed(masterSeed);
             if (SOH_SetComboGoal)
-                SOH_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwOotPieces(goal.total));
+                SOH_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwOotPieces(goal.total, seedGames));
             if (MM_SetComboGoal)
-                MM_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwMmPieces(goal.total));
+                MM_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwMmPieces(goal.total, seedGames));
             if (SOH_SetComboStartingGame)
                 SOH_SetComboStartingGame(mmStart ? 1 : 0);
             // A real in-game save's placement map lists only SHUFFLED checks; non-shuffled items the
@@ -534,10 +548,15 @@ static int Run(int argc, char** argv) {
     }
     // Same cap the DLLs apply per game, so the recorded totalPieces can't disagree with the pools.
     goal.total = std::clamp(goal.total, goal.required, ComboRando::kMaxComboTriforcePieces);
+    // Games: the flag wins, else the menu CVar. A solo seed starts in its game and has no Shared Items.
+    const ComboRando::ComboGames games = ComboRando::ComboGamesFromInt(
+        gamesArg >= 0 ? gamesArg : (SOH_ReadComboGamesCVar ? SOH_ReadComboGamesCVar() : 0));
+    const bool solo = ComboRando::ComboGamesSolo(games);
     // #135: same fallback order — the flag wins, else the menu CVar.
-    const int startCfg = startingGameArg >= 0            ? startingGameArg
-                         : SOH_ReadComboStartingGameCVar ? SOH_ReadComboStartingGameCVar()
-                                                         : 0;
+    const int startCfg =
+        ComboRando::ComboGamesStartingGameCfg(games, startingGameArg >= 0            ? startingGameArg
+                                                     : SOH_ReadComboStartingGameCVar ? SOH_ReadComboStartingGameCVar()
+                                                                                     : 0);
     // Shared Items: --shared-items wins ("all"/"none"/comma-separated keys); else the menu CVars.
     ComboRando::SharedMask sharedMask = 0;
     if (sharedItemsArg == "all") {
@@ -552,6 +571,8 @@ static int Run(int argc, char** argv) {
             keys.push_back(tok);
         sharedMask = ComboRando::SharedMaskFromKeys(keys);
     }
+    if (solo)
+        sharedMask = 0;
     std::cout << "[comborando] validating " << count << " seed(s) from "
               << (haveMasterSeed ? "masterSeed " + std::to_string(masterSeedArg) : "'" + seed + "'")
               << (goal.hunt ? " (Triforce Hunt, " + std::to_string(goal.required) + " of " +
@@ -560,7 +581,7 @@ static int Run(int argc, char** argv) {
               << (startCfg == 1   ? ", starting game MM"
                   : startCfg == 2 ? ", starting game random"
                                   : "")
-              << "\n";
+              << (solo ? std::string(", games ") + ComboRando::ComboGamesKey(games) : std::string()) << "\n";
     int failures = 0;
     auto t0 = std::chrono::steady_clock::now();
     for (int i = 0; i < count; ++i) {
@@ -583,9 +604,9 @@ static int Run(int argc, char** argv) {
                 MM_SetSeed(masterSeed);
             // Before the dumps: the goal shapes OOT's wincon placement and MM's hunt pool.
             if (SOH_SetComboGoal)
-                SOH_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwOotPieces(goal.total));
+                SOH_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwOotPieces(goal.total, games));
             if (MM_SetComboGoal)
-                MM_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwMmPieces(goal.total));
+                MM_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwMmPieces(goal.total, games));
             // Same reason (#135): an MM start forces OOT's age/forest/exclusions.
             if (SOH_SetComboStartingGame)
                 SOH_SetComboStartingGame(mmStart ? 1 : 0);
@@ -614,7 +635,7 @@ static int Run(int argc, char** argv) {
             ComboRando::OotAccess ootAccess = ComboRando::OotAccessFromDump(sohDump);
             r = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, oot, mmO, nullptr, forced, ootAccess,
                                                    goal, mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT,
-                                                   sharedMask);
+                                                   sharedMask, games);
             if (r.success) {
                 resolvedMmStart = mmStart;
                 // Cross-hint data (Phase 2/3 mirror of RunComboFill, incl. the same area maps so the
@@ -637,13 +658,16 @@ static int Run(int argc, char** argv) {
                 // A hunt under NO_LOGIC has no meaningful requiredness (see RunComboFill) — skip it.
                 if (goal.hunt && noLogic)
                     std::cout << "[comborando]   pare-down skipped (No Logic + Triforce Hunt)\n";
+                else if (noLogic && games == ComboRando::COMBO_GAMES_OOT)
+                    std::cout << "[comborando]   pare-down skipped (No Logic + OoT only)\n";
                 else if (ComboRando::NeedsRequirednessPareDown(sohHintDump, mmDump))
-                    // NO_LOGIC: gate requiredness on MM only (OOT may be unbeatable by design).
+                    // NO_LOGIC: gate requiredness on MM only (OOT may be unbeatable by design). Solo: its boss.
                     pareDownResult = ComboRando::PareDownPlaythrough(
                         r.spoilerJson, oot, mmO, nullptr, sohDump, mmDump, ootAreas, mmAreas,
                         goal.hunt ? ComboRando::MakeTriforceHuntGoal(goal.required)
-                        : noLogic ? ComboRando::MmOnlyMajoraGoal
-                                  : ComboRando::DefaultGanonMajoraGoal,
+                        : (noLogic || games == ComboRando::COMBO_GAMES_MM) ? ComboRando::MmOnlyMajoraGoal
+                        : games == ComboRando::COMBO_GAMES_OOT             ? ComboRando::OotOnlyGanonGoal
+                                                                           : ComboRando::DefaultGanonMajoraGoal,
                         !noLogic, mmStart);
                 else
                     std::cout << "[comborando]   pare-down skipped (no enabled hint surface needs requiredness)\n";
@@ -685,6 +709,7 @@ static int Run(int argc, char** argv) {
                                              { "requiredPieces", goal.required },
                                              { "totalPieces", goal.total } };
                     consolidated["startingGame"] = resolvedMmStart ? "MM" : "OOT"; // #135
+                    consolidated["games"] = ComboRando::ComboGamesKey(games);
                     // Shared Items: the EFFECTIVE mask (families actually trimmed this fill), not the
                     // requested one — a family with no OOT copies was left alone (see CrossWorldRando.h).
                     nlohmann::json sharedItemsJson = fillSpoiler.value("sharedItems", nlohmann::json::array());
@@ -730,7 +755,7 @@ static int Run(int argc, char** argv) {
                     // Cross-hint generation (mirrors RunComboFill) — enables the headless determinism check.
                     consolidated["hints"] =
                         ComboRando::Generate(masterSeed, sohDump, sohHintDump, mmDump, consolidated["foreign"],
-                                             r.spoilerJson, pareDownResult);
+                                             r.spoilerJson, pareDownResult, games);
                     std::error_code ec;
                     std::filesystem::create_directories("saves/combo", ec);
                     std::ofstream f("saves/combo/comborando.spoiler.json", std::ios::trunc);

@@ -6416,6 +6416,15 @@ void func_80834DB8(Player* this, PlayerAnimationHeader* anim, f32 speed, PlaySta
     func_80834D50(play, this, anim, speed, NA_SE_VO_LI_SWORD_N);
 }
 
+#ifdef COMBO_BUILD
+// ComboShip (Roc's Feather in MM, CrossRocsFeather.cpp): SoH jumps through OOT's func_80838940, which always plays the
+// floor-jump sound; MM's twin only does when given a voice.
+void Combo_Player_Jump(PlayState* play, Player* this, void* anim, f32 velocityY) {
+    func_80834D50(play, this, (PlayerAnimationHeader*)anim, velocityY, NA_SE_NONE);
+    Player_AnimSfx_PlayFloorJump(this);
+}
+#endif
+
 s32 Player_ActionHandler_12(Player* this, PlayState* play) {
     if ((this->transformation != PLAYER_FORM_GORON) &&
         ((this->transformation != PLAYER_FORM_DEKU) || func_801242B4(this) ||

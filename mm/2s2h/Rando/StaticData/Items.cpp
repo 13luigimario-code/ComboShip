@@ -341,6 +341,8 @@ std::map<RandoItemId, RandoStaticItem> Items = {
     RI(RI_SNOWHEAD_KEYRING,           "the",  "Snowhead Key Ring",          RITYPE_SMALL_KEY,       ITEM_NONE,                       GI_NONE,                     GID_KEY_SMALL),
     RI(RI_GREAT_BAY_KEYRING,          "the",  "Great Bay Key Ring",         RITYPE_SMALL_KEY,       ITEM_NONE,                       GI_NONE,                     GID_KEY_SMALL),
     RI(RI_STONE_TOWER_KEYRING,        "the",  "Stone Tower Key Ring",       RITYPE_SMALL_KEY,       ITEM_NONE,                       GI_NONE,                     GID_KEY_SMALL),
+    // Ship of Harkinian's Roc's Feather, an OOT item human Link can use in MM (MiscBehavior/CrossRocsFeather.cpp).
+    RI(RI_ROCS_FEATHER,               "",     "Roc's Feather",              RITYPE_MAJOR,           ITEM_COMBO_ROCS_FEATHER,         GI_NONE,                     GID_NONE),
 };
 
 std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
@@ -386,6 +388,7 @@ std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
           RI_HAMMER, RI_BOOMERANG, RI_SLINGSHOT, RI_SHIELD_DEKU,
           RI_STONE_OF_AGONY, RI_PROGRESSIVE_STICK_UPGRADE, RI_PROGRESSIVE_NUT_UPGRADE,
           RI_PROGRESSIVE_BOMBCHU_BAG, // Ship of Harkinian's "Bombchu Bag"
+          RI_ROCS_FEATHER,
 #endif
         } }, 
 };
@@ -549,6 +552,8 @@ const char* GetIconTexturePath(RandoItemId randoItemId) {
             return gComboIconSlingshotTex;
         case RI_SHIELD_DEKU:
             return gComboIconShieldDekuTex;
+        case RI_ROCS_FEATHER:
+            return gComboIconRocsFeatherTex;
         case RI_STONE_OF_AGONY:
             return gComboIconStoneOfAgonyTex;
         case RI_OCARINA_FAIRY:

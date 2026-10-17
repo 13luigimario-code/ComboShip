@@ -1585,6 +1585,42 @@ keeping the seed escapable is generation's job, not the hint layer's.
 **Residual:** NO_LOGIC + MM start has no re-entry guarantee — that mode's point. No MM-side setter
 exists (nothing in MM reads the value); add one when a consumer appears.
 
+## Games: OoT only / MM only / Combo (OoTMM `games`, 2026-10-17)
+
+Item #22 of the 2026-10-13 notes. Combo menu "Games" (`gCombo.Rando.Games`: 0 = both, 1 = Ocarina of Time only, 2 =
+Majora's Mask only; `combo/rando/ComboGames.h`). Seed-bound: the spoiler (and so the slot's `combo.rando`) records
+top-level `games` = `"ootmm"` / `"oot"` / `"mm"`; absent = `"ootmm"`, so every older seed and save is a combo seed.
+
+**Generation.** A solo seed still goes through the combined fill over both games, so both saves exist and every
+existing path (save creation, foreign data, trackers) is unchanged, but nothing crosses between the games:
+- `CrossWorldCombinedFill(..., games)`: every item only takes a check of its own game (Phase A draws among the item's
+  own game's reachable checks and treats a game with too few as a dead end; Phase B fast-fills each game's checks with
+  that game's items, in order; the pools are already balanced per game). Both games are rooted at their own starts
+  (`portalOpen` from the start), no cross-game teleport songs are applied in logic, and the portal prerequisites
+  (Phase A0) and the MM-start re-entry assertion are skipped. Combo seeds take the old code paths unchanged.
+- The launcher and `comborando` (`--games ootmm|oot|mm`): the starting game is the played game
+  (`ComboGamesStartingGameCfg`), Shared Items are off (mask 0), the Triforce Hunt puts every piece in the played game
+  up to 50 (`ComboGamesOotPieces` / `ComboGamesMmPieces`, mirrored by `settings.cpp`'s menu-side split), the pare-down
+  goal is that game's boss (`OotOnlyGanonGoal`, `MmOnlyMajoraGoal`; skipped for No Logic + OoT only) and the hints
+  only target the played game's checks (`CrossHints::Generate(..., games)`).
+
+**Runtime.** `SOH_SetComboGames` / `MM_SetComboGames` (pushed at slot bind, after generation, on reload) set each DLL's
+copy; `Combo_GamesSolo()`:
+- OOT: entering the Happy Mask Shop no longer switches to MM (`OTRGlobals.cpp` OnSceneInit); the Song of Soaring's
+  owl chooser refuses like a no-warp room (`ComboOwlWarp.cpp`).
+- MM: the Clock Tower's South Clock Town door no longer switches to OOT (`BenPort.cpp` OnSceneInit); OOT warp songs
+  refuse like a room that forbids soaring (`WarpSongs.cpp`).
+- Both: `Combo_RequestCrossSwitch` refuses (covers Cross-Games Farore's Wind and the console commands).
+- `Combo_OnFinalBossDefeated` completes the run on the played game's final boss alone (`ComboBossesComplete`), so its
+  own ending plays.
+
+**Menu.** Starting Game and Shared Items are greyed out for a solo seed; Majora's Mask only greys out the same OOT
+options an MM start does (`SOH_RefreshComboStartingGameUI`, `HandleStartingAgeUI`).
+
+**Not changed:** the headless `--playthrough` and the sphere playthrough still apply cross-game teleports (a solo seed
+is beatable without them, and both games are filled from their own starts); the other game's settings still shape its
+own (unplayed) pool.
+
 ## Combo-owned unified Hint Tracker (#164) (2026-08-20)
 
 **Why:** the Hint Tracker arrived in the 2026-07-13 soh merge as vendored OOT-only code, reachable
@@ -2471,6 +2507,25 @@ off). Gameplay in `mm/2s2h/Rando/MiscBehavior/CrossUpgrades.cpp` (C ABI in `Cros
 Hookshot; without it MM's Hookshot comes with the first copy and the second is ignored there. No Shared Ocarinas yet.
 MM's copies placed in OOT draw OOT's own models (`ComboCrossGearNativeOOT`).
 
+### Roc's Feather in MM (Ship of Harkinian's, 2026-10-17)
+
+Item #15 of the 2026-10-13 notes. MM option `RO_CROSS_ROCS_FEATHER` (Item Pool, "Ocarina of Time Gear", default off)
+adds `RI_ROCS_FEATHER` (`ITEM_COMBO_ROCS_FEATHER` = `ITEM_C5`, `ITEM_COMBO_MAX` moved to `ITEM_C6`), owned as
+`RANDO_INF_OBTAINED_ROCS_FEATHER`. It sits in the Letter to Kafei / Pendant cycle (SoH keeps it with Nayru's Love,
+which is in that cycle in MM) and is used from a C button by human Link (adult Link too, under Cross-Games Age).
+
+- **Jump (`mm/2s2h/Rando/MiscBehavior/CrossRocsFeather.cpp`):** a port of SoH's `RocsFeather.cpp`. One use per time in
+  the air, back after 3 frames on the ground; SoH's own jump animation (`gPlayerAnim_link_rocs_feather_jump`, a soh.o2r
+  asset served through "@oot:"), jump speed 7.0 (7.5 for adult Link), a forward push of 5, the ripple and splash at
+  Link's feet and the skip sound; it drops the sidehop/backflip state so ledges can be grabbed. The jump itself is MM's
+  jump setup, `func_80834D50` (OOT's `func_80838940`), through a guarded `Combo_Player_Jump` in `z_player.c` that adds
+  the floor-jump sound OOT's twin always plays.
+- **Icon / name / model:** SoH's `gRocsFeatherTex` and `gRocsFeatherItemNameENGTex` ("@oot:", `CrossItemAssets.h`);
+  MM's copy draws SoH's `gGiRocsFeatherDL` by OOT item name, and in OOT it draws OOT's own (`ComboCrossGearNativeOOT`).
+- **Shared Items:** `SF_ROCS_FEATHER` (key `rocsFeather`, "Shared Roc's Feather"): needs SoH's Roc's Feather in OOT's
+  pool and MM's option. OOT's tier is `RAND_INF_OBTAINED_ROCS_FEATHER`, raised with `RG_ROCS_FEATHER`.
+- **Logic:** none in MM, like the other OOT items there.
+
 ## Ageless items (OoTMM `items.ageless`) (2026-10-12)
 
 Twelve OOT options, `RSK_COMBO_AGELESS_SWORDS/SHIELDS/TUNICS/BOOTS/STICKS/BOOMERANG/HAMMER/HOOKSHOT/SLINGSHOT/BOW/
@@ -2775,3 +2830,35 @@ hand plates, and the child bracelet.
 Tested in game: the bracelet and both gauntlets on child Link; adult Link with every new color set (hair, linen,
 boots, gauntlets); the bracelet and gem colors on child Link.
 
+## Majora's Mask title screen + file select (2026-10-17)
+
+Item #27 of the 2026-10-13 notes. Settings > "Title & File Select" (`gCombo.FrontEnd`: 0 = Ocarina of Time's, the
+default; 1 = Majora's Mask's). Read by the launcher at startup and whenever a game goes back to its title screen.
+
+**Design.** MM's title screen and file select are the front end, but every file action is still carried out by OOT's
+file select, so the slot/seed machinery is unchanged: MM picks, OOT loads or creates.
+- **Startup (`combo/ComboShip.cpp`):** after the eager MM boot, the loop enters MM first with no file
+  (`MM_ResumeGame(-1)`: Setup -> logo -> title -> file select) instead of `SOH_RunMain`. OOT is booted only when a file
+  is picked (`SOH_ResumeForeground` + `SOH_RunMain`).
+- **Load (`z_file_choose_NES.c` `FileSelect_LoadGame`, guarded):** with the front end on, MM records "load slot N"
+  (`Combo_MM_FrontEndOpenFile`) and its loop ends at the next frame start (return kind 3,
+  `MM_TakeComboFrontEndAction`). The launcher passes it to OOT (`SOH_SetComboFileSelectAction`); OOT's `TitleSetup` goes
+  straight to `FileChoose_Init` while one is pending, and `FileChoose_Main`'s first frame runs `FileChoose_LoadGame` on
+  that slot (`Combo_RunFileSelectAction`). From there it is a normal OOT file-select load: slot bind, and
+  `Combo_ResumeMMIfLastSavedThere` takes the player to MM when the slot was last saved there.
+- **New file (`z_file_nameset_NES.c`, guarded):** MM's name entry confirms "create slot N named X" instead of
+  `Sram_InitSave`. It needs a combo seed: the launcher reloads the remembered one first (`Combo_FrontEndSeedReady`),
+  otherwise MM shows a notification and the name entry stays open. OOT copies the name (MM and OOT spell file names
+  with the same characters) into the slot's meta info and runs `Sram_InitSave` as its own name entry does, which fires
+  the launcher's new-save handling (MM save, seed bind), then loads the slot. 2ship's New File Setup screen (preset /
+  vanilla or rando / seed) is skipped (`NewFileSetup.cpp`): combo files take the ComboShip seed.
+- **Copy / erase:** erase already wiped both saves and the slot (`gMMComboDeleteForeignSave`); copy now copies the whole
+  slot too (`z_file_copy_erase.c` -> `Combo_FrontEndCopy` -> `Combo_CopyContainer`).
+- **Generation:** the ComboShip menu's Generate is allowed on MM's file select too (`SOH_IsOnComboFileSelect`), and MM's
+  file select drives the main-thread finalize each frame (`Combo_MM_FrontEndFileSelectFrame` -> `SOH_PollComboFinalize`).
+  While a seed generates MM's file select ignores input: the MM reachability searches borrow MM's `gSaveContext`.
+  `SOH_PollComboFinalize` / `SOH_RequestComboReload` now run inside OOT's ResourceManager scope, since MM's is the
+  active one there.
+- **Back to the title:** a reset or owl-save quit in MM (return kinds 1/2) re-enters MM's title instead of OOT's; OOT
+  reaching its own `TitleSetup` (a reset, the credits) asks the launcher (`Combo_FrontEndTakeTitle`), which parks OOT
+  and enters MM's title.

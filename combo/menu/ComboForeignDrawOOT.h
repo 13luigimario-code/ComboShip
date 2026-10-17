@@ -688,6 +688,7 @@ inline RandomizerGet ComboCrossGearNativeOOT(const std::string& mmName) {
         { "Fairy Slingshot", RG_FAIRY_SLINGSHOT },
         { "Deku Shield", RG_DEKU_SHIELD },
         { "Stone of Agony", RG_STONE_OF_AGONY },
+        { "Roc's Feather", RG_ROCS_FEATHER },
         { "Progressive Stick Capacity", RG_DEKU_STICK_CAPACITY_20 },
         { "Deku Stick Capacity (20)", RG_DEKU_STICK_CAPACITY_20 },
         { "Deku Stick Capacity (30)", RG_DEKU_STICK_CAPACITY_30 },

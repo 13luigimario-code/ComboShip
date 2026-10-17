@@ -37,6 +37,7 @@ void Rando::RemoveItem(RandoItemId randoItemId) {
         case RI_BOOMERANG:
         case RI_SLINGSHOT:
         case RI_SHIELD_DEKU:
+        case RI_ROCS_FEATHER:
             Rando::CrossGearRemove(randoItemId);
             break;
         case RI_STONE_OF_AGONY:

@@ -132,6 +132,14 @@ void* Combo_Tools_AdultFirstPersonRightHandDL(struct PlayState* play, struct Pla
 void* Combo_Tools_SlingshotStringDL(struct Player* player);
 void* Combo_Tools_BackShieldDL(struct Player* player);
 
+// ---- CrossRocsFeather.cpp: Ship of Harkinian's Roc's Feather ----
+// Player_UseItem of ITEM_COMBO_ROCS_FEATHER: SoH's jump (once per time in the air). Always 1 (handled).
+int Combo_Rocs_Use(struct PlayState* play, struct Player* player);
+// Per-frame (from Combo_Gear_OnPlayerUpdate): the jump comes back after 3 frames on the ground.
+void Combo_Rocs_OnPlayerUpdate(struct PlayState* play, struct Player* player);
+// z_player.c: MM's jump setup (func_80834D50, OOT's func_80838940) with the jump's floor sound, no voice.
+void Combo_Player_Jump(struct PlayState* play, struct Player* player, void* anim, float velocityY);
+
 // ---- CrossUpgrades.cpp: Stone of Agony, Fairy Ocarina, Short Hookshot, Deku Stick & Nut upgrades ----
 // The inventory's ocarina is still OOT's Fairy Ocarina / the hookshot is still the Short Hookshot.
 int Combo_Upgrades_OcarinaIsFairy(void);
