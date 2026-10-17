@@ -9,11 +9,11 @@
 // - Din's Fire: the expanding fire sphere; its cylinder hits what player attacks hit, as MM's fire arrows do
 //   (OoTMM uses DMG_FIRE_ARROW too). Costs 12 magic, like OOT.
 // - Nayru's Love: Link can't be hurt for 1200 frames (OOT keeps invincibilityTimer at -100); 24 magic.
-// - Farore's Wind: the first cast sets a warp point where Link stands, the next one returns to it (and uses
-//   it up). The point is saved (RandoSaveInfo::comboFw) and restored through RESPAWN_MODE_HUMAN, which
-//   Player_Init reads for respawnFlag 8 (OoTMM's approach); refused where the Song of Soaring is. 12 magic.
-//   OoTMM's "dispel" prompt isn't ported. With Cross-Games Farore's Wind (RO_CROSS_GAME_FW) there is one point
-//   across both games (combo/rando/CrossFw.h): casting with OOT's point set warps to Hyrule.
+// - Farore's Wind: the first cast sets a warp point where Link stands (12 magic); with a point set, casting asks
+//   "Return to the Warp Point / Dispel the Warp Point / Exit", like OOT (returning uses the point up and costs no
+//   magic). The point is saved (RandoSaveInfo::comboFw) and restored through RESPAWN_MODE_HUMAN, which Player_Init
+//   reads for respawnFlag 8 (OoTMM's approach); refused where the Song of Soaring is. With Cross-Games Farore's Wind
+//   (RO_CROSS_GAME_FW) each game keeps its own point (combo/rando/CrossFw.h) and the prompt offers Hyrule's too.
 #ifdef COMBO_BUILD
 
 #include "CrossGear.h"
@@ -24,6 +24,7 @@
 #include "ComboExport.h"
 #include "rando/CrossFw.h"
 #include "2s2h/SaveManager/SaveManager.h"
+#include "2s2h/CustomMessage/CustomMessage.h"
 
 extern "C" {
 #include "variables.h"
@@ -133,12 +134,31 @@ bool WarpForbiddenHere(PlayState* play) {
            play->sceneId == SCENE_SECOM;
 }
 
+s16 sMagicResetTimer = 0; // frames until the meter is put back to idle after a cast
+
 bool SpendMagic(PlayState* play, s16 cost) {
     if (!gSaveContext.save.saveInfo.playerData.isMagicAcquired || !Magic_Consume(play, cost, MAGIC_CONSUME_NOW)) {
         Audio_PlaySfx(NA_SE_SY_ERROR);
         return false;
     }
+    sMagicResetTimer = 20;
     return true;
+}
+
+// MM leaves the meter flashing after MAGIC_CONSUME_NOW until the caster calls Magic_Reset (OOT's Player does it when
+// the spell ends), and Magic_Consume refuses while it flashes: without this the next cast in the scene failed.
+void UpdateMagicReset(PlayState* play) {
+    if (sMagicResetTimer == 0) {
+        return;
+    }
+    const s16 state = gSaveContext.magicState;
+    if ((state == MAGIC_STATE_CONSUME_SETUP) || (state == MAGIC_STATE_CONSUME)) {
+        return; // not drained yet (the interface is paused)
+    }
+    if (--sMagicResetTimer == 0 && ((state == MAGIC_STATE_METER_FLASH_1) || (state == MAGIC_STATE_METER_FLASH_2) ||
+                                    (state == MAGIC_STATE_METER_FLASH_3))) {
+        Magic_Reset(play);
+    }
 }
 
 void CastDins(PlayState* play, Player* player) {
@@ -163,45 +183,149 @@ void CastNayrus(PlayState* play, Player* player) {
     sNayrusPos = player->actor.world.pos;
 }
 
-void CastFarores(PlayState* play, Player* player) {
-    if (WarpForbiddenHere(play)) {
-        Audio_PlaySfx(NA_SE_SY_ERROR);
-        return;
-    }
-    if (!SpendMagic(play, kCostFarores)) {
-        return;
-    }
+// Farore's Wind's prompt, like OOT's (Player_Action_8085063C): with a point already set, casting asks what to do.
+// With Cross-Games Farore's Wind each game keeps its own point, and Hyrule's can be warped to from here.
+enum FwPrompt : u8 {
+    FW_PROMPT_NONE,
+    FW_PROMPT_HERE,  // "Return / Dispel / Exit" (Termina's point only)
+    FW_PROMPT_THERE, // "Warp to Hyrule / Set one here / Exit" (Hyrule's point only)
+    FW_PROMPT_BOTH,  // "Return / Dispel / Exit", then "which point?" for Return
+    FW_PROMPT_WHICH, // the second box of FW_PROMPT_BOTH
+};
+FwPrompt sFwPrompt = FW_PROMPT_NONE;
+
+bool FwHere() {
+    // A "lives in Hyrule" marker from before ComboShip kept a point per game counts as no point.
+    return gSaveContext.save.shipSaveInfo.rando.comboFwState == CFW_HERE;
+}
+
+bool FwThere() {
+    return FwPeer(CFW_STATE) == CFW_HERE;
+}
+
+void FwSetHere(PlayState* play, Player* player) {
+    // Set the warp point here (OOT's "Warp Point set" behavior; PLAYER_PARAMS(0xFF, START_MODE_D)).
     RandoSaveInfo& rando = gSaveContext.save.shipSaveInfo.rando;
-    if (rando.comboFwState == CFW_CROSS) {
-        // Cross-Games Farore's Wind: the point is in Hyrule. Warp there if it still exists; it is used up on arrival.
-        const int entrance = (FwPeer(CFW_STATE) == CFW_HERE) ? FwPeer(CFW_ENTRANCE) : -1;
-        if ((entrance >= 0) && (FwPeer(CFW_ARM_ARRIVAL) >= 0)) {
-            rando.comboFwState = CFW_NONE;
-            Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_VANISH);
-            Combo_RequestCrossSwitch(entrance); // persist + switch on the next clean frame
-            return;
-        }
-        rando.comboFwState = CFW_NONE; // OOT's point is gone: set a new one here
-    }
-    if (rando.comboFwState != CFW_HERE) {
-        // Set the warp point here (OOT's "Warp Point set" behavior; PLAYER_PARAMS(0xFF, START_MODE_D)).
-        Play_SetRespawnData(play, RESPAWN_MODE_HUMAN, gSaveContext.save.entrance, play->roomCtx.curRoom.num, 0xDFF,
-                            &player->actor.world.pos, player->actor.shape.rot.y);
-        rando.comboFw = gSaveContext.respawn[RESPAWN_MODE_HUMAN];
-        rando.comboFwState = CFW_HERE;
-        FwPeer(CFW_MARK_CROSS); // OOT's own point (if any) now warps here
-        Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_WARP);
-        return;
-    }
-    // Return to it: Player_Init reads respawn[respawnFlag - 1] for a positive flag.
+    Play_SetRespawnData(play, RESPAWN_MODE_HUMAN, gSaveContext.save.entrance, play->roomCtx.curRoom.num, 0xDFF,
+                        &player->actor.world.pos, player->actor.shape.rot.y);
+    rando.comboFw = gSaveContext.respawn[RESPAWN_MODE_HUMAN];
+    rando.comboFwState = CFW_HERE;
+    Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_WARP);
+}
+
+void FwReturnHere(PlayState* play, Player* player) {
+    // Player_Init reads respawn[respawnFlag - 1] for a positive flag; the point is used up, like OOT's.
+    RandoSaveInfo& rando = gSaveContext.save.shipSaveInfo.rando;
     gSaveContext.respawn[RESPAWN_MODE_HUMAN] = rando.comboFw;
     rando.comboFwState = CFW_NONE;
-    FwPeer(CFW_CLEAR_IF_CROSS);
     gSaveContext.respawnFlag = RESPAWN_MODE_HUMAN + 1;
     play->nextEntrance = rando.comboFw.entrance;
     play->transitionTrigger = TRANS_TRIGGER_START;
     play->transitionType = TRANS_TYPE_FADE_WHITE_FAST;
     Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_VANISH);
+}
+
+void FwWarpThere(Player* player) {
+    // Hyrule's point: OOT spawns there on arrival and uses it up. Termina's point stays.
+    const int entrance = FwThere() ? FwPeer(CFW_ENTRANCE) : -1;
+    if ((entrance >= 0) && (FwPeer(CFW_ARM_ARRIVAL) >= 0)) {
+        Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_VANISH);
+        Combo_RequestCrossSwitch(entrance); // persist + switch on the next clean frame
+    } else {
+        Audio_PlaySfx(NA_SE_SY_ERROR); // Hyrule's point is gone
+    }
+}
+
+void FwStartPrompt(Player* player, FwPrompt prompt) {
+    // Laid out by hand (autoFormat off): '\x11' new line, '\xC2' / '\xC3' two / three choices, '\x02' green.
+    CustomMessage::Entry entry;
+    entry.autoFormat = false;
+    std::string msg;
+    switch (prompt) {
+        case FW_PROMPT_THERE:
+            msg = std::string("There is a warp point in Hyrule.\x11") + "\xC3" + "\x02" + "Warp to Hyrule\x11" +
+                  "Set a warp point here\x11" + "Exit";
+            break;
+        case FW_PROMPT_WHICH:
+            msg = std::string("Warp to which point?\x11") + "\xC2" + "\x02" + "Termina\x11" + "Hyrule";
+            break;
+        default:
+            msg = std::string("Warp to the warp point?\x11") + "\xC3" + "\x02" + "Return to the warp point\x11" +
+                  "Dispel the warp point\x11" + "Exit";
+            break;
+    }
+    CustomMessage::EnsureMessageEnd(&msg);
+    sFwPrompt = prompt;
+    // Hold Link still while it is up (PLAYER_STATE1_20 zeroes his input; the box reads the controller itself).
+    player->stateFlags1 |= PLAYER_STATE1_TALKING | PLAYER_STATE1_20;
+    CustomMessage::StartTextbox(msg, entry);
+}
+
+void FwEndPrompt(Player* player) {
+    sFwPrompt = FW_PROMPT_NONE;
+    player->stateFlags1 &= ~(PLAYER_STATE1_TALKING | PLAYER_STATE1_20);
+}
+
+void UpdateFwPrompt(PlayState* play, Player* player) {
+    if (sFwPrompt == FW_PROMPT_NONE) {
+        return;
+    }
+    if (Message_GetState(&play->msgCtx) == TEXT_STATE_NONE) {
+        FwEndPrompt(player); // closed some other way (a scene change, a cutscene)
+        return;
+    }
+    if ((Message_GetState(&play->msgCtx) != TEXT_STATE_CHOICE) || !Message_ShouldAdvance(play)) {
+        return;
+    }
+    const u8 choice = play->msgCtx.choiceIndex;
+    const FwPrompt prompt = sFwPrompt;
+    Message_CloseTextbox(play);
+    FwEndPrompt(player);
+    switch (prompt) {
+        case FW_PROMPT_THERE:
+            if (choice == 0) {
+                FwWarpThere(player);
+            } else if ((choice == 1) && SpendMagic(play, kCostFarores)) {
+                FwSetHere(play, player);
+            }
+            break;
+        case FW_PROMPT_WHICH:
+            if (choice == 0) {
+                FwReturnHere(play, player);
+            } else {
+                FwWarpThere(player);
+            }
+            break;
+        default: // FW_PROMPT_HERE / FW_PROMPT_BOTH
+            if (choice == 0) {
+                if (prompt == FW_PROMPT_BOTH) {
+                    FwStartPrompt(player, FW_PROMPT_WHICH);
+                } else {
+                    FwReturnHere(play, player);
+                }
+            } else if (choice == 1) {
+                gSaveContext.save.shipSaveInfo.rando.comboFwState = CFW_NONE;
+                Player_PlaySfx(player, NA_SE_PL_MAGIC_WIND_VANISH);
+            }
+            break;
+    }
+}
+
+void CastFarores(PlayState* play, Player* player) {
+    if ((sFwPrompt != FW_PROMPT_NONE) || WarpForbiddenHere(play)) {
+        Audio_PlaySfx(NA_SE_SY_ERROR);
+        return;
+    }
+    const bool here = FwHere();
+    const bool there = FwThere(); // Cross-Games Farore's Wind only
+    if (!here && !there) {
+        if (SpendMagic(play, kCostFarores)) {
+            FwSetHere(play, player);
+        }
+        return;
+    }
+    // A point to go to: ask, as OOT does (returning costs no magic there either).
+    FwStartPrompt(player, here ? (there ? FW_PROMPT_BOTH : FW_PROMPT_HERE) : FW_PROMPT_THERE);
 }
 
 // MagicFire_UpdateBeforeCast + MagicFire_Update.
@@ -420,6 +544,7 @@ void DrawNayrus(PlayState* play, Player* player) {
 void ResetSpellEffects() {
     sDins.action = DINS_OFF;
     sNayrusTimer = 0;
+    sFwPrompt = FW_PROMPT_NONE;
 }
 
 } // namespace
@@ -441,6 +566,8 @@ extern "C" int Combo_Spell_Cast(PlayState* play, Player* player, int item) {
 }
 
 extern "C" void Combo_Spells_OnPlayerUpdate(PlayState* play, Player* player) {
+    UpdateMagicReset(play);
+    UpdateFwPrompt(play, player);
     UpdateDins(play, player);
     UpdateNayrus(play, player);
 }
@@ -459,9 +586,8 @@ extern "C" COMBO_EXPORT int MM_ComboFw(int op) {
         case CFW_STATE:
             return rando.comboFwState;
         case CFW_MARK_CROSS:
-            changed = (rando.comboFwState != CFW_CROSS);
-            rando.comboFwState = CFW_CROSS;
-            break;
+            return 0; // each game keeps its own point now: no "lives over there" marker
+
         case CFW_CLEAR_IF_CROSS:
             changed = (rando.comboFwState == CFW_CROSS);
             if (changed) {

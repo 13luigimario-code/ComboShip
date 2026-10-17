@@ -2322,9 +2322,14 @@ table has no slot for them); models are OOT's own (`"@oot:overlays/ovl_Magic_*"`
 - Nayru's Love (24 magic): `invincibilityTimer = -100` for 1200 frames, the diamond around Link's waist; carries
   over scene changes like OOT's `nayrusLoveTimer`.
 - Farore's Wind (12 magic): first cast stores the spot (`Play_SetRespawnData(RESPAWN_MODE_HUMAN, ...)`, which
-  MM only initializes); the next one restores it and transitions with `respawnFlag = RESPAWN_MODE_HUMAN + 1`
-  (Player_Init reads `respawn[flag - 1]`), using the point up. Refused where the Song of Soaring is. Kept in memory
-  only (not saved), and without OoTMM's return/dispel prompt.
+  MM only initializes). With a point set, casting asks like OOT's (free, as in OOT): "Return to the warp point /
+  Dispel the warp point / Exit"; Return transitions with `respawnFlag = RESPAWN_MODE_HUMAN + 1` (Player_Init reads
+  `respawn[flag - 1]`), using the point up. Refused where the Song of Soaring is. The point is saved (see Cross-Games
+  Farore's Wind). The prompt is a hand-laid `CustomMessage` box polled from `Combo_Spells_OnPlayerUpdate`; Link's
+  input is held (`PLAYER_STATE1_20`) while it is up.
+- The magic meter: MM leaves it flashing after `MAGIC_CONSUME_NOW` until the caster calls `Magic_Reset` (OOT's Player
+  does when a spell ends), and `Magic_Consume` refuses while it flashes, so a second cast in the same scene failed.
+  `UpdateMagicReset` puts it back to idle 20 frames after the magic is drained (2026-10-17).
 - No casting animation: the effect starts from the C-button press.
 
 **Shared Items:** `spellFire`, `spellWind`, `spellLove`. **Logic:** none. OOT draws MM's copies with its own models.
@@ -2490,30 +2495,46 @@ CHILD_TRADE/STRENGTH` (`ComboAgeless*` CVars, Logic section of the OOT randomize
     (`OverrideChildAdultSwordSheath`, `ComboAgeless.cpp`, through `VB_PLAYER_OVERRIDE_LIMB_DRAW`). The Hylian and
     Mirror Shield cases were already handled by SoH. The pause-menu Link is unchanged.
 
-## Cross-Games Farore's Wind (OoTMM `crossGameFw`) (2026-10-12)
+## Cross-Games Farore's Wind (OoTMM `crossGameFw`) (2026-10-12, a point per game 2026-10-17)
 
-MM option `RO_CROSS_GAME_FW` (Item Pool, under Farore's Wind; it needs `RO_CROSS_SPELL_WIND`). There is one Farore's
-Wind point across both games: setting it in one game turns the other game's point into a "lives over there" marker,
-and casting Farore's Wind there warps across (the teleport songs' `Combo_RequestCrossSwitch`) and spawns at the point,
-which is used up.
+MM option `RO_CROSS_GAME_FW` (Item Pool, under Farore's Wind; it needs `RO_CROSS_SPELL_WIND`). Each game keeps its own
+Farore's Wind point, and casting in one game offers to warp to the other game's point (the teleport songs'
+`Combo_RequestCrossSwitch`), spawning there and using that point up. **Deviation:** OoTMM has one point across both
+games (setting it in one game replaces the other's); ComboShip keeps both and asks which one, as requested.
 
-- **Protocol (`combo/rando/CrossFw.h`):** each DLL exports `<GAME>_ComboFw(op)` on its own save (state, mark cross,
-  clear a marker, the point's entrance, arm the arrival) and takes a peer callback from the launcher
+What casting does (the same in both games; "here" is the game cast in, "there" the other one):
+
+| Points | Prompt | Choices |
+| --- | --- | --- |
+| none | none | sets a point here (spends magic) |
+| here only | "Warp to the warp point?" (OOT: its own box) | Return / Dispel / Exit |
+| there only | "There is a warp point in Hyrule/Termina." | Warp to Hyrule/Termina / Set a warp point here (spends magic) / Exit |
+| both | as "here only"; Return then asks "which point?" | Termina / Hyrule (each game lists its own first) |
+
+Opening a prompt is free, like OOT's. Dispel only clears this game's point.
+
+- **Protocol (`combo/rando/CrossFw.h`):** each DLL exports `<GAME>_ComboFw(op)` on its own save (state, the point's
+  entrance, arm the arrival, clear a legacy marker) and takes a peer callback from the launcher
   (`<GAME>_SetComboFwPeer`) that forwards to the other game while both halves of the slot are resident
-  (`combo/ComboShip.cpp`). Dormant writes persist immediately, like dormant item grants. A marker whose point is gone
-  is dropped when cast.
-- **MM (`CrossSpells.cpp`):** Farore's Wind's point now lives in the save (`RandoSaveInfo::comboFwState` / `comboFw`,
-  JSON `comboFwState` / `comboFw`, tolerant) instead of memory, with or without the option. `title_setup.c` (guarded)
-  calls `Combo_MM_ApplyFwArrival` after a cross arrival: entrance, `respawn[RESPAWN_MODE_HUMAN]` and `respawnFlag` from
-  the point.
-- **OOT (`soh/soh/Enhancements/combo/ComboCrossFw.cpp`):** the marker is `gSaveContext.fw` with `entranceIndex = -2`
-  (never the current scene, placed far below it), so OOT's own Return/Dispel prompt appears; `z_player.c` (guarded)
-  asks `Combo_Fw_OotReturn` first, and notifies on set and dispel. `title_setup.c` calls `Combo_OoT_ApplyFwArrival`:
+  (`combo/ComboShip.cpp`). Dormant writes persist immediately, like dormant item grants. `CFW_MARK_CROSS` is a no-op
+  now; a "lives over there" marker saved by the one-point version (`CFW_CROSS`) reads as no point and is dropped.
+- **MM (`CrossSpells.cpp`):** the point lives in the save (`RandoSaveInfo::comboFwState` / `comboFw`, JSON
+  `comboFwState` / `comboFw`, tolerant), with or without the option. `FwPrompt` drives the boxes (`CustomMessage`,
+  laid out by hand: `\x11` new line, `\xC2` / `\xC3` choices). `title_setup.c` (guarded) calls
+  `Combo_MM_ApplyFwArrival` after a cross arrival: entrance, `respawn[RESPAWN_MODE_HUMAN]` and `respawnFlag` from the
+  point.
+- **OOT (`soh/soh/Enhancements/combo/ComboCrossFw.cpp`):** OOT's own point is `gSaveContext.fw` as always.
+  `z_player.c` (guarded): `Player_UseItem` / `Player_ActionHandler_13` open the prompt when only Termina has a point,
+  and `Player_Action_8085063C` shows `TEXT_COMBO_FW_THERE` (Termina only) or OOT's own box, then `TEXT_COMBO_FW_WHICH`
+  after Return when both exist (`OnOpenText` hooks load the `CustomMessage`s). "Set a warp point here" runs OOT's normal
+  cast (`func_8083AF44`), so magic and the point work as vanilla. OOT's two-choice box only indents lines from the
+  third on, so the "which point?" question takes two lines. `title_setup.c` calls `Combo_OoT_ApplyFwArrival`:
   `respawnFlag` 3 with `respawn[RESPAWN_MODE_TOP]` from the point, like OOT's own return. OOT stores its point from the
   room-entry respawn (`fw.pos = respawn[RESPAWN_MODE_DOWN]`), so arriving from Termina lands there, as OOT's own return
   from another area does.
-- **Not ported:** OoTMM keeps one point per age; ComboShip keeps one (SoH already keeps OOT's per age). Dispelling a
-  marker in OOT leaves MM's point. MM has no dispel prompt.
+- **Not ported:** OoTMM keeps one point per age; SoH already keeps OOT's per age, MM keeps one.
+- **Known:** a point set while standing in the Clock Tower's doorway in South Clock Town respawns Link on the door's
+  exit, which carries him back to Hyrule (`SCENE_INSIDETOWER` spawn 1 is the way back).
 
 Also: MM's `title_setup.c` now includes `consolevariablebridge.h` for its Remember Save Location `CVarGetInteger`
 (an implicit declaration clang rejects).
