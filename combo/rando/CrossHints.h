@@ -325,7 +325,7 @@ inline nlohmann::json Generate(uint32_t masterSeed, const std::string& sohDumpJs
             if (!(sharedMask & SharedBit(i)) || !def.mmHasItem || mmItemLocations.contains(def.mmName))
                 continue;
             for (const auto& p : placements) {
-                if (p.itemGame != GAME_OOT || p.item != def.ootName)
+                if (p.itemGame != GAME_OOT || !SharedFamilyOotNameMatches(def, p.item))
                     continue;
                 if (p.checkGame == GAME_OOT) {
                     auto ca = ootChecks.find(p.check);

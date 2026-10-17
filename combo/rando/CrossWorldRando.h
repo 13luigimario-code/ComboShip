@@ -466,16 +466,28 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
                 continue;
             }
             size_t ootCopies = 0;
+            size_t ootMainCopies = 0; // the main ootName only (a family with an alt name needs one)
             for (const auto& it : advItems)
-                if (it.game == GAME_OOT && it.name == def.ootName)
+                if (it.game == GAME_OOT && SharedFamilyOotNameMatches(def, it.name)) {
                     ++ootCopies;
+                    ootMainCopies += (it.name == def.ootName) ? 1 : 0;
+                }
             for (const auto& p : lockedPlacements)
-                if (p.item.game == GAME_OOT && p.item.name == def.ootName)
+                if (p.item.game == GAME_OOT && SharedFamilyOotNameMatches(def, p.item.name)) {
                     ++ootCopies;
-            const size_t ootStartingCopies =
+                    ootMainCopies += (p.item.name == def.ootName) ? 1 : 0;
+                }
+            const size_t ootStartingCopies = SharedFamilyOotCount(def, ootStarting);
+            ootMainCopies +=
                 static_cast<size_t>(std::count(ootStarting.begin(), ootStarting.end(), std::string(def.ootName)));
             if (ootCopies == 0 && ootStartingCopies == 0) {
                 std::cout << "[ComboShip] Shared " << def.key << ": OOT pool has none, left MM copies alone\n";
+                continue;
+            }
+            if (def.ootAltName != nullptr && ootMainCopies == 0) {
+                // e.g. Shared Kokiri Sword without OOT's Extra Child Swords: OOT has one tier, MM keeps its own.
+                std::cout << "[ComboShip] Shared " << def.key << ": OOT pool has no '" << def.ootName
+                          << "', left MM copies alone\n";
                 continue;
             }
             if (ootCopies == 0)
@@ -803,8 +815,7 @@ inline CombinedFillResult CrossWorldCombinedFill(const std::string& sohDumpJson,
                     const auto& def = SharedFamilyByIndex(i);
                     if (!def.mmHasItem)
                         continue; // nothing to push; MM logic doesn't need it
-                    size_t k =
-                        static_cast<size_t>(std::count(ootOwned.begin(), ootOwned.end(), std::string(def.ootName)));
+                    size_t k = SharedFamilyOotCount(def, ootOwned);
                     size_t target = std::min<size_t>(k, static_cast<size_t>(def.mmTierCap));
                     for (size_t n = sharedGiven[i]; n < target; ++n)
                         mmOwned.push_back(def.mmName);

@@ -74,6 +74,8 @@ enum SharedFamily {
     SF_STONE_OF_AGONY,
     SF_STICK_UPGRADES,
     SF_NUT_UPGRADES,
+    // OoTMM's "Shared Child Swords": OOT's Kokiri Sword + Extra Child Swords and MM's Progressive Sword.
+    SF_CHILD_SWORDS,
     SF_COUNT
 };
 // Family bitmask (bit i = SharedFamily i). 64 bits since the cross-game item families (was uint32_t);
@@ -104,6 +106,9 @@ struct SharedFamilyDef {
     bool isMask;         // requires OOT Shuffle Masks
     bool mmHasItem;      // false = MM has no pool copy of this item (no trim, no oracle mirror)
     bool ootToMmOnly;    // true = one-way OOT->MM; MM's tier signal isn't a reliable OOT source
+    // A second OOT pool name counted as the same family (OOT's Kokiri Sword beside its Progressive Kokiri Swords).
+    // The family is only effective when OOT's pool has the main ootName: the alt name alone never shares it.
+    const char* ootAltName = nullptr;
 };
 
 // The six warp-song rows share these (one menu toggle for the group).
@@ -277,12 +282,34 @@ inline const SharedFamilyDef* SharedFamilyTable() {
           "One Deku Stick or Deku Nut capacity upgrade counts for both games. Requires MM's Deku Stick & Nut "
           "Upgrades (Ocarina of Time Gear).",
           "Progressive Nut Capacity", "Progressive Nut Capacity", 2, false, true, false },
+        // OOT's Kokiri Sword and its two Progressive Kokiri Swords (Extra Child Swords) are the three tiers; MM's three
+        // Progressive Swords are trimmed. Without Extra Child Swords OOT has a single sword tier and MM's Razor and
+        // Gilded Swords would be lost, so like OoTMM it needs that option (OOT's pool has no Progressive Kokiri Sword
+        // without it, and the family stays unshared).
+        { SF_CHILD_SWORDS, "childSwords", "gCombo.Rando.Shared.ChildSwords", "Shared Kokiri Sword",
+          "One Kokiri Sword, Razor Sword and Gilded Sword count for both games: three progressive child swords. "
+          "Requires Ocarina of Time's Extra Child Swords.",
+          "Progressive Kokiri Sword", "Progressive Sword", 3, false, true, false, "Kokiri Sword" },
     };
     return table;
 }
 
 inline const SharedFamilyDef& SharedFamilyByIndex(int i) {
     return SharedFamilyTable()[i];
+}
+
+// True for any OOT pool name of a family (its ootName or ootAltName).
+inline bool SharedFamilyOotNameMatches(const SharedFamilyDef& def, const std::string& name) {
+    return name == def.ootName || (def.ootAltName != nullptr && name == def.ootAltName);
+}
+
+// How many of `names` are the family's OOT items (either name).
+inline size_t SharedFamilyOotCount(const SharedFamilyDef& def, const std::vector<std::string>& names) {
+    size_t n = 0;
+    for (const auto& name : names)
+        if (SharedFamilyOotNameMatches(def, name))
+            ++n;
+    return n;
 }
 
 inline SharedMask SharedMaskFromKeys(const nlohmann::json& keys) {
@@ -311,6 +338,8 @@ inline std::set<std::string> SharedUntaggedNames(SharedMask mask) {
         if (!(mask & SharedBit(i)))
             continue;
         out.insert(SharedFamilyTable()[i].ootName);
+        if (SharedFamilyTable()[i].ootAltName != nullptr)
+            out.insert(SharedFamilyTable()[i].ootAltName);
         if (SharedFamilyTable()[i].mmHasItem)
             out.insert(SharedFamilyTable()[i].mmName);
     }

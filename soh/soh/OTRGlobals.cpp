@@ -3434,6 +3434,14 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
             return CHECK_QUEST_ITEM(QUEST_SONG_SUN) ? 1 : 0;
         case ComboRando::SF_SARIAS_SONG:
             return CHECK_QUEST_ITEM(QUEST_SONG_SARIA) ? 1 : 0;
+        // Shared Kokiri Sword: the Kokiri Sword, then Extra Child Swords' Razor and Gilded (ComboChildSwords.cpp).
+        case ComboRando::SF_CHILD_SWORDS:
+            if (!CHECK_OWNED_EQUIP(EQUIP_TYPE_SWORD, EQUIP_INV_SWORD_KOKIRI)) {
+                return 0;
+            }
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_GILDED_SWORD)  ? 3
+                   : Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_RAZOR_SWORD) ? 2
+                                                                                 : 1;
         default:
             return 0;
     }
@@ -3614,6 +3622,9 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_SARIAS_SONG:
                 rg = RG_SARIAS_SONG;
+                break;
+            case ComboRando::SF_CHILD_SWORDS:
+                rg = cur == 0 ? RG_KOKIRI_SWORD : cur == 1 ? RG_COMBO_RAZOR_SWORD : RG_COMBO_GILDED_SWORD;
                 break;
             default:
                 break;
