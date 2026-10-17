@@ -2163,6 +2163,7 @@ void Player_DrawImpl(PlayState* play, void** skeleton, Vec3s* jointTable, s32 dL
     if ((actor != NULL) && (actor->id == ACTOR_PLAYER) && (playerForm == PLAYER_FORM_HUMAN)) {
         Combo_AdultLink_DrawGear(play, (Player*)actor);
         Combo_Gear_DrawBoots(play, (Player*)actor);
+        Combo_Gear_DrawStrength(play, (Player*)actor);
     }
 #endif
 

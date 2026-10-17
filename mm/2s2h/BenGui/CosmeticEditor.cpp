@@ -127,6 +127,12 @@ std::map<std::string, CosmeticOption> cosmeticOptions = {
     COSMETIC_OPTION("Player.AdultTunic",            "Adult Link Tunic",                 COSMETICS_GROUP_PLAYER,             ColorRGBA8( 30, 105,  27, 255), false, true, false),
     COSMETIC_OPTION("Player.SilverGauntlets",       "Silver Gauntlets (OoT)",           COSMETICS_GROUP_PLAYER,             ColorRGBA8(255, 255, 255, 255), false, true, false),
     COSMETIC_OPTION("Player.GoldenGauntlets",       "Golden Gauntlets (OoT)",           COSMETICS_GROUP_PLAYER,             ColorRGBA8(254, 207,  15, 255), false, true, false),
+    // ComboShip: MM's colors for the OOT models Link wears in MM (Rando/MiscBehavior/CrossGearColors.cpp).
+    COSMETIC_OPTION("Player.AdultHair",             "Adult Link Hair",                  COSMETICS_GROUP_PLAYER,             ColorRGBA8(255, 173,  27, 255), false, true, false),
+    COSMETIC_OPTION("Player.AdultLinen",            "Adult Link Linen",                 COSMETICS_GROUP_PLAYER,             ColorRGBA8(255, 255, 255, 255), false, true, false),
+    COSMETIC_OPTION("Player.AdultBoots",            "Adult Link Boots",                 COSMETICS_GROUP_PLAYER,             ColorRGBA8( 93,  44,  18, 255), false, true, false),
+    COSMETIC_OPTION("Player.OotGoronBracelet",      "Goron's Bracelet (OoT)",           COSMETICS_GROUP_PLAYER,             ColorRGBA8(255, 255, 170, 255), false, true, false),
+    COSMETIC_OPTION("Player.OotGauntletsGem",       "Gauntlets Gem (OoT)",              COSMETICS_GROUP_PLAYER,             ColorRGBA8(255,  60, 100, 255), false, true, false),
 #endif
     COSMETIC_OPTION("Dungeon.Woodfall",             "Woodfall",                         COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(255, 170, 246, 255), false, true, false),
     COSMETIC_OPTION("Dungeon.Snowhead",             "Snowhead",                         COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(116, 226,  61, 255), false, true, false),
@@ -1205,6 +1211,12 @@ extern "C" Color_RGB8 CosmeticEditor_GetComboColor(const char* id, Color_RGB8 de
     }
     Color_RGBA8 color = CVarGetColor(it->second.colorCvar, {});
     return { color.r, color.g, color.b };
+}
+
+// ComboShip: whether a ComboShip cosmetic color is set (CrossGearColors.cpp draws OOT's own colors otherwise).
+extern "C" int CosmeticEditor_IsComboColorChanged(const char* id) {
+    auto it = cosmeticOptions.find(id);
+    return (it != cosmeticOptions.end()) && CVarGetInteger(it->second.colorChangedCvar, 0);
 }
 
 extern "C" void CosmeticEditor_SetHumanTunicOverride(const Color_RGB8* color) {

@@ -448,8 +448,10 @@ extern "C" void Combo_AdultLink_DrawGear(PlayState* play, Player* player) {
     gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);
     gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kGauntletLeft1);
     gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kGauntletRight1);
-    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)(sLeftHandOpen ? kGauntletLeftOpen : kGauntletLeftClosed));
-    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)(sRightHandOpen ? kGauntletRightOpen : kGauntletRightClosed));
+    // The gem color (CrossGearColors.cpp) lives in the hand plates.
+    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)Combo_Gear_Recolor(sLeftHandOpen ? kGauntletLeftOpen : kGauntletLeftClosed));
+    gSPDisplayList(POLY_OPA_DISP++,
+                   (Gfx*)Combo_Gear_Recolor(sRightHandOpen ? kGauntletRightOpen : kGauntletRightClosed));
     CLOSE_DISPS(play->state.gfxCtx);
 }
 
@@ -496,12 +498,20 @@ extern "C" void Combo_AdultLink_KeepHand(int limbIndex) {
     sKeptHand = limbIndex;
 }
 
+static void RemapLimb(PlayState* play, Player* player, int limbIndex, void** dList, int lod, int firstPerson);
+
 extern "C" void Combo_AdultLink_RemapLimb(PlayState* play, Player* player, int limbIndex, void** dList, int lod,
                                           int firstPerson) {
     if ((dList == nullptr) || (limbIndex <= PLAYER_LIMB_NONE) || (limbIndex >= PLAYER_LIMB_MAX) ||
         !Combo_AdultLink_Is(player)) {
         return;
     }
+    RemapLimb(play, player, limbIndex, dList, lod, firstPerson);
+    // MM's own hair / linen / boots colors (CrossGearColors.cpp): a recolored copy of OOT's limb while one is set.
+    *dList = (void*)Combo_Gear_Recolor(*dList);
+}
+
+static void RemapLimb(PlayState* play, Player* player, int limbIndex, void** dList, int lod, int firstPerson) {
     if (firstPerson) {
         // OOT's own first-person arms (Player_OverrideLimbDrawGameplayFirstPerson, OOT decomp; the "Right"/"Left" in
         // OOT's names are swapped relative to the limbs), including the right forearm MM leaves out.
