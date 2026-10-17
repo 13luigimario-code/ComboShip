@@ -1341,6 +1341,11 @@ void BenMenu::AddEnhancements() {
     AddWidget(path, "Remove Explosive Limit", WIDGET_CVAR_CHECKBOX)
         .CVar("gEnhancements.Items.RemoveExplosiveLimit")
         .Options(CheckboxOptions().Tooltip("Removes the cap of 3 active explosives being deployed at once."));
+    // ComboShip: SoH's Deku Nuts Explode Bombs (Enhancements/Items/NutsExplodeBombs.cpp).
+    AddWidget(path, "Deku Nuts Explode Bombs", WIDGET_CVAR_CHECKBOX)
+        .CVar("gEnhancements.Items.NutsExplodeBombs")
+        .Options(CheckboxOptions().Tooltip("Make Deku Nuts explode Bombs, similar to how they interact with Bombchus. "
+                                           "This does not affect Powder Kegs."));
 
     path.column = SECTION_COLUMN_3;
     AddWidget(path, "Saving", WIDGET_SEPARATOR_TEXT);

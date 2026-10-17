@@ -323,6 +323,24 @@ std::map<RandoItemId, RandoStaticItem> Items = {
     RI(RI_PROGRESSIVE_NUT_UPGRADE,    "a",    "Progressive Nut Capacity",   RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
     RI(RI_DEKU_NUT_UPGRADE_30,        "a",    "Deku Nut Capacity (30)",     RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
     RI(RI_DEKU_NUT_UPGRADE_40,        "a",    "Deku Nut Capacity (40)",     RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_NONE),
+    // Ship of Harkinian's "Infinite Upgrades" (MiscBehavior/InfiniteUpgrades.cpp): drawn as the last tier.
+    RI(RI_BOMB_BAG_INF,               "the",  "Infinite Bomb Bag",          RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_BOMB_BAG_40),
+    RI(RI_QUIVER_INF,                 "the",  "Infinite Quiver",            RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_QUIVER_50),
+    RI(RI_WALLET_INF,                 "the",  "Infinite Wallet",            RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_WALLET_GIANT),
+    RI(RI_MAGIC_INF,                  "the",  "Infinite Magic Meter",       RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_MAGIC_JAR_BIG),
+    RI(RI_STICK_UPGRADE_INF,          "",     "Infinite Stick Capacity",    RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_DEKU_STICK),
+    RI(RI_NUT_UPGRADE_INF,            "",     "Infinite Nut Capacity",      RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_DEKU_NUTS),
+    RI(RI_BOMBCHU_INF,                "",     "Infinite Bombchus",          RITYPE_LESSER,          ITEM_NONE,                       GI_NONE,                     GID_BOMBCHU),
+    // Ship of Harkinian's "Bombchu Bag" (MiscBehavior/BombchuBag.cpp): drawn as OOT's Bombchu Bag.
+    RI(RI_PROGRESSIVE_BOMBCHU_BAG,    "a",    "Bombchu Bag",                RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_BOMBCHU),
+    RI(RI_BOMBCHU_BAG_20,             "a",    "Bombchu Bag (20)",           RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_BOMBCHU),
+    RI(RI_BOMBCHU_BAG_30,             "a",    "Bombchu Bag (30)",           RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_BOMBCHU),
+    RI(RI_BOMBCHU_BAG_40,             "a",    "Bombchu Bag (40)",           RITYPE_MAJOR,           ITEM_NONE,                       GI_NONE,                     GID_BOMBCHU),
+    // Ship of Harkinian's "Key Rings": every small key of one temple.
+    RI(RI_WOODFALL_KEYRING,           "the",  "Woodfall Key Ring",          RITYPE_SMALL_KEY,       ITEM_NONE,                       GI_NONE,                     GID_KEY_SMALL),
+    RI(RI_SNOWHEAD_KEYRING,           "the",  "Snowhead Key Ring",          RITYPE_SMALL_KEY,       ITEM_NONE,                       GI_NONE,                     GID_KEY_SMALL),
+    RI(RI_GREAT_BAY_KEYRING,          "the",  "Great Bay Key Ring",         RITYPE_SMALL_KEY,       ITEM_NONE,                       GI_NONE,                     GID_KEY_SMALL),
+    RI(RI_STONE_TOWER_KEYRING,        "the",  "Stone Tower Key Ring",       RITYPE_SMALL_KEY,       ITEM_NONE,                       GI_NONE,                     GID_KEY_SMALL),
 };
 
 std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
@@ -367,6 +385,7 @@ std::map<StartingItemCategory, std::vector<RandoItemId>> StartingItemsMap = {
           RI_SPELL_FIRE, RI_SPELL_WIND, RI_SPELL_LOVE,
           RI_HAMMER, RI_BOOMERANG, RI_SLINGSHOT, RI_SHIELD_DEKU,
           RI_STONE_OF_AGONY, RI_PROGRESSIVE_STICK_UPGRADE, RI_PROGRESSIVE_NUT_UPGRADE,
+          RI_PROGRESSIVE_BOMBCHU_BAG, // Ship of Harkinian's "Bombchu Bag"
 #endif
         } }, 
 };
@@ -377,6 +396,7 @@ std::map<RandoItemId, u8> MaxStartingItemsMap = {
     { RI_TIME_PROGRESSIVE, 6 },
 #ifdef COMBO_BUILD
     { RI_PROGRESSIVE_SCALE, 2 }, { RI_PROGRESSIVE_STRENGTH, 3 }, // ComboShip (cross-game items)
+    { RI_PROGRESSIVE_BOMBCHU_BAG, 3 },                            // Ship of Harkinian's "Bombchu Bag"
 #endif
 };
 // clang-format on
@@ -542,7 +562,30 @@ const char* GetIconTexturePath(RandoItemId randoItemId) {
         case RI_PROGRESSIVE_NUT_UPGRADE:
         case RI_DEKU_NUT_UPGRADE_30:
         case RI_DEKU_NUT_UPGRADE_40:
+        case RI_NUT_UPGRADE_INF:
             return (const char*)gItemIcons[ITEM_DEKU_NUT];
+        // Ship of Harkinian's "Infinite Upgrades", "Bombchu Bag" and "Key Rings".
+        case RI_STICK_UPGRADE_INF:
+            return (const char*)gItemIcons[ITEM_DEKU_STICK];
+        case RI_BOMB_BAG_INF:
+            return (const char*)gItemIcons[ITEM_BOMB_BAG_40];
+        case RI_QUIVER_INF:
+            return (const char*)gItemIcons[ITEM_QUIVER_50];
+        case RI_WALLET_INF:
+            return (const char*)gItemIcons[ITEM_WALLET_GIANT];
+        case RI_MAGIC_INF:
+            return (const char*)gItemIcons[ITEM_MAGIC_JAR_BIG];
+        case RI_BOMBCHU_INF:
+        case RI_PROGRESSIVE_BOMBCHU_BAG:
+        case RI_BOMBCHU_BAG_20:
+        case RI_BOMBCHU_BAG_30:
+        case RI_BOMBCHU_BAG_40:
+            return (const char*)gItemIcons[ITEM_BOMBCHU];
+        case RI_WOODFALL_KEYRING:
+        case RI_SNOWHEAD_KEYRING:
+        case RI_GREAT_BAY_KEYRING:
+        case RI_STONE_TOWER_KEYRING:
+            return (const char*)gItemIcons[ITEM_KEY_SMALL];
 #endif
         case RI_BOMBCHU:
         case RI_BOMBCHU_5:

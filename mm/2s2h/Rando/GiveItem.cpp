@@ -2,6 +2,9 @@
 #include "Rando/ActorBehavior/Souls.h"
 #include "Rando/MiscBehavior/MiscBehavior.h"
 #include "Rando/MiscBehavior/ClockShuffle.h"
+#ifdef COMBO_BUILD
+#include "Rando/MiscBehavior/SohSettings.h" // Ship of Harkinian's Infinite Upgrades, Bombchu Bag, Key Rings
+#endif
 
 extern "C" {
 #include "variables.h"
@@ -66,6 +69,30 @@ void Rando::GiveItem(RandoItemId randoItemId) {
             break;
         case RI_SONG_ZELDA:
             Flags_SetRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);
+            break;
+        // Ship of Harkinian's "Infinite Upgrades", "Bombchu Bag" and "Key Rings" (MiscBehavior/SohSettings.h).
+        case RI_BOMB_BAG_INF:
+        case RI_QUIVER_INF:
+        case RI_WALLET_INF:
+        case RI_MAGIC_INF:
+        case RI_STICK_UPGRADE_INF:
+        case RI_NUT_UPGRADE_INF:
+        case RI_BOMBCHU_INF:
+            Rando::InfiniteUpgradesGive(randoItemId);
+            break;
+        case RI_PROGRESSIVE_BOMBCHU_BAG:
+            Rando::GiveItem(Rando::ConvertItem(randoItemId));
+            break;
+        case RI_BOMBCHU_BAG_20:
+        case RI_BOMBCHU_BAG_30:
+        case RI_BOMBCHU_BAG_40:
+            Rando::BombchuBagGive(randoItemId);
+            break;
+        case RI_WOODFALL_KEYRING:
+        case RI_SNOWHEAD_KEYRING:
+        case RI_GREAT_BAY_KEYRING:
+        case RI_STONE_TOWER_KEYRING:
+            Rando::KeyringGive(randoItemId);
             break;
 #endif
         case RI_CLOCK_TOWN_STRAY_FAIRY:
@@ -194,11 +221,12 @@ void Rando::GiveItem(RandoItemId randoItemId) {
         case RI_BOMB_BAG_40:
             Item_Give(gPlayState, Rando::StaticData::Items[randoItemId].itemId);
 #ifdef COMBO_BUILD
-            // Shared Bombchu Bag family effective: bag grants bombs only, chus come from that family.
-            if (!Combo_MM_BombchuBagShared())
+            // Shared Bombchu Bag family effective, or Ship of Harkinian's "Bombchu Bag" on: the bag grants bombs
+            // only, chus come from their own bag.
+            if (!Combo_MM_BombchuBagShared() && !Rando::BombchuBagOn())
                 INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
             AMMO(ITEM_BOMB) = CUR_CAPACITY(UPG_BOMB_BAG);
-            if (INV_CONTENT(ITEM_BOMBCHU) != ITEM_NONE)
+            if (INV_CONTENT(ITEM_BOMBCHU) != ITEM_NONE && !Rando::BombchuBagOn())
                 AMMO(ITEM_BOMBCHU) = CUR_CAPACITY(UPG_BOMB_BAG);
 #else
             INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;

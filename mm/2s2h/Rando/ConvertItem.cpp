@@ -6,6 +6,7 @@
 #include <cassert>
 #ifdef COMBO_BUILD
 #include "Rando/MiscBehavior/MiscBehavior.h" // ComboShip: MM_LookupForeign for foreign container art
+#include "Rando/MiscBehavior/SohSettings.h"  // ComboShip: Infinite Upgrades, Bombchu Bag, Key Rings
 extern "C" int Combo_MM_BombchuBagShared(void);
 #endif
 
@@ -238,10 +239,38 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
             ((Item_CheckObtainability(giEntry->itemId) == ITEM_NONE) && (giEntry->field & GIFIELD_40));
     }
 
+#ifdef COMBO_BUILD
+    // Ship of Harkinian's "Infinite Upgrades": a progressive copy past its last tier still gives the infinite item.
+    if (!hasObtainedCheck && Rando::InfiniteUpgradeFor(randoItemId) != RI_UNKNOWN) {
+        return true;
+    }
+#endif
     switch (randoItemId) {
         case RI_UNKNOWN:
             return false;
 #ifdef COMBO_BUILD
+        // Ship of Harkinian's "Infinite Upgrades", "Bombchu Bag" and "Key Rings" (MiscBehavior/SohSettings.h).
+        case RI_BOMB_BAG_INF:
+        case RI_QUIVER_INF:
+        case RI_WALLET_INF:
+        case RI_MAGIC_INF:
+        case RI_STICK_UPGRADE_INF:
+        case RI_NUT_UPGRADE_INF:
+        case RI_BOMBCHU_INF:
+            return !Rando::InfiniteUpgradeOwned(randoItemId);
+        case RI_PROGRESSIVE_BOMBCHU_BAG:
+            return !hasObtainedCheck && Rando::BombchuBagNext() != RI_UNKNOWN;
+        case RI_BOMBCHU_BAG_20:
+            return Rando::BombchuBagLevel() < 1;
+        case RI_BOMBCHU_BAG_30:
+            return Rando::BombchuBagLevel() < 2;
+        case RI_BOMBCHU_BAG_40:
+            return Rando::BombchuBagLevel() < 3;
+        case RI_WOODFALL_KEYRING:
+        case RI_SNOWHEAD_KEYRING:
+        case RI_GREAT_BAY_KEYRING:
+        case RI_STONE_TOWER_KEYRING:
+            return !hasObtainedCheck;
         // ComboShip (cross-game items): OOT gear in MM. A copy already owned converts to junk.
         case RI_BOOTS_IRON:
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_BOOTS_IRON);
@@ -487,6 +516,15 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
         case RI_BOMBCHU:
         case RI_BOMBCHU_5:
         case RI_BOMBCHU_10:
+#ifdef COMBO_BUILD
+            // Ship of Harkinian's "Bombchu Bag": bombchus need their own bag, not a bomb bag.
+            if (Rando::BombchuBagOn()) {
+                if (INV_CONTENT(ITEM_BOMBCHU) != ITEM_BOMBCHU) {
+                    return false;
+                }
+                break;
+            }
+#endif
             if (CUR_UPG_VALUE(UPG_BOMB_BAG) == 0) {
                 return false;
             }
@@ -799,8 +837,18 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
 
 RandoItemId Rando::ConvertItem(RandoItemId randoItemId, RandoCheckId randoCheckId) {
     if (IsItemObtainable(randoItemId, randoCheckId)) {
+#ifdef COMBO_BUILD
+        // Ship of Harkinian's "Infinite Upgrades": the copy past the last tier (Condensed: the first) is infinite.
+        RandoItemId infinite = Rando::InfiniteUpgradeFor(randoItemId);
+        if (infinite != RI_UNKNOWN) {
+            return infinite;
+        }
+#endif
         switch (randoItemId) {
 #ifdef COMBO_BUILD
+            // Ship of Harkinian's "Bombchu Bag": 20 -> 30 -> 40 (a Single bag holds 40).
+            case RI_PROGRESSIVE_BOMBCHU_BAG:
+                return Rando::BombchuBagNext();
             // ComboShip (cross-game items): OOT's scale and strength tiers, owned as RandoInf flags in MM.
             case RI_PROGRESSIVE_SCALE:
                 return (Combo_Gear_GetScale() == 0) ? RI_SCALE_SILVER : RI_SCALE_GOLDEN;

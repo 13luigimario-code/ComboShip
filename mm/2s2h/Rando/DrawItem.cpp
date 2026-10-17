@@ -275,15 +275,27 @@ void DrawSmallKey(RandoItemId randoItemId) {
     int slot;
     switch (randoItemId) {
         case RI_WOODFALL_SMALL_KEY:
+#ifdef COMBO_BUILD
+        case RI_WOODFALL_KEYRING: // ComboShip: Ship of Harkinian's "Key Rings" (DrawKeyring)
+#endif
             slot = 0;
             break;
         case RI_SNOWHEAD_SMALL_KEY:
+#ifdef COMBO_BUILD
+        case RI_SNOWHEAD_KEYRING:
+#endif
             slot = 1;
             break;
         case RI_GREAT_BAY_SMALL_KEY:
+#ifdef COMBO_BUILD
+        case RI_GREAT_BAY_KEYRING:
+#endif
             slot = 2;
             break;
         case RI_STONE_TOWER_SMALL_KEY:
+#ifdef COMBO_BUILD
+        case RI_STONE_TOWER_KEYRING:
+#endif
             slot = 3;
             break;
         default:
@@ -307,6 +319,27 @@ void DrawSmallKey(RandoItemId randoItemId) {
 
     CLOSE_DISPS(gPlayState->state.gfxCtx);
 }
+
+#ifdef COMBO_BUILD
+// ComboShip: Ship of Harkinian's "Key Rings" - the temple's small key, fanned out three times.
+void DrawKeyring(RandoItemId randoItemId) {
+    static const s16 kFanAngles[] = { -0x1000, 0, 0x1000 };
+    for (s16 angle : kFanAngles) {
+        Matrix_Push();
+        Matrix_RotateZS(angle, MTXMODE_APPLY);
+        Matrix_Translate(0.0f, 4.0f, 0.0f, MTXMODE_APPLY);
+        DrawSmallKey(randoItemId);
+        Matrix_Pop();
+    }
+}
+
+// ComboShip: Ship of Harkinian's "Bombchu Bag" - MM has no bag model, so draw Ocarina of Time's.
+void DrawBombchuBag() {
+    if (!MM_DrawOOTItemByName("Bombchu Bag")) {
+        GetItem_Draw(gPlayState, GID_BOMBCHU); // OOT not resident yet: never draw blank
+    }
+}
+#endif
 
 void DrawBossKey(RandoItemId randoItemId) {
     int slot;
@@ -611,6 +644,31 @@ void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* 
         case RI_WOODFALL_BOSS_KEY:
             DrawBossKey(randoItemId);
             break;
+#ifdef COMBO_BUILD
+        // ComboShip: Ship of Harkinian's "Key Rings" and "Bombchu Bag".
+        case RI_WOODFALL_KEYRING:
+        case RI_SNOWHEAD_KEYRING:
+        case RI_GREAT_BAY_KEYRING:
+        case RI_STONE_TOWER_KEYRING:
+            DrawKeyring(randoItemId);
+            break;
+        case RI_PROGRESSIVE_BOMBCHU_BAG: {
+            RandoItemId concrete = Rando::ConvertItem(randoItemId, randoCheckId);
+            if (concrete == RI_BOMBCHU_BAG_20 || concrete == RI_BOMBCHU_BAG_30 || concrete == RI_BOMBCHU_BAG_40) {
+                DrawBombchuBag();
+            } else {
+                // A copy past the last bag: the infinite item or the junk it gives.
+                Rando::DrawItem(concrete, randoCheckId, actor);
+            }
+            break;
+        }
+        case RI_BOMBCHU_BAG_20:
+        case RI_BOMBCHU_BAG_30:
+        case RI_BOMBCHU_BAG_40:
+        case RI_BOMBCHU_INF: // as in Ship of Harkinian, the infinite one is a bag too
+            DrawBombchuBag();
+            break;
+#endif
         case RI_SONG_TIME:
         case RI_SONG_STORMS:
         case RI_SONG_SUN:

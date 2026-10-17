@@ -80,6 +80,38 @@ std::unordered_map<int32_t, const char*> songShuffleOptions = {
     { RO_SONG_SHUFFLE_VANILLA, "Vanilla" },
 };
 
+#ifdef COMBO_BUILD
+// ComboShip: Ship of Harkinian's shop prices, Infinite Upgrades, Bombchu Bag and Key Rings.
+std::unordered_map<int32_t, const char*> shopPricesOptions = {
+    { RO_SHOP_PRICES_RANDOM, "Random" },
+    { RO_SHOP_PRICES_VANILLA, "Vanilla" },
+    { RO_SHOP_PRICES_CHEAP_BALANCED, "Cheap Balanced" },
+    { RO_SHOP_PRICES_BALANCED, "Balanced" },
+    { RO_SHOP_PRICES_FIXED_PRICE, "Fixed" },
+    { RO_SHOP_PRICES_RANGE, "Range" },
+    { RO_SHOP_PRICES_SET_BY_WALLET, "Set By Wallet" },
+};
+
+std::unordered_map<int32_t, const char*> infiniteUpgradesOptions = {
+    { RO_INFINITE_UPGRADES_OFF, "Off" },
+    { RO_INFINITE_UPGRADES_PROGRESSIVE, "Progressive" },
+    { RO_INFINITE_UPGRADES_CONDENSED, "Condensed Progressive" },
+};
+
+std::unordered_map<int32_t, const char*> bombchuBagOptions = {
+    { RO_BOMBCHU_BAG_NONE, "None" },
+    { RO_BOMBCHU_BAG_SINGLE, "Single Bag" },
+    { RO_BOMBCHU_BAG_PROGRESSIVE, "Progressive Bags" },
+};
+
+std::unordered_map<int32_t, const char*> keyringsOptions = {
+    { RO_KEYRINGS_MODE_OFF, "Off" },
+    { RO_KEYRINGS_MODE_RANDOM, "Random" },
+    { RO_KEYRINGS_MODE_COUNT, "Count" },
+    { RO_KEYRINGS_MODE_SELECTION, "Selection" },
+};
+#endif
+
 // clang-format off
 std::vector<int32_t> incompatibleWithVanilla = {
     RO_SHUFFLE_BOSS_SOULS,
@@ -481,6 +513,14 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_CROSS_HOOKSHOT_SHORT",
                                                                    "gRando.Options.RO_CROSS_STICKS_NUTS",
                                                                    "gRando.Options.RO_CROSS_GAME_FW",
+                                                                   "gRando.Options.RO_INFINITE_UPGRADES",
+                                                                   "gRando.Options.RO_BOMBCHU_BAG",
+                                                                   "gRando.Options.RO_KEYRINGS",
+                                                                   "gRando.Options.RO_KEYRINGS_COUNT",
+                                                                   "gRando.Options.RO_KEYRINGS_WOODFALL",
+                                                                   "gRando.Options.RO_KEYRINGS_SNOWHEAD",
+                                                                   "gRando.Options.RO_KEYRINGS_GREAT_BAY",
+                                                                   "gRando.Options.RO_KEYRINGS_STONE_TOWER",
 #endif
                                                                });
 
@@ -757,6 +797,64 @@ static const UIWidgets::CardLayoutOptions POOL_CARD_LAYOUT = { .columnsPerRow = 
                                                                .minColumnWidth = 400.0f,
                                                                .childFlags = ImGuiChildFlags_AutoResizeY };
 
+#ifdef COMBO_BUILD
+// ComboShip: Ship of Harkinian's shop price settings (Logic/ShopPrices.cpp).
+static void DrawShopPrices() {
+    UIWidgets::CVarCombobox(
+        "Shop Prices", Rando::StaticData::Options[RO_SHOP_PRICES].cvar, &shopPricesOptions,
+        UIWidgets::ComboboxOptions()
+            .ComponentAlignment(UIWidgets::ComponentAlignment::Right)
+            .LabelPosition(UIWidgets::LabelPosition::Near)
+            .Tooltip("The price of each shuffled shop item and Tingle map, as in Ship of Harkinian.\n\n"
+                     "Random - Any price from 0 to 199 rupees.\n\n"
+                     "Vanilla - Majora's Mask's own prices.\n\n"
+                     "Cheap Balanced - Mostly cheap: 0 to 95 rupees, about 30 on average.\n\n"
+                     "Balanced - 0 to 295 rupees, about 125 on average.\n\n"
+                     "Fixed - Every price is the one set below.\n\n"
+                     "Range - Any price between the two set below.\n\n"
+                     "Set By Wallet - Weights for which wallet a price needs: free, the starting wallet (1-99), "
+                     "the Adult's (100-200), the Giant's (201-500) or the Tycoon's (501-999).\n\n"
+                     "Prices never exceed the biggest wallet in the seed (500 rupees, 999 with the Tycoon's "
+                     "Wallet), and logic expects the wallet a price needs."));
+    int32_t mode = CVarGetInteger(Rando::StaticData::Options[RO_SHOP_PRICES].cvar, RO_SHOP_PRICES_RANDOM);
+    auto priceSlider = [](const char* label, RandoOptionId option, const char* format, int32_t defaultValue) {
+        CVarSliderInt(label, Rando::StaticData::Options[option].cvar,
+                      IntSliderOptions()
+                          .LabelPosition(UIWidgets::LabelPosition::None)
+                          .Min(0)
+                          .Max(199)
+                          .Format(format)
+                          .DefaultValue(defaultValue));
+    };
+    if (mode == RO_SHOP_PRICES_FIXED_PRICE) {
+        priceSlider("Fixed Price", RO_SHOP_PRICES_FIXED, "Price: %d x 5 Rupees", 10);
+    } else if (mode == RO_SHOP_PRICES_RANGE) {
+        priceSlider("Lower Bound", RO_SHOP_PRICES_RANGE_1, "Lower Bound: %d x 5 Rupees", 4);
+        priceSlider("Upper Bound", RO_SHOP_PRICES_RANGE_2, "Upper Bound: %d x 5 Rupees", 40);
+    } else if (mode == RO_SHOP_PRICES_SET_BY_WALLET) {
+        auto weightSlider = [](const char* label, RandoOptionId option, const char* format, int32_t defaultValue) {
+            CVarSliderInt(label, Rando::StaticData::Options[option].cvar,
+                          IntSliderOptions()
+                              .LabelPosition(UIWidgets::LabelPosition::None)
+                              .Min(0)
+                              .Max(100)
+                              .Format(format)
+                              .DefaultValue(defaultValue));
+        };
+        weightSlider("Free Weight", RO_SHOP_PRICES_WEIGHT_FREE, "Free: %d", 0);
+        weightSlider("Starting Wallet Weight", RO_SHOP_PRICES_WEIGHT_STARTING_WALLET, "Starting Wallet: %d", 1);
+        weightSlider("Adult Wallet Weight", RO_SHOP_PRICES_WEIGHT_ADULT_WALLET, "Adult's Wallet: %d", 1);
+        weightSlider("Giant Wallet Weight", RO_SHOP_PRICES_WEIGHT_GIANT_WALLET, "Giant's Wallet: %d", 1);
+        weightSlider("Tycoon Wallet Weight", RO_SHOP_PRICES_WEIGHT_TYCOON_WALLET, "Tycoon's Wallet: %d", 1);
+    }
+    if (mode != RO_SHOP_PRICES_FIXED_PRICE) {
+        CVarCheckbox("Affordable Prices", Rando::StaticData::Options[RO_SHOP_PRICES_AFFORDABLE].cvar,
+                     CheckboxOptions({ { .tooltip = "Each price drops to the cheapest one of the wallet it needs: 0, "
+                                                    "5, 100, 205 or 505 rupees." } }));
+    }
+}
+#endif
+
 static void DrawCheckPoolTab() {
     DrawSeedHealthStrip();
 
@@ -804,6 +902,9 @@ static void DrawCheckPoolTab() {
                       "and the Bomb Shop's bomb bags are always shuffled, even with this off.");
     CheckPoolCheckbox("Tingle Maps", RO_SHUFFLE_TINGLE_SHOPS, RCTYPE_TINGLE_SHOP,
                       "Maps sold by Tingle are checks, with randomized prices.");
+#ifdef COMBO_BUILD
+    DrawShopPrices();
+#endif
     CheckPoolCheckbox("Cows", RO_SHUFFLE_COWS, RCTYPE_COW, "Playing Epona's Song to a cow is a check.");
     UIWidgets::EndCard();
 
@@ -1080,6 +1181,43 @@ static void DrawAgeRequirementsCard() {
 }
 #endif
 
+#ifdef COMBO_BUILD
+// ComboShip: Ship of Harkinian's "Key Rings" (Logic/GeneratePools.cpp ApplyKeyrings).
+static void DrawKeyrings() {
+    int32_t smallKeys =
+        CVarGetInteger(Rando::StaticData::Options[RO_PLACEMENT_SMALL_KEYS].cvar, RO_DUNGEON_ITEM_ANYWHERE);
+    bool noKeys = (smallKeys == RO_DUNGEON_ITEM_VANILLA) || (smallKeys == RO_DUNGEON_ITEM_START_WITH);
+    UIWidgets::ComboboxOptions keyringOptions = UIWidgets::ComboboxOptions().Tooltip(
+        "As in Ship of Harkinian: a temple's key ring replaces all of its small keys in the item pool and gives "
+        "every one at once. Follows the Small Keys placement.\n\n"
+        "Random - A random number of random temples.\n\n"
+        "Count - The number of random temples set below.\n\n"
+        "Selection - The temples checked below.");
+    keyringOptions.disabled = noKeys;
+    keyringOptions.disabledTooltip = "Small Keys are Vanilla or Start With, so no small keys are shuffled";
+    UIWidgets::CVarCombobox("Key Rings", Rando::StaticData::Options[RO_KEYRINGS].cvar, &keyringsOptions,
+                            keyringOptions);
+    int32_t mode = CVarGetInteger(Rando::StaticData::Options[RO_KEYRINGS].cvar, RO_KEYRINGS_MODE_OFF);
+    if (noKeys) {
+        return;
+    }
+    if (mode == RO_KEYRINGS_MODE_COUNT) {
+        CVarSliderInt("Key Ring Count", Rando::StaticData::Options[RO_KEYRINGS_COUNT].cvar,
+                      IntSliderOptions()
+                          .LabelPosition(UIWidgets::LabelPosition::None)
+                          .Min(0)
+                          .Max(4)
+                          .Format("%d Key Rings")
+                          .DefaultValue(2));
+    } else if (mode == RO_KEYRINGS_MODE_SELECTION) {
+        CVarCheckbox("Woodfall Temple Key Ring", Rando::StaticData::Options[RO_KEYRINGS_WOODFALL].cvar);
+        CVarCheckbox("Snowhead Temple Key Ring", Rando::StaticData::Options[RO_KEYRINGS_SNOWHEAD].cvar);
+        CVarCheckbox("Great Bay Temple Key Ring", Rando::StaticData::Options[RO_KEYRINGS_GREAT_BAY].cvar);
+        CVarCheckbox("Stone Tower Temple Key Ring", Rando::StaticData::Options[RO_KEYRINGS_STONE_TOWER].cvar);
+    }
+}
+#endif
+
 static void DrawItemPoolTab() {
     DrawSeedHealthStrip();
 
@@ -1215,6 +1353,31 @@ static void DrawItemPoolTab() {
                      "sticks 10 -> 20 -> 30, nuts 20 -> 30 -> 40.",
                      1);
 #endif
+#ifdef COMBO_BUILD
+    // ComboShip: Ship of Harkinian's "Infinite Upgrades" and "Bombchu Bag".
+    UIWidgets::CVarCombobox(
+        "Infinite Upgrades", Rando::StaticData::Options[RO_INFINITE_UPGRADES].cvar, &infiniteUpgradesOptions,
+        UIWidgets::ComboboxOptions()
+            .ComponentAlignment(UIWidgets::ComponentAlignment::Right)
+            .LabelPosition(UIWidgets::LabelPosition::Near)
+            .Tooltip("As in Ship of Harkinian: an upgrade past its last tier makes its ammo, magic or rupees "
+                     "infinite, and hides the ammo count.\n\n"
+                     "Progressive - Each upgrade gets one more copy in the item pool, the infinite one.\n\n"
+                     "Condensed Progressive - No extra copies: the second copy of an upgrade is already infinite "
+                     "(the first one for Deku Stick & Nut Upgrades).\n\n"
+                     "Covers the bomb bag, quiver, wallet, magic meter, Bombchu Bag and the Deku Stick & Nut "
+                     "Upgrades."));
+    UIWidgets::CVarCombobox(
+        "Bombchu Bag", Rando::StaticData::Options[RO_BOMBCHU_BAG].cvar, &bombchuBagOptions,
+        UIWidgets::ComboboxOptions()
+            .ComponentAlignment(UIWidgets::ComponentAlignment::Right)
+            .LabelPosition(UIWidgets::LabelPosition::Near)
+            .Tooltip("As in Ship of Harkinian: bombchus need a bag of their own, and the bomb bag stops "
+                     "carrying them.\n\n"
+                     "None - Vanilla: the bomb bag holds as many bombchus as bombs.\n\n"
+                     "Single Bag - One Bombchu Bag in the item pool, holding 40.\n\n"
+                     "Progressive Bags - Three Bombchu Bags in the item pool, holding 20, 30 and 40."));
+#endif
     CVarCheckbox("Repeatable Rupee Purchases", Rando::StaticData::Options[RO_PURCHASE_INFINITE_RUPEES].cvar,
                  CheckboxOptions({ { .tooltip = "Shops can end up selling rupees as their randomized stock (e.g. a "
                                                 "Silver Rupee for 1 rupee). When enabled, those rupees can be "
@@ -1229,8 +1392,7 @@ static void DrawItemPoolTab() {
                  CheckboxOptions({ { .disabled = true, .disabledTooltip = "Coming Soon" } }));
     CVarCheckbox("Child Wallet", "gPlaceholderBool",
                  CheckboxOptions({ { .disabled = true, .disabledTooltip = "Coming Soon" } }));
-    CVarCheckbox("Infinite Upgrades", "gPlaceholderBool",
-                 CheckboxOptions({ { .disabled = true, .disabledTooltip = "Coming Soon" } }));
+
     UIWidgets::EndCard();
 #ifdef COMBO_BUILD
     DrawAgeRequirementsCard();
@@ -1387,6 +1549,9 @@ static void DrawItemPoolTab() {
             "Vanilla - Boss keys stay on the checks that hold them in the vanilla game, and none are added to "
             "the item pool.\n\n"
             "Start With - You begin with every dungeon's boss key, and none are added to the item pool."));
+#ifdef COMBO_BUILD
+    DrawKeyrings();
+#endif
     bool strayFairyPlacementChanged = UIWidgets::CVarCombobox(
         "Stray Fairies", Rando::StaticData::Options[RO_PLACEMENT_STRAY_FAIRIES].cvar, &dungeonItemPlacementOptions,
         UIWidgets::ComboboxOptions().Tooltip(

@@ -69,6 +69,7 @@ CrowdControl* CrowdControl::Instance;
 #include "rando/SharedItems.h"                    // ComboShip: Shared Items family table
 #include "rando/CrossWarpLogic.h"                 // ComboShip (teleport songs): cross-game warp logic bits
 #include "2s2h/Rando/MiscBehavior/MiscBehavior.h" // ComboShip: MM_LoadComboRando cache invalidation + ComboRando types
+#include "2s2h/Rando/MiscBehavior/SohSettings.h" // ComboShip: Ship of Harkinian's Infinite Upgrades, Bombchu Bag, Key Rings
 #endif
 
 #include "2s2h/GameInteractor/GameInteractor.h"
@@ -3653,23 +3654,49 @@ static void GiveItemForOracle(RandoItemId ri) {
 
         // Bomb bags — set upgrade + inventory. Chu grant left unconditional: gen-time mask is the
         // loaded slot's, not the seed's, and MM logic never gates on chus alone (see GiveItem.cpp).
+        // Ship of Harkinian's "Bombchu Bag" is a seed option, so with it on the chus need their own bag.
         case RI_BOMB_BAG_20:
             Inventory_ChangeUpgrade(UPG_BOMB_BAG, 1);
             INV_CONTENT(ITEM_BOMB) = ITEM_BOMB;
-            INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
+            if (!Rando::BombchuBagOn())
+                INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
             AMMO(ITEM_BOMB) = 20;
             break;
         case RI_BOMB_BAG_30:
             Inventory_ChangeUpgrade(UPG_BOMB_BAG, 2);
             INV_CONTENT(ITEM_BOMB) = ITEM_BOMB;
-            INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
+            if (!Rando::BombchuBagOn())
+                INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
             AMMO(ITEM_BOMB) = 30;
             break;
         case RI_BOMB_BAG_40:
             Inventory_ChangeUpgrade(UPG_BOMB_BAG, 3);
             INV_CONTENT(ITEM_BOMB) = ITEM_BOMB;
-            INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
+            if (!Rando::BombchuBagOn())
+                INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
             AMMO(ITEM_BOMB) = 40;
+            break;
+        // Ship of Harkinian's "Infinite Upgrades", "Bombchu Bag" and "Key Rings": save writes only.
+        case RI_BOMB_BAG_INF:
+        case RI_QUIVER_INF:
+        case RI_WALLET_INF:
+        case RI_MAGIC_INF:
+        case RI_STICK_UPGRADE_INF:
+        case RI_NUT_UPGRADE_INF:
+        case RI_BOMBCHU_INF:
+            Rando::InfiniteUpgradesGive(ri);
+            break;
+        case RI_PROGRESSIVE_BOMBCHU_BAG:
+        case RI_BOMBCHU_BAG_20:
+        case RI_BOMBCHU_BAG_30:
+        case RI_BOMBCHU_BAG_40:
+            Rando::BombchuBagGive(ri);
+            break;
+        case RI_WOODFALL_KEYRING:
+        case RI_SNOWHEAD_KEYRING:
+        case RI_GREAT_BAY_KEYRING:
+        case RI_STONE_TOWER_KEYRING:
+            Rando::KeyringGive(ri);
             break;
 
         // Wallets
