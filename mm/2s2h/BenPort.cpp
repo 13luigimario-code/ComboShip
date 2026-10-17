@@ -4456,6 +4456,20 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
             return CHECK_QUEST_ITEM(QUEST_SONG_SUN) ? 1 : 0;
         case ComboRando::SF_SARIAS_SONG:
             return CHECK_QUEST_ITEM(QUEST_SONG_SARIA) ? 1 : 0;
+        // Shared Kokiri Sword: MM's sword level, counting one the Takkuri stole (as ConvertItem does) so a theft
+        // isn't undone by the sync.
+        case ComboRando::SF_CHILD_SWORDS: {
+            int tier = GET_CUR_EQUIP_VALUE(EQUIP_TYPE_SWORD);
+            if (tier > EQUIP_VALUE_SWORD_GILDED) {
+                tier = EQUIP_VALUE_SWORD_GILDED; // never the Fierce Deity's
+            }
+            for (u8 stolen : { (u8)STOLEN_ITEM_1, (u8)STOLEN_ITEM_2 }) {
+                if (stolen >= ITEM_SWORD_KOKIRI && stolen <= ITEM_SWORD_GILDED) {
+                    tier = std::max(tier, (int)(stolen - ITEM_SWORD_KOKIRI) + EQUIP_VALUE_SWORD_KOKIRI);
+                }
+            }
+            return tier;
+        }
         default:
             return 0;
     }
@@ -4636,6 +4650,9 @@ extern "C" COMBO_EXPORT void MM_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_SARIAS_SONG:
                 base = RI_SONG_SARIA;
+                break;
+            case ComboRando::SF_CHILD_SWORDS:
+                base = RI_PROGRESSIVE_SWORD;
                 break;
             default:
                 break;

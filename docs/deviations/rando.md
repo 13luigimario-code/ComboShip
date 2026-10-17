@@ -2404,8 +2404,30 @@ checks for it is unchanged; MM's Razor Sword durability is not ported.
 - Icon and name: `gItemIcons[ITEM_SWORD_KOKIRI]` is pointed at MM's Razor/Gilded icon each frame (restored at
   tier 0), and `VB_DRAW_CUSTOM_ITEM_NAME` supplies MM's name texture on the equipment page.
 
-**Logic:** only the Kokiri Sword, as before; the upgrades are out of logic. **Shared Items:** none (no shared child
-sword family yet). OOT's progressive copies placed in MM draw as OOT's Kokiri Sword.
+**Logic:** only the Kokiri Sword, as before; the upgrades are out of logic. **Shared Items:** "Shared Kokiri Sword"
+(below). OOT's progressive copies placed in MM draw as OOT's Kokiri Sword.
+
+### Shared Kokiri Sword (OoTMM `sharedSwords`) (2026-10-16)
+
+A Shared Items family, `SF_CHILD_SWORDS` (key `childSwords`, CVar `gCombo.Rando.Shared.ChildSwords`, menu label
+"Shared Kokiri Sword"): OOT's Kokiri Sword and its two Progressive Kokiri Swords (Extra Child Swords) are three
+progressive child swords for both games, and MM's Progressive Swords are trimmed from its pool. The tiers are
+Kokiri, Razor, Gilded in both games: OOT's equip flag + `RAND_INF_OBTAINED_COMBO_RAZOR/GILDED_SWORD`, MM's sword
+equip value (counting a sword the Takkuri stole, like `ConvertItem`, so a theft isn't undone; the Fierce Deity's
+Sword never counts). Raises use `RG_KOKIRI_SWORD` / `RG_COMBO_RAZOR_SWORD` / `RG_COMBO_GILDED_SWORD` and MM's
+`RI_PROGRESSIVE_SWORD`. Two-way, so MM's starting Kokiri Sword also gives OOT its Kokiri Sword once both saves
+sync (OOT's logic doesn't expect it; that only makes the seed easier).
+
+- **Two OOT names:** `SharedFamilyDef` gained `ootAltName` (here "Kokiri Sword", beside "Progressive Kokiri Sword").
+  The trim count, the fill's MM mirror (`CrossWorldRando.h`, `ComboPlaythrough.h`), the shared-item hint lookup
+  (`CrossHints.h`), the cross-game suffix (`CrossForeign.h`) and `SharedUntaggedNames` count both names
+  (`SharedFamilyOotNameMatches` / `SharedFamilyOotCount`).
+- **Needs Extra Child Swords**, like OoTMM: without it OOT has one sword tier and MM would lose its Razor and Gilded
+  Swords, so a family with an alt name is only effective when OOT's pool has its main name (the log says "OOT pool
+  has no 'Progressive Kokiri Sword', left MM copies alone").
+
+Tested headless: 2/2 seeds pass with it and Extra Child Swords on (2 MM swords trimmed), and with Extra Child Swords
+off it stays unshared. In game: OOT raised Kokiri → Gilded, MM raised Kokiri → Gilded.
 
 ### OOT items in MM: Stone of Agony, Fairy Ocarina, Short Hookshot, Deku Stick & Nut upgrades (2026-10-12)
 

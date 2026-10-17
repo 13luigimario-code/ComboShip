@@ -49,7 +49,7 @@ inline void ApplySharedMirror(SharedMask sharedMask, const std::vector<std::stri
         const auto& def = SharedFamilyByIndex(i);
         if (!def.mmHasItem)
             continue; // nothing to push; MM logic doesn't need it
-        size_t k = static_cast<size_t>(std::count(ootOwned.begin(), ootOwned.end(), std::string(def.ootName)));
+        size_t k = SharedFamilyOotCount(def, ootOwned);
         size_t target = std::min<size_t>(k, static_cast<size_t>(def.mmTierCap));
         for (size_t n = given[i]; n < target; ++n)
             mmOwned.push_back(def.mmName);

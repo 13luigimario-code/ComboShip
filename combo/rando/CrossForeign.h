@@ -381,7 +381,7 @@ inline nlohmann::json BuildForeignArray(const nlohmann::json& foreignArray, Shar
         bool shared = false;
         if (sharedMask != 0 && itemGame == "oot") {
             for (int i = 0; i < SF_COUNT; ++i) {
-                if ((sharedMask & SharedBit(i)) && itemName == SharedFamilyByIndex(i).ootName) {
+                if ((sharedMask & SharedBit(i)) && SharedFamilyOotNameMatches(SharedFamilyByIndex(i), itemName)) {
                     shared = true;
                     break;
                 }
