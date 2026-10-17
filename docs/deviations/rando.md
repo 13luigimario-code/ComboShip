@@ -2625,3 +2625,79 @@ Tested headless: off and all-"Any age" pass; Bow/Hookshot/Gibdo Mask adult-only 
 same with OOT's Song of Soaring removed fails with the hint; a Random subset (non-transformation masks, Bow, Hookshot,
 Bombchu) passes 3/3. Randomizing every item at once usually can't be beaten (e.g. both ocarinas child-only leaves
 adult Link no songs), as in OoTMM.
+
+## Ship of Harkinian's randomizer settings in MM (2026-10-16)
+
+Four of SoH's randomizer settings, which 2Ship's randomizer didn't have, ported to MM's. Each is a new MM rando
+option (`gRando.Options.RO_*`, appended to `RandoOptionId` since save arrays are positional) and follows the seed:
+it is read from the save's `randoSaveOptions`, so the combined fill's MM oracle and the save agree. New items and
+RandoInf flags are appended too. Shared header: `mm/2s2h/Rando/MiscBehavior/SohSettings.h`.
+
+### Shop prices (SoH's shopsanity prices)
+
+**What:** Rando → Check Pool → World & NPCs, under Shops / Tingle Maps: "Shop Prices" with SoH's modes for every
+shuffled shop item and Tingle map. Random (2Ship's own 0-199 roll for every check) stays the default and keeps the RNG
+stream, so default seeds are unchanged.
+
+- Vanilla: MM's prices, read from its shop messages (the Goron Shop's winter ones; Tingle's 5/20/40).
+- Cheap Balanced / Balanced: SoH's tables (0-95 / 0-295 in steps of 5).
+- Fixed / Range: in steps of 5 rupees.
+- Set By Wallet: weights for free, the starting wallet (1-99), the Adult's (100-200), the Giant's (201-500) and the
+  Tycoon's (501-999) Wallets. MM has no "no wallet", so SoH's no-wallet/child weights become free/starting.
+- Affordable (not Fixed): the cheapest price of the wallet a roll needs (0, 5, 100, 205, 505).
+- Prices are capped at the biggest wallet in the seed (999 with the Tycoon's Wallet shuffled, else 500), and
+  `CAN_AFFORD` (Logic.h) now asks for the Giant's Wallet up to 500 and the Tycoon's past it (it assumed 200 max).
+
+`mm/2s2h/Rando/Logic/ShopPrices.cpp` (`RollCheckPrice`, called where `GeneratePools` rolled `Ship_Random(0, 200)`).
+
+### Infinite Upgrades
+
+**What:** Rando → Item Pool → Abilities & Upgrades: Off / Progressive / Condensed Progressive (it replaces the "Coming
+Soon" placeholder). Progressive adds one more copy of each upgrade to the pool; the copy past the last tier is its
+infinite item. Condensed adds none: the copy after the first tier is already infinite (for the Deku Stick & Nut
+Upgrades, whose first tier is MM's own capacity, the first upgrade). Families: bomb bag, quiver, wallet, magic, Bombchu
+Bag, and the Deku Stick & Nut Upgrades when those are on.
+
+An infinite item also raises its upgrade to the last tier (a skipped Condensed tier never leaves logic or capacity
+behind); owned, the ammo / magic / rupees stay full every frame and the ammo count is hidden on C and D-pad buttons
+and in the pause menu (the B button keeps it for minigame ammo). `ConvertItem` gives the infinite item through
+`Rando::InfiniteUpgradeFor`, before the tier switch. `mm/2s2h/Rando/MiscBehavior/InfiniteUpgrades.cpp`.
+
+### Bombchu Bag
+
+**What:** Rando → Item Pool → Abilities & Upgrades: None / Single Bag / Progressive Bags. With a bag on, bombchus
+need it and the bomb bag stops carrying them (`GiveItem`, the oracle's `GiveItemForOracle`, `InfiniteUpgradesGive`).
+Single: one bag holding 40. Progressive: three bags holding 20, 30 and 40 (MM's bomb bag sizes). Owned tiers are
+`RANDO_INF_OBTAINED_BOMBCHU_BAG_*`; a bombchu in the inventory without one (a starting Bombchu) counts as the first.
+The bag is drawn as OOT's Bombchu Bag (`MM_DrawOOTItemByName`), as is the infinite one, like SoH.
+
+**Vendored:** bombchu capacity was the bomb bag's everywhere, so these ask `Combo_Rando_BombchuCapacity()`:
+- `mm/src/code/z_parameter.c` — `Item_Give` (bombchus and refills; refills need the bag), `Inventory_ChangeAmmo`,
+  `Item_CheckObtainabilityImpl` (refills need the bag, not a bomb bag), and the HUD's full-ammo color.
+- `mm/src/overlays/kaleido_scope/ovl_kaleido_scope/z_kaleido_item.c` — the pause menu's full-ammo color.
+- `mm/src/overlays/actors/ovl_En_GirlA/z_en_girla.c` — `EnGirlA_CanBuyBombchus` (unshuffled Bomb Shop bombchus).
+
+`mm/2s2h/Rando/MiscBehavior/BombchuBag.cpp`. Not combined with the Shared Bombchu Bags family, which keeps its own
+behavior (OOT's bag grants MM's bombchus).
+
+### Key Rings
+
+**What:** Rando → Item Pool → Dungeon Items, under Small Keys: Off / Random / Count / Selection, as in SoH. A temple's
+key ring replaces all of its small keys in the pool (`ApplyKeyrings`, `GeneratePools`) and gives them at once: the
+found count logic reads (`foundDungeonKeys`) goes to the temple's total and the keys in hand grow by the difference,
+so the Song of Time keeps restoring them. Random/Count pick temples with the seeded RNG and write them back into
+`RO_KEYRINGS_*`. Vanilla or Start With small keys ignore it (no keys to replace). Own Dungeon confines a ring to its
+temple (`PlacementConstraints.cpp`). Drawn as the temple's small key, fanned out three times.
+`mm/2s2h/Rando/MiscBehavior/Keyrings.cpp`.
+
+### Stick / nut capacity kept on the first pickup
+
+**Vendored:** `mm/src/code/z_parameter.c` `Item_Give` set the stick / nut upgrade back to tier 1 whenever Link had
+none in his inventory, so a capacity upgrade (Deku Stick & Nut Upgrades, Infinite Upgrades) found before the first
+stick or nut was lost. With `COMBO_BUILD` it only sets tier 1 when there is no tier yet.
+
+Tested in game: tier-by-tier conversion and grants for every family in both modes, the HUD hiding the ammo counts,
+both bag modes, key rings (4/4 keys from 1/4), the bombchu bag and key ring models; pools and prices for every mode
+(`GeneratePools` on a live save); headless `comborando`: 3/3 seeds pass with Set By Wallet prices, Tycoon's Wallet,
+Progressive Infinite Upgrades, Progressive Bags, Random key rings and the stick & nut upgrades all on.
+

@@ -1,6 +1,12 @@
 #include "global.h"
 #ifdef COMBO_BUILD
 #include "2s2h/Rando/MiscBehavior/CrossGear.h" // ComboShip: cross-game items (OOT gear in MM)
+// ComboShip: Ship of Harkinian's "Bombchu Bag" (Rando/MiscBehavior/BombchuBag.cpp): bombchus with a bag of their own.
+s32 Combo_Rando_BombchuBagOn(void);
+s32 Combo_Rando_BombchuCapacity(void);
+#define BOMBCHU_CAPACITY() ((u16)Combo_Rando_BombchuCapacity())
+#else
+#define BOMBCHU_CAPACITY() CUR_CAPACITY(UPG_BOMB_BAG)
 #endif
 #include "PR/gs2dex.h"
 #include "sys_cfb.h"
@@ -4363,7 +4369,15 @@ u8 Item_GiveImpl(PlayState* play, u8 item) {
 
     } else if (item == ITEM_DEKU_STICK) {
         if (INV_CONTENT(ITEM_DEKU_STICK) != ITEM_DEKU_STICK) {
+#ifdef COMBO_BUILD
+            // ComboShip: a capacity upgrade owned before the first pickup (Deku Stick & Nut Upgrades, Infinite
+            // Upgrades) is kept; vanilla MM only ever has the first tier here.
+            if (CUR_UPG_VALUE(UPG_DEKU_STICKS) == 0) {
+                Inventory_ChangeUpgrade(UPG_DEKU_STICKS, 1);
+            }
+#else
             Inventory_ChangeUpgrade(UPG_DEKU_STICKS, 1);
+#endif
             AMMO(ITEM_DEKU_STICK) = 1;
         } else {
             AMMO(ITEM_DEKU_STICK)++;
@@ -4374,7 +4388,15 @@ u8 Item_GiveImpl(PlayState* play, u8 item) {
 
     } else if ((item == ITEM_DEKU_STICKS_5) || (item == ITEM_DEKU_STICKS_10)) {
         if (INV_CONTENT(ITEM_DEKU_STICK) != ITEM_DEKU_STICK) {
+#ifdef COMBO_BUILD
+            // ComboShip: a capacity upgrade owned before the first pickup (Deku Stick & Nut Upgrades, Infinite
+            // Upgrades) is kept; vanilla MM only ever has the first tier here.
+            if (CUR_UPG_VALUE(UPG_DEKU_STICKS) == 0) {
+                Inventory_ChangeUpgrade(UPG_DEKU_STICKS, 1);
+            }
+#else
             Inventory_ChangeUpgrade(UPG_DEKU_STICKS, 1);
+#endif
             AMMO(ITEM_DEKU_STICK) = sAmmoRefillCounts[item - ITEM_DEKU_STICKS_5];
         } else {
             AMMO(ITEM_DEKU_STICK) += sAmmoRefillCounts[item - ITEM_DEKU_STICKS_5];
@@ -4387,7 +4409,15 @@ u8 Item_GiveImpl(PlayState* play, u8 item) {
 
     } else if (item == ITEM_DEKU_NUT) {
         if (INV_CONTENT(ITEM_DEKU_NUT) != ITEM_DEKU_NUT) {
+#ifdef COMBO_BUILD
+            // ComboShip: a capacity upgrade owned before the first pickup (Deku Stick & Nut Upgrades, Infinite
+            // Upgrades) is kept; vanilla MM only ever has the first tier here.
+            if (CUR_UPG_VALUE(UPG_DEKU_NUTS) == 0) {
+                Inventory_ChangeUpgrade(UPG_DEKU_NUTS, 1);
+            }
+#else
             Inventory_ChangeUpgrade(UPG_DEKU_NUTS, 1);
+#endif
             AMMO(ITEM_DEKU_NUT) = 1;
         } else {
             AMMO(ITEM_DEKU_NUT)++;
@@ -4398,7 +4428,15 @@ u8 Item_GiveImpl(PlayState* play, u8 item) {
 
     } else if ((item == ITEM_DEKU_NUTS_5) || (item == ITEM_DEKU_NUTS_10)) {
         if (INV_CONTENT(ITEM_DEKU_NUT) != ITEM_DEKU_NUT) {
+#ifdef COMBO_BUILD
+            // ComboShip: a capacity upgrade owned before the first pickup (Deku Stick & Nut Upgrades, Infinite
+            // Upgrades) is kept; vanilla MM only ever has the first tier here.
+            if (CUR_UPG_VALUE(UPG_DEKU_NUTS) == 0) {
+                Inventory_ChangeUpgrade(UPG_DEKU_NUTS, 1);
+            }
+#else
             Inventory_ChangeUpgrade(UPG_DEKU_NUTS, 1);
+#endif
             AMMO(ITEM_DEKU_NUT) += sAmmoRefillCounts[item - ITEM_DEKU_NUTS_5];
         } else {
             AMMO(ITEM_DEKU_NUT) += sAmmoRefillCounts[item - ITEM_DEKU_NUTS_5];
@@ -4442,24 +4480,30 @@ u8 Item_GiveImpl(PlayState* play, u8 item) {
             AMMO(ITEM_BOMBCHU) = 10;
             return ITEM_NONE;
         }
-        if ((AMMO(ITEM_BOMBCHU) += 10) > CUR_CAPACITY(UPG_BOMB_BAG)) {
-            AMMO(ITEM_BOMBCHU) = CUR_CAPACITY(UPG_BOMB_BAG);
+        if ((AMMO(ITEM_BOMBCHU) += 10) > BOMBCHU_CAPACITY()) {
+            AMMO(ITEM_BOMBCHU) = BOMBCHU_CAPACITY();
         }
         return ITEM_NONE;
 
     } else if ((item >= ITEM_BOMBCHUS_20) && (item <= ITEM_BOMBCHUS_5)) {
+#ifdef COMBO_BUILD
+        // ComboShip: with Ship of Harkinian's "Bombchu Bag", refills need the bag.
+        if (Combo_Rando_BombchuBagOn() && (gSaveContext.save.saveInfo.inventory.items[SLOT_BOMBCHU] != ITEM_BOMBCHU)) {
+            return ITEM_NONE;
+        }
+#endif
         if (gSaveContext.save.saveInfo.inventory.items[SLOT_BOMBCHU] != ITEM_BOMBCHU) {
             INV_CONTENT(ITEM_BOMBCHU) = ITEM_BOMBCHU;
             AMMO(ITEM_BOMBCHU) += sBombchuRefillCounts[item - ITEM_BOMBCHUS_20];
 
-            if (AMMO(ITEM_BOMBCHU) > CUR_CAPACITY(UPG_BOMB_BAG)) {
-                AMMO(ITEM_BOMBCHU) = CUR_CAPACITY(UPG_BOMB_BAG);
+            if (AMMO(ITEM_BOMBCHU) > BOMBCHU_CAPACITY()) {
+                AMMO(ITEM_BOMBCHU) = BOMBCHU_CAPACITY();
             }
             return ITEM_NONE;
         }
 
-        if ((AMMO(ITEM_BOMBCHU) += sBombchuRefillCounts[item - ITEM_BOMBCHUS_20]) > CUR_CAPACITY(UPG_BOMB_BAG)) {
-            AMMO(ITEM_BOMBCHU) = CUR_CAPACITY(UPG_BOMB_BAG);
+        if ((AMMO(ITEM_BOMBCHU) += sBombchuRefillCounts[item - ITEM_BOMBCHUS_20]) > BOMBCHU_CAPACITY()) {
+            AMMO(ITEM_BOMBCHU) = BOMBCHU_CAPACITY();
         }
         return ITEM_NONE;
 
@@ -4718,6 +4762,12 @@ u8 Item_CheckObtainabilityImpl(u8 item) {
         return 0;
 
     } else if ((item >= ITEM_BOMBCHUS_20) && (item <= ITEM_BOMBCHUS_5)) {
+#ifdef COMBO_BUILD
+        // ComboShip: with Ship of Harkinian's "Bombchu Bag", bombchus need that bag instead of a bomb bag.
+        if (Combo_Rando_BombchuBagOn()) {
+            return (INV_CONTENT(ITEM_BOMBCHU) == ITEM_BOMBCHU) ? 0 : ITEM_NONE;
+        }
+#endif
         if (CUR_UPG_VALUE(UPG_BOMB_BAG) == 0) {
             return ITEM_NONE;
         }
@@ -5249,8 +5299,8 @@ void Inventory_ChangeAmmo(s16 item, s16 ammoChange) {
     } else if (item == ITEM_BOMBCHU) {
         AMMO(ITEM_BOMBCHU) += ammoChange;
 
-        if (AMMO(ITEM_BOMBCHU) >= CUR_CAPACITY(UPG_BOMB_BAG)) {
-            AMMO(ITEM_BOMBCHU) = CUR_CAPACITY(UPG_BOMB_BAG);
+        if (AMMO(ITEM_BOMBCHU) >= BOMBCHU_CAPACITY()) {
+            AMMO(ITEM_BOMBCHU) = BOMBCHU_CAPACITY();
         } else if (AMMO(ITEM_BOMBCHU) < 0) {
             AMMO(ITEM_BOMBCHU) = 0;
         }
@@ -6248,7 +6298,7 @@ void Interface_Dpad_DrawAmmoCount(PlayState* play, s16 button, s16 alpha) {
             ((i == ITEM_BOMB) && (AMMO(i) == CUR_CAPACITY(UPG_BOMB_BAG))) ||
             ((i == ITEM_DEKU_STICK) && (AMMO(i) == CUR_CAPACITY(UPG_DEKU_STICKS))) ||
             ((i == ITEM_DEKU_NUT) && (AMMO(i) == CUR_CAPACITY(UPG_DEKU_NUTS))) ||
-            ((i == ITEM_BOMBCHU) && (AMMO(i) == CUR_CAPACITY(UPG_BOMB_BAG))) ||
+            ((i == ITEM_BOMBCHU) && (AMMO(i) == BOMBCHU_CAPACITY())) ||
             ((i == ITEM_POWDER_KEG) && GameInteractor_Should(VB_POWDER_KEG_AMMO_AT_CAPACITY, ammo == 1)) ||
             ((i == ITEM_PICTOGRAPH_BOX) && (ammo == 1)) || ((i == ITEM_MAGIC_BEANS) && (ammo == 20))) {
             gDPSetPrimColor(OVERLAY_DISP++, 0, 0, 120, 255, 0, alpha);
@@ -6400,7 +6450,7 @@ void Interface_DrawAmmoCount(PlayState* play, s16 button, s16 alpha) {
                    ((i == ITEM_BOMB) && (AMMO(i) == CUR_CAPACITY(UPG_BOMB_BAG))) ||
                    ((i == ITEM_DEKU_STICK) && (AMMO(i) == CUR_CAPACITY(UPG_DEKU_STICKS))) ||
                    ((i == ITEM_DEKU_NUT) && (AMMO(i) == CUR_CAPACITY(UPG_DEKU_NUTS))) ||
-                   ((i == ITEM_BOMBCHU) && (AMMO(i) == CUR_CAPACITY(UPG_BOMB_BAG))) ||
+                   ((i == ITEM_BOMBCHU) && (AMMO(i) == BOMBCHU_CAPACITY())) ||
                    ((i == ITEM_POWDER_KEG) && GameInteractor_Should(VB_POWDER_KEG_AMMO_AT_CAPACITY, ammo == 1)) ||
                    ((i == ITEM_PICTOGRAPH_BOX) && (ammo == 1)) || ((i == ITEM_MAGIC_BEANS) && (ammo == 20))) {
             gDPSetPrimColor(OVERLAY_DISP++, 0, 0, 120, 255, 0, alpha);

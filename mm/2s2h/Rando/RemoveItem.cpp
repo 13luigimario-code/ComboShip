@@ -1,6 +1,9 @@
 #include "Rando/Rando.h"
 #include "Rando/ActorBehavior/Souls.h"
 #include "Rando/MiscBehavior/ClockShuffle.h"
+#ifdef COMBO_BUILD
+#include "Rando/MiscBehavior/SohSettings.h" // Ship of Harkinian's Infinite Upgrades, Bombchu Bag, Key Rings
+#endif
 
 extern "C" {
 #include "variables.h"
@@ -49,6 +52,28 @@ void Rando::RemoveItem(RandoItemId randoItemId) {
             break;
         case RI_SONG_ZELDA:
             Flags_ClearRandoInf(RANDO_INF_OBTAINED_SONG_ZELDA);
+            break;
+        // Ship of Harkinian's "Infinite Upgrades", "Bombchu Bag" and "Key Rings" (MiscBehavior/SohSettings.h).
+        case RI_BOMB_BAG_INF:
+        case RI_QUIVER_INF:
+        case RI_WALLET_INF:
+        case RI_MAGIC_INF:
+        case RI_STICK_UPGRADE_INF:
+        case RI_NUT_UPGRADE_INF:
+        case RI_BOMBCHU_INF:
+            Rando::InfiniteUpgradesRemove(randoItemId);
+            break;
+        case RI_PROGRESSIVE_BOMBCHU_BAG:
+        case RI_BOMBCHU_BAG_20:
+        case RI_BOMBCHU_BAG_30:
+        case RI_BOMBCHU_BAG_40:
+            Rando::BombchuBagRemove(randoItemId);
+            break;
+        case RI_WOODFALL_KEYRING:
+        case RI_SNOWHEAD_KEYRING:
+        case RI_GREAT_BAY_KEYRING:
+        case RI_STONE_TOWER_KEYRING:
+            Rando::KeyringRemove(randoItemId);
             break;
 #endif
         case RI_CLOCK_TOWN_STRAY_FAIRY:

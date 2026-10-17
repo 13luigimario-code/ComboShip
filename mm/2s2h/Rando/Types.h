@@ -2999,6 +2999,25 @@ typedef enum {
     RI_PROGRESSIVE_NUT_UPGRADE,
     RI_DEKU_NUT_UPGRADE_30,
     RI_DEKU_NUT_UPGRADE_40,
+    // Ship of Harkinian's "Infinite Upgrades" (MiscBehavior/InfiniteUpgrades.cpp): the copy past an upgrade's last
+    // tier.
+    RI_BOMB_BAG_INF,
+    RI_QUIVER_INF,
+    RI_WALLET_INF,
+    RI_MAGIC_INF,
+    RI_STICK_UPGRADE_INF,
+    RI_NUT_UPGRADE_INF,
+    RI_BOMBCHU_INF,
+    // Ship of Harkinian's "Bombchu Bag" (MiscBehavior/BombchuBag.cpp): bombchus need their own bag.
+    RI_PROGRESSIVE_BOMBCHU_BAG,
+    RI_BOMBCHU_BAG_20,
+    RI_BOMBCHU_BAG_30,
+    RI_BOMBCHU_BAG_40,
+    // Ship of Harkinian's "Key Rings": every small key of one temple at once.
+    RI_WOODFALL_KEYRING,
+    RI_SNOWHEAD_KEYRING,
+    RI_GREAT_BAY_KEYRING,
+    RI_STONE_TOWER_KEYRING,
 #endif
     RI_MAX_TRAP, // Just used for ice trap ice cube model
     RI_MAX,
@@ -3428,6 +3447,29 @@ typedef enum {
 #define AGE_REQ(suffix, label, ootmmId, item, poolOption) RO_AGE_REQ_##suffix,
 #include "MiscBehavior/AgeReqList.h"
 #undef AGE_REQ
+    // Ship of Harkinian's shop price settings (values: RandoOptionShopPrices); Logic/ShopPrices.cpp.
+    RO_SHOP_PRICES,
+    RO_SHOP_PRICES_FIXED,   // in units of 5 rupees
+    RO_SHOP_PRICES_RANGE_1, // in units of 5 rupees
+    RO_SHOP_PRICES_RANGE_2, // in units of 5 rupees
+    RO_SHOP_PRICES_WEIGHT_FREE,
+    RO_SHOP_PRICES_WEIGHT_STARTING_WALLET,
+    RO_SHOP_PRICES_WEIGHT_ADULT_WALLET,
+    RO_SHOP_PRICES_WEIGHT_GIANT_WALLET,
+    RO_SHOP_PRICES_WEIGHT_TYCOON_WALLET,
+    RO_SHOP_PRICES_AFFORDABLE,
+    // Ship of Harkinian's "Infinite Upgrades" (values: RandoOptionInfiniteUpgrades).
+    RO_INFINITE_UPGRADES,
+    // Ship of Harkinian's "Bombchu Bag" (values: RandoOptionBombchuBag).
+    RO_BOMBCHU_BAG,
+    // Ship of Harkinian's "Key Rings" (values: RandoOptionKeyrings). The per-temple options are the selection;
+    // generation writes the resolved temples back into them for Random and Count.
+    RO_KEYRINGS,
+    RO_KEYRINGS_COUNT,
+    RO_KEYRINGS_WOODFALL,
+    RO_KEYRINGS_SNOWHEAD,
+    RO_KEYRINGS_GREAT_BAY,
+    RO_KEYRINGS_STONE_TOWER,
 #endif
     RO_MAX,
 } RandoOptionId;
@@ -3446,6 +3488,36 @@ typedef enum {
     RO_AGE_ADULT_ONLY,
     RO_AGE_RANDOM,
 } RandoOptionAgeReq;
+
+// Ship of Harkinian's shop price settings. Random is 2Ship's own 0-199 roll and stays the default.
+typedef enum {
+    RO_SHOP_PRICES_RANDOM,
+    RO_SHOP_PRICES_VANILLA,
+    RO_SHOP_PRICES_CHEAP_BALANCED,
+    RO_SHOP_PRICES_BALANCED,
+    RO_SHOP_PRICES_FIXED_PRICE,
+    RO_SHOP_PRICES_RANGE,
+    RO_SHOP_PRICES_SET_BY_WALLET,
+} RandoOptionShopPrices;
+
+typedef enum {
+    RO_INFINITE_UPGRADES_OFF,
+    RO_INFINITE_UPGRADES_PROGRESSIVE,
+    RO_INFINITE_UPGRADES_CONDENSED,
+} RandoOptionInfiniteUpgrades;
+
+typedef enum {
+    RO_BOMBCHU_BAG_NONE,
+    RO_BOMBCHU_BAG_SINGLE,
+    RO_BOMBCHU_BAG_PROGRESSIVE,
+} RandoOptionBombchuBag;
+
+typedef enum {
+    RO_KEYRINGS_MODE_OFF,
+    RO_KEYRINGS_MODE_RANDOM,
+    RO_KEYRINGS_MODE_COUNT,
+    RO_KEYRINGS_MODE_SELECTION,
+} RandoOptionKeyrings;
 #endif
 
 typedef enum {
@@ -3626,6 +3698,18 @@ typedef enum {
     // The ocarina / hookshot in the inventory is still the first tier: OOT's Fairy Ocarina, the Short Hookshot.
     RANDO_INF_COMBO_OCARINA_IS_FAIRY,
     RANDO_INF_COMBO_HOOKSHOT_IS_SHORT,
+    // Ship of Harkinian's "Infinite Upgrades" (MiscBehavior/InfiniteUpgrades.cpp).
+    RANDO_INF_HAS_INFINITE_BOMB_BAG,
+    RANDO_INF_HAS_INFINITE_QUIVER,
+    RANDO_INF_HAS_INFINITE_MONEY,
+    RANDO_INF_HAS_INFINITE_MAGIC,
+    RANDO_INF_HAS_INFINITE_STICKS,
+    RANDO_INF_HAS_INFINITE_NUTS,
+    RANDO_INF_HAS_INFINITE_BOMBCHUS,
+    // Ship of Harkinian's "Bombchu Bag": one flag per bag tier owned (MiscBehavior/BombchuBag.cpp).
+    RANDO_INF_OBTAINED_BOMBCHU_BAG_20,
+    RANDO_INF_OBTAINED_BOMBCHU_BAG_30,
+    RANDO_INF_OBTAINED_BOMBCHU_BAG_40,
 #endif
     RANDO_INF_MAX,
 } RandoInf;

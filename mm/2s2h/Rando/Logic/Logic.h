@@ -153,6 +153,13 @@ void FindReachableRegions(RandoRegionId currentRegion, std::set<RandoRegionId>& 
                           std::unordered_map<RandoRegionId, RegionTimeState>& regionTimeStates);
 RandoRegionId GetRegionIdFromEntrance(s32 entrance);
 void GeneratePools(RandoSaveInfo& saveInfo, std::vector<RandoCheckId>& checkPool, std::vector<RandoItemId>& itemPool);
+#ifdef COMBO_BUILD
+// Ship of Harkinian's shop price settings (ShopPrices.cpp): the price GeneratePools rolls for a check.
+uint16_t RollCheckPrice(const RandoSaveInfo& saveInfo, RandoCheckId randoCheckId);
+// Ship of Harkinian's "Key Rings": resolves which temples get one (writing them back into the save options) and
+// swaps their small keys in the pool for the ring.
+void ApplyKeyrings(RandoSaveInfo& saveInfo, std::vector<RandoItemId>& itemPool);
+#endif
 void ApplyGlitchlessLogicToSaveContext(std::vector<RandoCheckId>& checkPool, std::vector<RandoItemId>& itemPool);
 void ApplyNearlyNoLogicToSaveContext(std::vector<RandoCheckId>& checkPool, std::vector<RandoItemId>& itemPool);
 void ApplyNoLogicToSaveContext(std::vector<RandoCheckId>& checkPool, std::vector<RandoItemId>& itemPool);
@@ -271,9 +278,17 @@ void ValidateRegionTimeOwnership(RandoRegionId regionId, RandoCheckId checkId, u
 #define CAN_USE_MAGIC_ARROW(arrowType) (HAS_ITEM(ITEM_BOW) && HAS_ITEM(ITEM_ARROW_##arrowType) && HAS_MAGIC)
 #define CAN_LIGHT_TORCH_NEAR_ANOTHER (HAS_ITEM(ITEM_DEKU_STICK) || CAN_USE_MAGIC_ARROW(FIRE))
 #define KEY_COUNT(dungeon) (gSaveContext.save.shipSaveInfo.rando.foundDungeonKeys[DUNGEON_SCENE_INDEX_##dungeon])
+#ifdef COMBO_BUILD
+// ComboShip: Ship of Harkinian's shop price settings can ask up to 999 rupees, so a Giant's Wallet (500) is no longer
+// enough for everything: past 500 takes the Tycoon's Wallet.
+#define CAN_AFFORD(rc)                                                                                                \
+    ((RANDO_SAVE_CHECKS[rc].price < 100) || (RANDO_SAVE_CHECKS[rc].price <= 200 && CUR_UPG_VALUE(UPG_WALLET) >= 1) || \
+     (RANDO_SAVE_CHECKS[rc].price <= 500 && CUR_UPG_VALUE(UPG_WALLET) >= 2) || (CUR_UPG_VALUE(UPG_WALLET) >= 3))
+#else
 #define CAN_AFFORD(rc)                                                                                                \
     ((RANDO_SAVE_CHECKS[rc].price < 100) || (RANDO_SAVE_CHECKS[rc].price <= 200 && CUR_UPG_VALUE(UPG_WALLET) >= 1) || \
      (CUR_UPG_VALUE(UPG_WALLET) >= 2))
+#endif
 #define HAS_ENOUGH_STRAY_FAIRIES(dungeonIndex) \
     (gSaveContext.save.saveInfo.inventory.strayFairies[dungeonIndex] >= RANDO_SAVE_OPTIONS[RO_STRAY_FAIRIES_REQUIRED])
 #define FOUND_ALL_FROGS                                                                  \
