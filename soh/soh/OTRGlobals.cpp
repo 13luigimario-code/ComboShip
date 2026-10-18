@@ -147,6 +147,7 @@
 #include "soh/SohGui/SohModals.h"
 #ifdef COMBO_BUILD
 #include "ComboMenuSharedContext.h" // ComboShip: shared per-DLL ImGui context helper (combo-owned)
+#include "ComboFileNames.h"         // ComboShip: file-name glyph codes shared with MM
 #include "rando/CrossForeign.h"     // ComboShip (#164): g_comboForeignJson for the hint-key map replay
 #include "rando/SharedItems.h"      // ComboShip: Shared Items family table
 #include "rando/ComboGames.h"       // ComboShip: Games (OoT only / MM only / Combo)
@@ -2848,9 +2849,11 @@ extern "C" COMBO_EXPORT void SOH_SetOnNewSaveCallback(void (*cb)(int fileNum)) {
 
 // ComboShip: the current save's file name (8 font-code bytes). Valid inside the new-save callback,
 // where the launcher copies it into the matching MM save.
+// Returns the current file's name in MM's glyph codes (ComboFileNames.h).
 extern "C" COMBO_EXPORT void SOH_GetCurrentPlayerName(unsigned char out8[8]) {
     for (int i = 0; i < 8; i++) {
-        out8[i] = gSaveContext.playerName[i];
+        out8[i] =
+            ComboNameCharOotToMm(gSaveContext.playerName[i], gSaveContext.ship.filenameLanguage != NAME_LANGUAGE_PAL);
     }
 }
 
@@ -3963,6 +3966,7 @@ extern "C" COMBO_EXPORT void SOH_SetTargetEntrance(int entrance) {
     gComboTargetEntrance = entrance;
 }
 
+extern "C" int gComboFsActionKind; // ComboShip (#27), defined with the front-end exports below
 extern "C" COMBO_EXPORT void SOH_ResumeGame(void) {
     auto ctx = Ship::Context::GetRawInstance();
     // Flush every log line immediately so the resume diagnostics survive a hard crash (the console
@@ -3993,7 +3997,8 @@ extern "C" COMBO_EXPORT void SOH_ResumeGame(void) {
     if (sComboResetPending && gSaveContext.fileNum != 0xFF) {
         GameInteractor_ExecuteOnExitGame(gSaveContext.fileNum);
     }
-    gComboReturnFileNum = sComboResetPending ? -1 : (s32)gSaveContext.fileNum;
+    // ComboShip (#27): a file action from MM's file select goes to OOT's file select, never straight into a slot.
+    gComboReturnFileNum = (sComboResetPending || gComboFsActionKind != 0) ? -1 : (s32)gSaveContext.fileNum;
     if (sComboResetPending) {
         gComboTargetEntrance = -1; // a reset return boots to the title; never carry an armed target there
     }
@@ -4014,6 +4019,11 @@ extern "C" COMBO_EXPORT void SOH_ResumeGame(void) {
 extern "C" COMBO_EXPORT void SOH_ResumeForeground(void) {
     auto ctx = Ship::Context::GetRawInstance();
     SOH_ReinitForResume(); // OOT RM active, OOT audio, OOT GUI + menu
+    // ComboShip (#27): with MM's title screen first, MM's loop cleared the shared window's running flag on its way out;
+    // re-arm it or OOT's first loop (SOH_RunMain) would return at once.
+    if (auto fast3d = std::dynamic_pointer_cast<Fast::Fast3dWindow>(ctx->GetWindow())) {
+        fast3d->SetIsRunning(true);
+    }
     // Re-sync this DLL's ImGui current-context (GImGui is per-module).
     ImGui::SetCurrentContext(ctx->GetWindow()->GetGui()->GetImGuiContext());
 }
@@ -5563,6 +5573,8 @@ extern "C" COMBO_EXPORT void SOH_SetOnComboFinalizeCallback(int (*cb)()) {
 // Called every frame on the main thread from the file-select loop. Runs the launcher's pending
 // main-thread apply; returns nonzero once generation is fully resolved (finalized or failed).
 extern "C" COMBO_EXPORT int SOH_PollComboFinalize(void) {
+    // OOT's archive is the active one even when MM's file select (#27 front end) is the screen polling this.
+    Ship::ResourceManagerScope rmScope(Ship::CrossRMRegistry::Get("oot"));
     const int resolved = gComboFinalizeCallback ? gComboFinalizeCallback() : 1;
     if (resolved) {
         SetComboRandoGenerating(false); // finalized or failed: the file-select loop plays the result sfx
@@ -5578,6 +5590,7 @@ extern "C" COMBO_EXPORT void SOH_SetOnComboReloadCallback(int (*cb)(const char*)
     gComboReloadCallback = cb;
 }
 extern "C" COMBO_EXPORT int SOH_RequestComboReload(const char* path) {
+    Ship::ResourceManagerScope rmScope(Ship::CrossRMRegistry::Get("oot")); // see SOH_PollComboFinalize
     return gComboReloadCallback ? gComboReloadCallback(path) : 0;
 }
 
@@ -5689,6 +5702,51 @@ extern "C" COMBO_EXPORT void SOH_TriggerComboGenerate(void) {
 extern "C" void FileChoose_Main(GameState* thisx);
 extern "C" COMBO_EXPORT uint8_t SOH_IsOnFileSelect(void) {
     return (gPlayState == NULL && gGameState != NULL && gGameState->main == (GameStateFunc)FileChoose_Main) ? 1 : 0;
+}
+
+// ComboShip (#27): title screen + file select front end. 0 = Ocarina of Time's (OOT boots first, as always), 1 =
+// Majora's Mask's: the launcher opens MM's title and file select, and MM's file select hands each file action to OOT's
+// file select (combo/ComboShip.cpp, mm/2s2h/BenPort.cpp). See docs/deviations/rando.md "Majora's Mask title screen".
+extern "C" COMBO_EXPORT int SOH_ReadComboFrontEndCVar(void) {
+    return CVarGetInteger("gCombo.FrontEnd", 0) == 1 ? 1 : 0;
+}
+// MM's file select is up (pushed by the launcher): generation may run there too.
+static int (*gComboMmOnFileSelect)(void) = nullptr;
+extern "C" COMBO_EXPORT void SOH_SetComboMmOnFileSelect(int (*fn)(void)) {
+    gComboMmOnFileSelect = fn;
+}
+// Either game's file select (the combo menu's Generate / plando Save gate).
+extern "C" COMBO_EXPORT uint8_t SOH_IsOnComboFileSelect(void) {
+    return (SOH_IsOnFileSelect() || (gComboMmOnFileSelect != nullptr && gComboMmOnFileSelect() != 0)) ? 1 : 0;
+}
+extern "C" COMBO_EXPORT int SOH_IsComboGenerating(void) {
+    return IsRandoGenerating() ? 1 : 0;
+}
+extern "C" COMBO_EXPORT int SOH_IsComboSeedReady(void) {
+    return (Randomizer_IsSeedGenerated() || Randomizer_IsSpoilerLoaded()) ? 1 : 0;
+}
+// A file action MM's file select asked for, run by OOT's file select the moment it opens (z_file_choose.c): 1 = load
+// the slot, 2 = create it with this name (OOT's filename characters) and load it. TitleSetup goes straight to the file
+// select while one is pending.
+extern "C" int gComboFsActionKind = 0;
+extern "C" int gComboFsActionSlot = -1;
+extern "C" uint8_t gComboFsActionName[8] = { 0 };
+extern "C" COMBO_EXPORT void SOH_SetComboFileSelectAction(int kind, int slot, const uint8_t* name8) {
+    gComboFsActionKind = (slot >= 0 && slot <= 2 && (kind == 1 || kind == 2)) ? kind : 0;
+    gComboFsActionSlot = gComboFsActionKind ? slot : -1;
+    memset(gComboFsActionName, 0, sizeof(gComboFsActionName));
+    if (name8 != nullptr) {
+        memcpy(gComboFsActionName, name8, sizeof(gComboFsActionName));
+    }
+}
+// TitleSetup is about to show OOT's title while the MM front end is on: the launcher takes the player to MM's title
+// instead (returns 1, and OOT then leaves its game loop).
+static int (*gComboFrontEndTitleCb)(void) = nullptr;
+extern "C" COMBO_EXPORT void SOH_SetComboFrontEndTitleCallback(int (*cb)(void)) {
+    gComboFrontEndTitleCb = cb;
+}
+extern "C" int Combo_FrontEndTakeTitle(void) {
+    return (gComboFrontEndTitleCb != nullptr && gComboFrontEndTitleCb() != 0) ? 1 : 0;
 }
 
 // ComboShip (Cross-Games Age): OOT Link's age as he leaves Hyrule; the launcher passes it to MM, which

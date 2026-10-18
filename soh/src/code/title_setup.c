@@ -11,6 +11,10 @@ extern s32 gComboReturnFileNum;
 extern s32 gComboTargetEntrance;
 extern s32 gComboCrossArrival;
 void Combo_OoT_ApplyFwArrival(void);
+// ComboShip (#27, Majora's Mask title screen + file select): a file action MM's file select handed over
+// (OTRGlobals.cpp), run by OOT's file select; and the launcher taking OOT's title away to MM's.
+extern int gComboFsActionKind;
+int Combo_FrontEndTakeTitle(void);
 #endif
 
 void TitleSetup_InitImpl(GameState* gameState) {
@@ -52,6 +56,18 @@ void TitleSetup_InitImpl(GameState* gameState) {
         gComboReturnFileNum = -1;
         gameState->running = false;
         SET_NEXT_GAMESTATE(gameState, Play_Init, PlayState);
+        return;
+    }
+    // ComboShip (#27): MM's file select picked a file (load or new): straight to OOT's file select, which runs it.
+    if (gComboFsActionKind != 0) {
+        gameState->running = false;
+        SET_NEXT_GAMESTATE(gameState, FileChoose_Init, FileChooseContext);
+        return;
+    }
+    // ComboShip (#27): with Majora's Mask's title screen, OOT's title (a reset, the credits) goes to MM's instead: no
+    // next gamestate, so OOT's frame loop ends and the launcher enters MM's title.
+    if (Combo_FrontEndTakeTitle()) {
+        gameState->running = false;
         return;
     }
 #endif
