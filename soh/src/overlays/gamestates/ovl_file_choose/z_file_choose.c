@@ -2978,13 +2978,14 @@ void FileChoose_DrawRandoSaveVersionWarning(GameState* thisx) {
 
 #ifdef COMBO_BUILD
 // ComboShip (#27, Majora's Mask title screen + file select): MM's file select picked a file and handed it here
-// (OTRGlobals.cpp SOH_SetComboFileSelectAction). 1 = load the slot, 2 = create it first with MM's name entry (MM and
-// OOT spell names with the same characters) and the loaded combo seed. Loading goes through FileChoose_LoadGame like a
+// (OTRGlobals.cpp SOH_SetComboFileSelectAction). 1 = load the slot, 2 = create it first with MM's name entry (converted
+// to OOT's glyph codes) and the loaded combo seed. Loading goes through FileChoose_LoadGame like a
 // real pick, so the launcher's save-load handling (slot bind, resume in MM when it was last played there) is unchanged.
 // Returns 1 once the file is loading; 0 leaves the player on this file select (no seed, or nothing to load).
 extern int gComboFsActionKind;
 extern int gComboFsActionSlot;
 extern u8 gComboFsActionName[8];
+#include "ComboFileNames.h"
 int Combo_FrontEndTakeTitle(void);
 static s32 Combo_RunFileSelectAction(FileChooseContext* this) {
     const int kind = gComboFsActionKind;
@@ -3002,7 +3003,11 @@ static s32 Combo_RunFileSelectAction(FileChooseContext* this) {
             Sfx_PlaySfxCentered(NA_SE_SY_ERROR);
             return 0;
         }
-        memcpy(Save_GetSaveMetaInfo(slot)->playerName, gComboFsActionName, 8);
+        // MM's name entry typed it in MM's glyph codes; store it in the codes Sram_InitSave's file will use.
+        const int ntsc = !(ResourceMgr_GetGameRegion(0) == GAME_REGION_PAL && gSaveContext.language != LANGUAGE_JPN);
+        for (int i = 0; i < 8; i++) {
+            Save_GetSaveMetaInfo(slot)->playerName[i] = ComboNameCharMmToOot(gComboFsActionName[i], ntsc);
+        }
         this->buttonIndex = slot;
         this->questType[slot] = QUEST_RANDOMIZER;
         gSaveContext.fileNum = slot;

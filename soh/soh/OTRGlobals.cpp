@@ -150,6 +150,7 @@
 #include "rando/CrossForeign.h"     // ComboShip (#164): g_comboForeignJson for the hint-key map replay
 #include "rando/SharedItems.h"      // ComboShip: Shared Items family table
 #include "rando/ComboGames.h"       // ComboShip: Games (OoT only / MM only / Combo)
+#include "ComboFileNames.h"         // ComboShip: file-name glyph codes shared with MM
 #include "rando/CrossWarpLogic.h"   // ComboShip (teleport songs): cross-game warp logic bits
 #include "soh/Enhancements/randomizer/hook_handlers.h" // ComboShip (#164): OOT_ForeignMapGen
 #include <functional>                                  // ComboShip (#164): shared hint-resolution callbacks
@@ -2848,9 +2849,11 @@ extern "C" COMBO_EXPORT void SOH_SetOnNewSaveCallback(void (*cb)(int fileNum)) {
 
 // ComboShip: the current save's file name (8 font-code bytes). Valid inside the new-save callback,
 // where the launcher copies it into the matching MM save.
+// Returns the current file's name in MM's glyph codes (ComboFileNames.h).
 extern "C" COMBO_EXPORT void SOH_GetCurrentPlayerName(unsigned char out8[8]) {
     for (int i = 0; i < 8; i++) {
-        out8[i] = gSaveContext.playerName[i];
+        out8[i] =
+            ComboNameCharOotToMm(gSaveContext.playerName[i], gSaveContext.ship.filenameLanguage != NAME_LANGUAGE_PAL);
     }
 }
 
@@ -4016,6 +4019,11 @@ extern "C" COMBO_EXPORT void SOH_ResumeGame(void) {
 extern "C" COMBO_EXPORT void SOH_ResumeForeground(void) {
     auto ctx = Ship::Context::GetRawInstance();
     SOH_ReinitForResume(); // OOT RM active, OOT audio, OOT GUI + menu
+    // ComboShip (#27): with MM's title screen first, MM's loop cleared the shared window's running flag on its way out;
+    // re-arm it or OOT's first loop (SOH_RunMain) would return at once.
+    if (auto fast3d = std::dynamic_pointer_cast<Fast::Fast3dWindow>(ctx->GetWindow())) {
+        fast3d->SetIsRunning(true);
+    }
     // Re-sync this DLL's ImGui current-context (GImGui is per-module).
     ImGui::SetCurrentContext(ctx->GetWindow()->GetGui()->GetImGuiContext());
 }

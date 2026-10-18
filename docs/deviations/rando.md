@@ -1621,6 +1621,11 @@ options an MM start does (`SOH_RefreshComboStartingGameUI`, `HandleStartingAgeUI
 is beatable without them, and both games are filled from their own starts); the other game's settings still shape its
 own (unplayed) pool.
 
+**Tested (Linux build, 2026-10-18):** headless, 4 OoT-only and 4 MM-only seeds beat with no item of either game in the
+other's checks and the starting game forced; an MM-only Triforce Hunt puts all 30 pieces in MM; `--playthrough` beats
+both solo spoilers; combo seeds are unchanged. In game, an MM-only file starts in MM and the Clock Tower door stays in
+MM; an OoT-only file's Mask Shop stays in OOT; each solo file's own final boss completes the run.
+
 ## Combo-owned unified Hint Tracker (#164) (2026-08-20)
 
 **Why:** the Hint Tracker arrived in the 2026-07-13 soh merge as vendored OOT-only code, reachable
@@ -2526,6 +2531,10 @@ which is in that cycle in MM) and is used from a C button by human Link (adult L
   pool and MM's option. OOT's tier is `RAND_INF_OBTAINED_ROCS_FEATHER`, raised with `RG_ROCS_FEATHER`.
 - **Logic:** none in MM, like the other OOT items there.
 
+**Tested (Linux build, 2026-10-18):** headless, Shared Roc's Feather trims MM's copy from the pool, and unshared both
+copies are placed ("Roc's Feather (OOT)" / "(MM)"). In game, from a C button in MM: one jump per time in the air (peak
+about 31 units over 14 frames, no second use in the air), back after landing.
+
 ## Ageless items (OoTMM `items.ageless`) (2026-10-12)
 
 Twelve OOT options, `RSK_COMBO_AGELESS_SWORDS/SHIELDS/TUNICS/BOOTS/STICKS/BOOMERANG/HAMMER/HOOKSHOT/SLINGSHOT/BOW/
@@ -2848,8 +2857,7 @@ file select, so the slot/seed machinery is unchanged: MM picks, OOT loads or cre
   `Combo_ResumeMMIfLastSavedThere` takes the player to MM when the slot was last saved there.
 - **New file (`z_file_nameset_NES.c`, guarded):** MM's name entry confirms "create slot N named X" instead of
   `Sram_InitSave`. It needs a combo seed: the launcher reloads the remembered one first (`Combo_FrontEndSeedReady`),
-  otherwise MM shows a notification and the name entry stays open. OOT copies the name (MM and OOT spell file names
-  with the same characters) into the slot's meta info and runs `Sram_InitSave` as its own name entry does, which fires
+  otherwise MM shows a notification and the name entry stays open. OOT copies the name into the slot's meta info and runs `Sram_InitSave` as its own name entry does, which fires
   the launcher's new-save handling (MM save, seed bind), then loads the slot. 2ship's New File Setup screen (preset /
   vanilla or rando / seed) is skipped (`NewFileSetup.cpp`): combo files take the ComboShip seed.
 - **Copy / erase:** erase already wiped both saves and the slot (`gMMComboDeleteForeignSave`); copy now copies the whole
@@ -2862,3 +2870,21 @@ file select, so the slot/seed machinery is unchanged: MM picks, OOT loads or cre
 - **Back to the title:** a reset or owl-save quit in MM (return kinds 1/2) re-enters MM's title instead of OOT's; OOT
   reaching its own `TitleSetup` (a reset, the credits) asks the launcher (`Combo_FrontEndTakeTitle`), which parks OOT
   and enters MM's title.
+- **File names (`combo/ComboFileNames.h`):** the two games share the characters but not their codes: MM (and OOT's PAL
+  order) keep A-Z at 0x0A and space at 0x3E, while OOT on an NTSC ROM keeps A-Z at 0xAB and space at 0xDF. OOT's name now
+  goes into a new MM save converted (`SOH_GetCurrentPlayerName`; before this every NTSC-made file's MM name was blank),
+  MM's name entry's name goes into OOT converted back, and MM's file select shows the OOT file's name
+  (`ComboFixupReadSave` in MM's `SaveManager.cpp`), so files made before the fix show their names too.
+- **"ZELDA3" marker:** combo MM saves come from `Sram_InitNewSave`, which leaves MM's file marker empty, so MM's file
+  select read every slot as empty. `ComboFixupReadSave` stamps it on read.
+- **No empty slots from opening it:** MM's file select clears every empty slot when it opens (a null write of the MM
+  section). A null write to a slot with no container on disk is now a no-op (`Combo_WriteGameSave`), instead of making
+  an empty `fileN.combosav`.
+- **First OOT boot after the front end:** OOT's window "running" flag was still off, so OOT quit on its first frame;
+  `SOH_ResumeForeground` turns it back on.
+
+**Tested (Linux build, 2026-10-18):** MM title and file select with three slots; loading an MM-last slot resumes MM, an
+OoT-only slot goes to OOT; a reset from MM and from OOT both return to MM's title; Generate from MM's file select
+finalizes; a new file from MM's name entry ("Ab2.") is created with the seed, starts in Link's house, and its name shows
+on MM's file select and in both games' saves; Copy duplicates the whole slot (both games and the seed); Erase removes
+the slot and leaves no file behind; the Mask Shop still switches to MM in a two-game seed loaded this way.

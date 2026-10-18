@@ -683,12 +683,22 @@ static void Combo_WriteGameSave(int game, int fileNum, const char* json) {
         }
         return;
     }
+    nlohmann::json section;
+    try {
+        section = nlohmann::json::parse(json);
+    } catch (...) { return; }
     std::lock_guard<std::mutex> lk(g_containerMutex);
+    // Clearing a section of a slot that has no container on disk is a no-op, not a new empty file: MM's file
+    // select (the #27 front end) clears every empty slot this way just by opening. (Every write flushes, so a
+    // slot with nothing on disk has nothing to clear; a read may have cached an empty entry for it.)
+    if (section.is_null()) {
+        std::error_code ec;
+        if (!std::filesystem::exists(ComboContainerPath(fileNum), ec))
+            return;
+    }
     auto& c = LoadOrCreateContainer(fileNum);
     const char* key = (game == ComboRando::GAME_OOT) ? "oot" : "mm";
-    try {
-        c[key] = nlohmann::json::parse(json);
-    } catch (...) { return; }
+    c[key] = std::move(section);
     FlushContainer(fileNum);
 }
 
