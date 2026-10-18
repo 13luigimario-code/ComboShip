@@ -135,6 +135,7 @@ std::map<RandoOptionId, RandoStaticOption> Options = {
     RO(RO_KEYRINGS_SNOWHEAD,                RO_GENERIC_OFF),
     RO(RO_KEYRINGS_GREAT_BAY,               RO_GENERIC_OFF),
     RO(RO_KEYRINGS_STONE_TOWER,             RO_GENERIC_OFF),
+    RO(RO_CROSS_ROCS_FEATHER,               RO_GENERIC_OFF),
 #endif
 };
 // clang-format on

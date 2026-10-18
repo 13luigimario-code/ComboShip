@@ -167,6 +167,9 @@ std::vector<u8> BuildAvailableItemsList(u8 slot) {
             if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT)) {
                 availableItems.push_back(ITEM_COMBO_SLINGSHOT);
             }
+            if (Flags_GetRandoInf(RANDO_INF_OBTAINED_ROCS_FEATHER)) {
+                availableItems.push_back(ITEM_COMBO_ROCS_FEATHER);
+            }
 #endif
             break;
     }

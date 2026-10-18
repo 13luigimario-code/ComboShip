@@ -35,6 +35,8 @@ static const ALIGN_ASSET(2) char gComboIconHammerTex[] = COMBO_OOT_ICON("gItemIc
 static const ALIGN_ASSET(2) char gComboIconBoomerangTex[] = COMBO_OOT_ICON("gItemIconBoomerangTex");
 static const ALIGN_ASSET(2) char gComboIconSlingshotTex[] = COMBO_OOT_ICON("gItemIconSlingshotTex");
 static const ALIGN_ASSET(2) char gComboIconShieldDekuTex[] = COMBO_OOT_ICON("gItemIconShieldDekuTex");
+// Ship of Harkinian's own Roc's Feather assets (soh.o2r, also served by OOT's ResourceManager).
+static const ALIGN_ASSET(2) char gComboIconRocsFeatherTex[] = COMBO_OOT_ICON("gRocsFeatherTex");
 
 // Pause-screen item names (128x16 IA4, same format as MM's item_name_static).
 static const ALIGN_ASSET(2) char gComboNameIronBootsTex[] = COMBO_OOT_NAME("gIronBootsItemNameENGTex");
@@ -50,6 +52,7 @@ static const ALIGN_ASSET(2) char gComboNameNayrusLoveTex[] = COMBO_OOT_NAME("gNa
 static const ALIGN_ASSET(2) char gComboNameMegatonHammerTex[] = COMBO_OOT_NAME("gMegatonHammerItemNameENGTex");
 static const ALIGN_ASSET(2) char gComboNameBoomerangTex[] = COMBO_OOT_NAME("gBoomerangItemNameENGTex");
 static const ALIGN_ASSET(2) char gComboNameFairySlingshotTex[] = COMBO_OOT_NAME("gFairySlingshotItemNameENGTex");
+static const ALIGN_ASSET(2) char gComboNameRocsFeatherTex[] = COMBO_OOT_NAME("gRocsFeatherItemNameENGTex");
 
 // OOT items in MM (CrossUpgrades.cpp): the first-tier ocarina shows OOT's own icon and name (the Short Hookshot keeps
 // MM's Hookshot icon), the Stone of Agony OOT's 24x24 quest icon (HUD indicator and menus).

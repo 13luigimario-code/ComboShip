@@ -868,6 +868,7 @@ void Rando::DrawItem(RandoItemId randoItemId, RandoCheckId randoCheckId, Actor* 
         case RI_BOOMERANG:
         case RI_SLINGSHOT:
         case RI_SHIELD_DEKU:
+        case RI_ROCS_FEATHER:
         case RI_STONE_OF_AGONY:
         case RI_OCARINA_FAIRY:
         case RI_HOOKSHOT_SHORT:

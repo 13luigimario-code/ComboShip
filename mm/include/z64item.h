@@ -379,7 +379,8 @@ typedef enum ItemId {
 #define ITEM_COMBO_HAMMER ITEM_C2
 #define ITEM_COMBO_BOOMERANG ITEM_C3
 #define ITEM_COMBO_SLINGSHOT ITEM_C4
-#define ITEM_COMBO_MAX ITEM_C5 // exclusive
+#define ITEM_COMBO_ROCS_FEATHER ITEM_C5 // Ship of Harkinian's Roc's Feather (CrossRocsFeather.cpp)
+#define ITEM_COMBO_MAX ITEM_C6 // exclusive
 #define ITEM_COMBO_TABLE_SIZE ITEM_COMBO_MAX
 #define IS_COMBO_CROSS_ITEM(item) (((item) >= ITEM_COMBO_MIN) && ((item) < ITEM_COMBO_MAX))
 #endif

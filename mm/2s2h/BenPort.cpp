@@ -3876,6 +3876,7 @@ static void GiveItemForOracle(RandoItemId ri) {
         case RI_BOOMERANG:
         case RI_SLINGSHOT:
         case RI_SHIELD_DEKU:
+        case RI_ROCS_FEATHER:
             Rando::CrossGearGive(ri);
             break;
         // ComboShip (cross-game items): OOT items in MM - flag / inventory / upgrade writes, headless-safe.
@@ -4479,6 +4480,8 @@ extern "C" COMBO_EXPORT int MM_GetSharedTier(int family) try {
             return Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT) ? 1 : 0;
         case ComboRando::SF_STONE_OF_AGONY:
             return Flags_GetRandoInf(RANDO_INF_OBTAINED_STONE_OF_AGONY) ? 1 : 0;
+        case ComboRando::SF_ROCS_FEATHER:
+            return Flags_GetRandoInf(RANDO_INF_OBTAINED_ROCS_FEATHER) ? 1 : 0;
         // MM starts at capacity tier 1 (10 sticks / 20 nuts); the family counts the upgrades past it.
         case ComboRando::SF_STICK_UPGRADES:
             return std::max(0, (int)CUR_UPG_VALUE(UPG_DEKU_STICKS) - 1);
@@ -4664,6 +4667,9 @@ extern "C" COMBO_EXPORT void MM_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_STONE_OF_AGONY:
                 base = RI_STONE_OF_AGONY;
+                break;
+            case ComboRando::SF_ROCS_FEATHER:
+                base = RI_ROCS_FEATHER;
                 break;
             case ComboRando::SF_STICK_UPGRADES:
                 base = RI_PROGRESSIVE_STICK_UPGRADE;

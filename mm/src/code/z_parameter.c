@@ -677,6 +677,7 @@ u8 gPlayerFormItemRestrictions[PLAYER_FORM_MAX][114] = {
         [ITEM_COMBO_HAMMER] = true,
         [ITEM_COMBO_BOOMERANG] = true,
         [ITEM_COMBO_SLINGSHOT] = true,
+        [ITEM_COMBO_ROCS_FEATHER] = true,
 #endif
     },
 };
