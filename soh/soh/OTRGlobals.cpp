@@ -147,10 +147,10 @@
 #include "soh/SohGui/SohModals.h"
 #ifdef COMBO_BUILD
 #include "ComboMenuSharedContext.h" // ComboShip: shared per-DLL ImGui context helper (combo-owned)
+#include "ComboFileNames.h"         // ComboShip: file-name glyph codes shared with MM
 #include "rando/CrossForeign.h"     // ComboShip (#164): g_comboForeignJson for the hint-key map replay
 #include "rando/SharedItems.h"      // ComboShip: Shared Items family table
 #include "rando/ComboGames.h"       // ComboShip: Games (OoT only / MM only / Combo)
-#include "ComboFileNames.h"         // ComboShip: file-name glyph codes shared with MM
 #include "rando/CrossWarpLogic.h"   // ComboShip (teleport songs): cross-game warp logic bits
 #include "soh/Enhancements/randomizer/hook_handlers.h" // ComboShip (#164): OOT_ForeignMapGen
 #include <functional>                                  // ComboShip (#164): shared hint-resolution callbacks

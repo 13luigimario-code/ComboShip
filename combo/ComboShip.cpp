@@ -3357,13 +3357,6 @@ int main(int argc, char** argv) {
     SOH_SetOwlFlagsProvider = (FnSetOwlFlagsProvider)GetSym(sohModule, "SOH_SetOwlFlagsProvider");
     SOH_SetOwlWarpEntranceProvider = (FnSetOwlWarpEntranceProvider)GetSym(sohModule, "SOH_SetOwlWarpEntranceProvider");
 
-    // Starting game seam (#135) — OOT-side only; MM needs no setter (nothing there reads it).
-    SOH_SetComboStartingGame = (FnSetComboStartingGame)GetSym(sohModule, "SOH_SetComboStartingGame");
-    SOH_ReadComboStartingGameCVar = (FnReadComboStartingGameCVar)GetSym(sohModule, "SOH_ReadComboStartingGameCVar");
-    // Games seam (ComboGames.h): optional, a missing export reads as combo.
-    SOH_ReadComboGamesCVar = (FnReadComboGamesCVar)GetSym(sohModule, "SOH_ReadComboGamesCVar");
-    SOH_SetComboGames = (FnSetComboGames)GetSym(sohModule, "SOH_SetComboGames");
-    MM_SetComboGames = (FnSetComboGames)GetSym(mmModule, "MM_SetComboGames");
     // Title screen + file select front end (#27): optional, a missing export keeps OOT's.
     SOH_ReadComboFrontEndCVar = (FnReadComboFrontEndCVar)GetSym(sohModule, "SOH_ReadComboFrontEndCVar");
     SOH_SetComboMmOnFileSelect = (FnSetComboMmOnFileSelect)GetSym(sohModule, "SOH_SetComboMmOnFileSelect");
@@ -3378,6 +3371,14 @@ int main(int argc, char** argv) {
     MM_TakeComboFrontEndAction = (FnMMTakeComboFrontEndAction)GetSym(mmModule, "MM_TakeComboFrontEndAction");
     MM_IsOnFileSelect = (FnIntVoid)GetSym(mmModule, "MM_IsOnFileSelect");
     SOH_RefreshSaveMeta = (FnRefreshSaveMeta)GetSym(sohModule, "SOH_RefreshSaveMeta");
+
+    // Starting game seam (#135) — OOT-side only; MM needs no setter (nothing there reads it).
+    SOH_SetComboStartingGame = (FnSetComboStartingGame)GetSym(sohModule, "SOH_SetComboStartingGame");
+    SOH_ReadComboStartingGameCVar = (FnReadComboStartingGameCVar)GetSym(sohModule, "SOH_ReadComboStartingGameCVar");
+    // Games seam (ComboGames.h): optional, a missing export reads as combo.
+    SOH_ReadComboGamesCVar = (FnReadComboGamesCVar)GetSym(sohModule, "SOH_ReadComboGamesCVar");
+    SOH_SetComboGames = (FnSetComboGames)GetSym(sohModule, "SOH_SetComboGames");
+    MM_SetComboGames = (FnSetComboGames)GetSym(mmModule, "MM_SetComboGames");
 
     // Shared Items seam — SOH_SetComboSharedItems is OOT-only (shapes the gen-time wallet force).
     SOH_SetComboSharedItems = (FnSetComboSharedItems)GetSym(sohModule, "SOH_SetComboSharedItems");
