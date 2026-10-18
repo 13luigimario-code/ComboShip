@@ -130,7 +130,8 @@ inline bool CwIsTriforcePiece(GameId itemGame, const std::string& itemName) {
 
 // How many pieces the two settings-scoped pools actually hold. Logged loudly: the names above are
 // coupled to each game's item table, so a rename would otherwise silently drop that game's pieces.
-inline int CountPoolTriforcePieces(const std::string& sohDumpJson, const std::string& mmDumpJson) {
+inline int CountPoolTriforcePieces(const std::string& sohDumpJson, const std::string& mmDumpJson,
+                                   ComboGames games = COMBO_GAMES_BOTH) {
     auto countIn = [](const std::string& dump, GameId g) {
         int n = 0;
         try {
@@ -143,7 +144,7 @@ inline int CountPoolTriforcePieces(const std::string& sohDumpJson, const std::st
     const int oot = countIn(sohDumpJson, GAME_OOT);
     const int mm = countIn(mmDumpJson, GAME_MM);
     std::cout << "[ComboShip] Triforce Hunt: combined pool holds " << oot << " OOT + " << mm << " MM piece(s)\n";
-    if (oot == 0 || mm == 0)
+    if ((oot == 0 || mm == 0) && !ComboGamesSolo(games)) // a solo seed has every piece in its game
         std::cerr << "[ComboShip] Triforce Hunt: WARNING — one game contributes no pieces (slider at 0, or its "
                      "piece item was renamed)\n";
     return oot + mm;

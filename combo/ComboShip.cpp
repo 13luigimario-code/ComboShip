@@ -1885,7 +1885,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         }
         resolvedMmStart = mmStart; // these dumps used it, so whatever spoiler they end up in must record it
         if (goal.hunt) {
-            const int pieces = ComboRando::CountPoolTriforcePieces(sohDump, mmDump);
+            const int pieces = ComboRando::CountPoolTriforcePieces(sohDump, mmDump, games);
             if (pieces < goal.required) {
                 fail((std::string("Triforce Hunt needs ") + std::to_string(goal.required) + " pieces but only " +
                       std::to_string(pieces) + " are in the combined pool — raise the Combo menu's pool total")

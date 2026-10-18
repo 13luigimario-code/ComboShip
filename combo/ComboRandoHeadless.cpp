@@ -616,7 +616,7 @@ static int Run(int argc, char** argv) {
             sohDump = SOH_Dump();
             mmDump = MM_Dump();
             if (goal.hunt) {
-                const int pieces = ComboRando::CountPoolTriforcePieces(sohDump, mmDump);
+                const int pieces = ComboRando::CountPoolTriforcePieces(sohDump, mmDump, games);
                 if (pieces < goal.required) {
                     std::cerr << "[comborando] Triforce Hunt needs " << goal.required << " pieces but only " << pieces
                               << " are in the combined pool — raise --triforce-total / the Combo pool total\n";
