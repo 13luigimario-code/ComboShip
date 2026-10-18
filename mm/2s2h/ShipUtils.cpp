@@ -391,7 +391,8 @@ void LoadGuiTextures() {
     // ComboShip (cross-game items): OOT icons for passive cross-game items, which have no gItemIcons entry
     // (Rando::StaticData::GetIconTexturePath returns these for the menus, tracker and notifications).
     for (const char* entry : { gComboIconScaleSilverTex, gComboIconScaleGoldenTex, gComboIconGoronsBraceletTex,
-                               gComboIconSilverGauntletsTex, gComboIconGoldenGauntletsTex }) {
+                               gComboIconSilverGauntletsTex, gComboIconGoldenGauntletsTex, gComboIconStoneOfAgonyTex,
+                               gComboIconShieldDekuTex, gComboIconOcarinaFairyTex }) {
         std::dynamic_pointer_cast<Fast::Fast3dGui>(Ship::Context::GetRawInstance()->GetWindow()->GetGui())
             ->LoadGuiTexture(entry, entry, "", ImVec4(1, 1, 1, 1));
     }
