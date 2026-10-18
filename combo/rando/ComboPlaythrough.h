@@ -234,6 +234,14 @@ inline bool MmOnlyMajoraGoal(const std::unordered_set<std::string>& /*ootReach*/
     return mmReach.count(kMmWin) > 0;
 }
 
+// OoT-only seed (ComboGames.h): Ganon alone.
+inline bool OotOnlyGanonGoal(const std::unordered_set<std::string>& ootReach,
+                             const std::unordered_set<std::string>& /*mmReach*/,
+                             const std::vector<std::string>& /*ownedOot*/,
+                             const std::vector<std::string>& /*ownedMm*/) {
+    return ootReach.count("Ganon") > 0;
+}
+
 // Counts Triforce Pieces held across BOTH games (#136). Owned-based, not reachability-based, so the
 // pare-down counterfactuals (which blank one placement) actually change the answer.
 inline int CountOwnedTriforcePieces(const std::vector<std::string>& ownedOot, const std::vector<std::string>& ownedMm) {

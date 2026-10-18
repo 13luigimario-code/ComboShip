@@ -12,6 +12,7 @@
 
 #ifdef COMBO_BUILD
 #include "rando/SharedItems.h" // ComboShip: Shared Items family indices (SF_WALLET)
+#include "rando/ComboGames.h"  // ComboShip: Games (the Triforce piece split)
 // ComboShip (#136): combo owns the win condition (combined Triforce goal), forced in FinalizeSettings.
 // A plain constant, not an #ifdef inside the OPT_CALLBACK macro arguments.
 extern "C" int gComboGoalHunt;
@@ -32,7 +33,9 @@ static uint8_t ComboOotTriforceTotal() {
     }
     int total = CVarGetInteger("gCombo.Rando.TriforceTotal", 15);
     total = total < 1 ? 1 : (total > 100 ? 100 : total); // 100 = kMaxComboTriforcePieces
-    return static_cast<uint8_t>(total - total / 2);      // OOT takes the odd piece
+    // OOT takes the odd piece; Games = OoT only takes them all, MM only none (combo/rando/ComboGames.h).
+    const auto games = ComboRando::ComboGamesFromInt(CVarGetInteger(ComboRando::kComboGamesCVar, 0));
+    return static_cast<uint8_t>(ComboRando::ComboGamesOotPieces(games, total));
 }
 #else
 static constexpr bool kComboOwnsWincon = false;
@@ -210,8 +213,11 @@ void Settings::HandleStartingAgeUI() {
         mOptions[RSK_STARTING_AGE].Enable();
     }
 #ifdef COMBO_BUILD
-    // ComboShip (#135): an explicit MM start forces Child, so that disable outranks the rule above.
-    if (CVarGetInteger("gCombo.Rando.StartingGame", 0) == 1) {
+    // ComboShip (#135): an explicit MM start forces Child, so that disable outranks the rule above. Games = MM only
+    // starts in MM too (combo/rando/ComboGames.h).
+    if (CVarGetInteger(ComboRando::kComboGamesCVar, 0) == ComboRando::COMBO_GAMES_MM) {
+        mOptions[RSK_STARTING_AGE].Disable("Games is Majora's Mask only");
+    } else if (CVarGetInteger("gCombo.Rando.StartingGame", 0) == 1) {
         mOptions[RSK_STARTING_AGE].Disable("Starting Game is Majora's Mask");
     }
 #endif
