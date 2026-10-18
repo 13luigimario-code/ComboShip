@@ -683,12 +683,22 @@ static void Combo_WriteGameSave(int game, int fileNum, const char* json) {
         }
         return;
     }
+    nlohmann::json section;
+    try {
+        section = nlohmann::json::parse(json);
+    } catch (...) { return; }
     std::lock_guard<std::mutex> lk(g_containerMutex);
+    // Clearing a section of a slot that has no container on disk is a no-op, not a new empty file: MM's file
+    // select (the #27 front end) clears every empty slot this way just by opening. (Every write flushes, so a
+    // slot with nothing on disk has nothing to clear; a read may have cached an empty entry for it.)
+    if (section.is_null()) {
+        std::error_code ec;
+        if (!std::filesystem::exists(ComboContainerPath(fileNum), ec))
+            return;
+    }
     auto& c = LoadOrCreateContainer(fileNum);
     const char* key = (game == ComboRando::GAME_OOT) ? "oot" : "mm";
-    try {
-        c[key] = nlohmann::json::parse(json);
-    } catch (...) { return; }
+    c[key] = std::move(section);
     FlushContainer(fileNum);
 }
 
@@ -2957,6 +2967,78 @@ static void Combo_OnMMReturn(int kind) {
     g_pendingOOTReturn = true;
 }
 
+// ---------- Title screen + file select front end (#27) ----------
+// Majora's Mask's title screen and file select instead of OOT's. MM's file select hands every file action (load, new)
+// to OOT's file select, which runs it exactly like its own (so slot binding, seed binding and "resume in the game it
+// was last saved in" are unchanged); the title screen, wherever a game would go back to it, is MM's.
+typedef int (*FnReadComboFrontEndCVar)(void);
+typedef void (*FnSetComboMmOnFileSelect)(int (*)(void));
+typedef int (*FnIntVoid)(void);
+typedef void (*FnSetComboFileSelectAction)(int kind, int slot, const unsigned char* name8);
+typedef void (*FnSetComboFrontEndTitleCb)(int (*)(void));
+typedef void (*FnMMSetComboFrontEnd)(int on, int (*seedReady)(void), void (*frame)(void), void (*copy)(int, int),
+                                     int (*busy)(void));
+typedef int (*FnMMTakeComboFrontEndAction)(int* slot, unsigned char* name8);
+typedef void (*FnRefreshSaveMeta)(int fileNum);
+static FnRefreshSaveMeta SOH_RefreshSaveMeta = nullptr;
+static FnReadComboFrontEndCVar SOH_ReadComboFrontEndCVar = nullptr;
+static FnSetComboMmOnFileSelect SOH_SetComboMmOnFileSelect = nullptr;
+static FnIntVoid SOH_IsComboGenerating = nullptr;
+static FnIntVoid SOH_IsComboSeedReady = nullptr;
+static FnIntVoid SOH_PollComboFinalizeExport = nullptr;
+static int (*SOH_RequestComboReloadExport)(const char*) = nullptr;
+static FnSetComboFileSelectAction SOH_SetComboFileSelectAction = nullptr;
+static FnSetComboFrontEndTitleCb SOH_SetComboFrontEndTitleCallback = nullptr;
+static FnMMSetComboFrontEnd MM_SetComboFrontEnd = nullptr;
+static FnMMTakeComboFrontEndAction MM_TakeComboFrontEndAction = nullptr;
+static FnIntVoid MM_IsOnFileSelect = nullptr;
+static bool g_frontEndMM = false;        // re-read every time the title screen comes up
+static bool g_frontEndToMmTitle = false; // OOT handed its title screen to MM's
+
+static bool Combo_ReadFrontEndMM() {
+    return SOH_ReadComboFrontEndCVar != nullptr && SOH_ReadComboFrontEndCVar() == 1 && MM_SetComboFrontEnd != nullptr &&
+           MM_TakeComboFrontEndAction != nullptr && SOH_SetComboFileSelectAction != nullptr;
+}
+// A combo seed is ready for a new file (the remembered one is reloaded first, as OOT's file select does on entry).
+static int Combo_FrontEndSeedReady() {
+    if (SOH_IsComboGenerating && SOH_IsComboGenerating())
+        return 0;
+    if (SOH_IsComboSeedReady && !SOH_IsComboSeedReady() && SOH_RequestComboReloadExport)
+        SOH_RequestComboReloadExport(nullptr);
+    return (SOH_IsComboSeedReady && SOH_IsComboSeedReady()) ? 1 : 0;
+}
+// Once a frame on MM's file select: drive a generation's main-thread finalize, as OOT's file select does.
+static void Combo_FrontEndFrame() {
+    if (SOH_IsComboGenerating && SOH_IsComboGenerating() && SOH_PollComboFinalizeExport)
+        SOH_PollComboFinalizeExport();
+}
+static int Combo_FrontEndBusy() {
+    return (SOH_IsComboGenerating && SOH_IsComboGenerating()) ? 1 : 0;
+}
+static int Combo_FrontEndMmOnFileSelect() {
+    return (g_frontEndMM && MM_IsOnFileSelect && MM_IsOnFileSelect()) ? 1 : 0;
+}
+// MM's file select copied a file: the whole slot goes with it (both saves and the seed), as OOT's copy does.
+static void Combo_FrontEndCopy(int from, int to) {
+    if (ComboIsValidSlot(from) && ComboIsValidSlot(to) && from != to)
+        Combo_CopyContainer(from, to);
+}
+static void Combo_PushFrontEnd() {
+    if (MM_SetComboFrontEnd)
+        MM_SetComboFrontEnd(g_frontEndMM ? 1 : 0, Combo_FrontEndSeedReady, Combo_FrontEndFrame, Combo_FrontEndCopy,
+                            Combo_FrontEndBusy);
+}
+// OOT is about to show its own title: with MM's front end, take the player to MM's title instead.
+static int Combo_FrontEndTakeOotTitle() {
+    g_frontEndMM = Combo_ReadFrontEndMM();
+    Combo_PushFrontEnd();
+    if (!g_frontEndMM)
+        return 0;
+    std::cout << "[ComboShip] OOT title -> Majora's Mask's title screen (front end)" << std::endl;
+    g_frontEndToMmTitle = true;
+    return 1;
+}
+
 // ---------- Data-file location ----------
 
 // The launcher runs BEFORE libultraship's Context exists, so it cannot call
@@ -3228,6 +3310,21 @@ int main(int argc, char** argv) {
     MM_GetOwlWarpEntrance = (FnGetOwlWarpEntrance)GetSym(mmModule, "MM_GetOwlWarpEntrance");
     SOH_SetOwlFlagsProvider = (FnSetOwlFlagsProvider)GetSym(sohModule, "SOH_SetOwlFlagsProvider");
     SOH_SetOwlWarpEntranceProvider = (FnSetOwlWarpEntranceProvider)GetSym(sohModule, "SOH_SetOwlWarpEntranceProvider");
+
+    // Title screen + file select front end (#27): optional, a missing export keeps OOT's.
+    SOH_ReadComboFrontEndCVar = (FnReadComboFrontEndCVar)GetSym(sohModule, "SOH_ReadComboFrontEndCVar");
+    SOH_SetComboMmOnFileSelect = (FnSetComboMmOnFileSelect)GetSym(sohModule, "SOH_SetComboMmOnFileSelect");
+    SOH_IsComboGenerating = (FnIntVoid)GetSym(sohModule, "SOH_IsComboGenerating");
+    SOH_IsComboSeedReady = (FnIntVoid)GetSym(sohModule, "SOH_IsComboSeedReady");
+    SOH_PollComboFinalizeExport = (FnIntVoid)GetSym(sohModule, "SOH_PollComboFinalize");
+    SOH_RequestComboReloadExport = (int (*)(const char*))GetSym(sohModule, "SOH_RequestComboReload");
+    SOH_SetComboFileSelectAction = (FnSetComboFileSelectAction)GetSym(sohModule, "SOH_SetComboFileSelectAction");
+    SOH_SetComboFrontEndTitleCallback =
+        (FnSetComboFrontEndTitleCb)GetSym(sohModule, "SOH_SetComboFrontEndTitleCallback");
+    MM_SetComboFrontEnd = (FnMMSetComboFrontEnd)GetSym(mmModule, "MM_SetComboFrontEnd");
+    MM_TakeComboFrontEndAction = (FnMMTakeComboFrontEndAction)GetSym(mmModule, "MM_TakeComboFrontEndAction");
+    MM_IsOnFileSelect = (FnIntVoid)GetSym(mmModule, "MM_IsOnFileSelect");
+    SOH_RefreshSaveMeta = (FnRefreshSaveMeta)GetSym(sohModule, "SOH_RefreshSaveMeta");
 
     // Starting game seam (#135) — OOT-side only; MM needs no setter (nothing there reads it).
     SOH_SetComboStartingGame = (FnSetComboStartingGame)GetSym(sohModule, "SOH_SetComboStartingGame");
@@ -3644,6 +3741,29 @@ int main(int argc, char** argv) {
     // MM was already booted at startup (eager boot) — the first portal transition must RESUME MM,
     // not run MM_RunGame (which would re-run MM_RunMain on an already-initialized MM).
     bool mmBooted = mmEagerBooted;
+    // #27: Majora's Mask's title screen + file select. MM's title opens first; OOT boots when a file is picked.
+    bool ootNeedsForeground = false; // OOT's RM/audio/GUI were handed to MM before OOT ever ran
+    if (SOH_SetComboFrontEndTitleCallback)
+        SOH_SetComboFrontEndTitleCallback(Combo_FrontEndTakeOotTitle);
+    if (SOH_SetComboMmOnFileSelect)
+        SOH_SetComboMmOnFileSelect(Combo_FrontEndMmOnFileSelect);
+    g_frontEndMM = mmEagerBooted && MM_ResumeGame && Combo_ReadFrontEndMM();
+    Combo_PushFrontEnd();
+    auto enterMmTitle = [&]() {
+        std::cout << "[ComboShip] Majora's Mask title screen (front end)\n";
+        if (MM_SetOnComboReturnCallback)
+            MM_SetOnComboReturnCallback(Combo_OnMMReturn);
+        ComboAnchor::SetActiveGame(1);
+        Combo_SetForegroundGame(ComboRando::GAME_MM);
+        g_PendingMMFileNum = -1; // no file: MM boots to its title
+        current = GAME_MM;
+    };
+    if (g_frontEndMM) {
+        if (SOH_PrepareForTransition)
+            SOH_PrepareForTransition(); // OOT's RM/audio go dormant, as on a portal hand-off
+        ootNeedsForeground = true;
+        enterMmTitle();
+    }
     for (;;) {
         if (current == GAME_OOT) {
             g_PendingMMFileNum = -1;
@@ -3657,12 +3777,23 @@ int main(int argc, char** argv) {
             }
             if (!ootBooted) {
                 std::cout << "[ComboShip] OOT boot\n";
+                if (ootNeedsForeground && SOH_ResumeForeground)
+                    SOH_ResumeForeground(); // #27: MM's front end ran first
+                ootNeedsForeground = false;
                 SOH_RunMain(argc, argv);
                 ootBooted = true;
             } else {
                 std::cout << "[ComboShip] OOT resume\n";
                 if (SOH_ResumeGame)
                     SOH_ResumeGame();
+            }
+            if (g_frontEndToMmTitle && MM_ResumeGame) {
+                // #27: OOT went back to its title screen (reset, credits, a failed file action): MM's title instead.
+                g_frontEndToMmTitle = false;
+                if (SOH_PrepareForTransition)
+                    SOH_PrepareForTransition();
+                enterMmTitle();
+                continue;
             }
             if (g_PendingMMFileNum >= 0 && MM_RunGame) {
                 if (SOH_PrepareForTransition)
@@ -3699,6 +3830,37 @@ int main(int argc, char** argv) {
                 std::cout << "[ComboShip] MM resume\n";
                 if (MM_ResumeGame)
                     MM_ResumeGame(g_PendingMMFileNum);
+            }
+            if (g_pendingOOTReturn && g_mmReturnKind == 3) {
+                // #27: MM's file select picked a file: OOT's file select loads (or creates) it.
+                int slot = -1;
+                unsigned char name[8] = { 0 };
+                const int kind = MM_TakeComboFrontEndAction ? MM_TakeComboFrontEndAction(&slot, name) : 0;
+                std::cout << "[ComboShip] MM file select -> OOT file select (action " << kind << ", slot " << slot
+                          << ")\n";
+                if (SOH_RefreshSaveMeta && slot >= 0)
+                    SOH_RefreshSaveMeta(slot); // MM's file select may have copied/erased slots since OOT read them
+                if (SOH_SetComboFileSelectAction)
+                    SOH_SetComboFileSelectAction(kind, slot, name);
+                if (MM_PrepareForTransition)
+                    MM_PrepareForTransition();
+                ComboAnchor::SetActiveGame(0);
+                Combo_SetForegroundGame(ComboRando::GAME_OOT);
+                g_MmSaveInMemorySlot = -1; // MM's title/file select left no save of a slot in memory
+                current = GAME_OOT;
+                continue;
+            }
+            if (g_pendingOOTReturn && g_mmReturnKind != 0) {
+                // #27: a reset or owl-save quit ends the session on the title screen: MM's, with MM's front end.
+                g_frontEndMM = Combo_ReadFrontEndMM();
+                Combo_PushFrontEnd();
+                if (g_frontEndMM) {
+                    if (MM_PrepareForTransition)
+                        MM_PrepareForTransition();
+                    g_MmSaveInMemorySlot = -1; // post-quit state: re-read from the container on the next load
+                    enterMmTitle();
+                    continue;
+                }
             }
             if (g_pendingOOTReturn) {
                 if (MM_PrepareForTransition)

@@ -184,6 +184,86 @@ static bool sComboOwlSaveQuitPending = false;
 extern "C" void Combo_RequestOwlSaveQuit(void) {
     sComboOwlSaveQuitPending = true;
 }
+// ComboShip (#27): Majora's Mask's title screen + file select as ComboShip's front end. The launcher turns it on
+// (MM_SetComboFrontEnd) and opens MM's title; MM's file select hands each file action to OOT's file select, which loads
+// or creates the slot exactly as its own would (soh title_setup.c / z_file_choose.c). 3 = the kind passed to the return
+// callback; the action itself is read back with MM_TakeComboFrontEndAction.
+static bool sComboFrontEnd = false;
+static int (*sComboFrontEndSeedReady)(void) = nullptr; // a combo seed is generated/loaded (reloads the remembered one)
+static void (*sComboFrontEndFrame)(void) = nullptr;    // once a frame on MM's file select (generation finalize)
+static void (*sComboFrontEndCopy)(int from, int to) = nullptr;
+static int (*sComboFrontEndBusy)(void) = nullptr; // a seed is generating: MM's file select ignores input
+static int sComboFrontEndActionKind = 0;          // 1 = load the slot, 2 = create it (name below), as OOT's action
+static int sComboFrontEndActionSlot = -1;
+static u8 sComboFrontEndActionName[8] = { 0 };
+extern "C" COMBO_EXPORT void MM_SetComboFrontEnd(int on, int (*seedReady)(void), void (*frame)(void),
+                                                 void (*copy)(int, int), int (*busy)(void)) {
+    sComboFrontEnd = on != 0;
+    sComboFrontEndSeedReady = seedReady;
+    sComboFrontEndFrame = frame;
+    sComboFrontEndCopy = copy;
+    sComboFrontEndBusy = busy;
+}
+extern "C" COMBO_EXPORT int MM_TakeComboFrontEndAction(int* slot, u8* name8) {
+    const int kind = sComboFrontEndActionKind;
+    if (slot != nullptr)
+        *slot = sComboFrontEndActionSlot;
+    if (name8 != nullptr)
+        memcpy(name8, sComboFrontEndActionName, sizeof(sComboFrontEndActionName));
+    sComboFrontEndActionKind = 0;
+    sComboFrontEndActionSlot = -1;
+    return kind;
+}
+extern "C" int Combo_MM_FileSelectIsUp(void); // z_file_choose_NES.c
+extern "C" COMBO_EXPORT int MM_IsOnFileSelect(void) {
+    return (sComboFrontEnd && Combo_MM_FileSelectIsUp()) ? 1 : 0;
+}
+extern "C" int Combo_MM_FrontEndActive(void) {
+    return sComboFrontEnd ? 1 : 0;
+}
+// MM's file select picked an existing file: OOT loads it (1 = handed over; MM's loop ends at the next frame start).
+extern "C" int Combo_MM_FrontEndOpenFile(int slot) {
+    if (!sComboFrontEnd || slot < 0 || slot > 2)
+        return 0;
+    sComboFrontEndActionKind = 1;
+    sComboFrontEndActionSlot = slot;
+    return 1;
+}
+// MM's name entry finished a new file: OOT creates the slot (both saves, the loaded combo seed) and loads it. 0 when
+// there is no combo seed to make it with: MM's name entry stays open.
+extern "C" int Combo_MM_FrontEndNewFile(int slot, const u8* name8) {
+    if (!sComboFrontEnd || slot < 0 || slot > 2)
+        return 0;
+    if (sComboFrontEndSeedReady == nullptr || !sComboFrontEndSeedReady()) {
+        Notification::Emit({ .message = "Generate a seed first: Randomizer > Generate in the ComboShip menu." });
+        return 0;
+    }
+    sComboFrontEndActionKind = 2;
+    sComboFrontEndActionSlot = slot;
+    memcpy(sComboFrontEndActionName, name8, sizeof(sComboFrontEndActionName));
+    return 1;
+}
+// MM's name entry finished (z_file_nameset_NES.c): 1 when the front end took it, with its own sound.
+extern "C" int Combo_MM_FrontEndNameEntryDone(int slot, const u8* name8) {
+    if (!sComboFrontEnd)
+        return 0;
+    Audio_PlaySfx(Combo_MM_FrontEndNewFile(slot, name8) ? NA_SE_SY_FSEL_DECIDE_L : NA_SE_SY_FSEL_ERROR);
+    return 1;
+}
+extern "C" void Combo_MM_FrontEndCopied(int from, int to) {
+    if (sComboFrontEndCopy != nullptr)
+        sComboFrontEndCopy(from, to);
+}
+// Once a frame from FileSelect_Main; 1 while a seed generates (the file select then ignores input: generation borrows
+// MM's gSaveContext for its reachability searches).
+extern "C" int Combo_MM_FrontEndFileSelectFrame(void) {
+    if (!sComboFrontEnd)
+        return 0;
+    if (sComboFrontEndFrame != nullptr)
+        sComboFrontEndFrame();
+    return (sComboFrontEndBusy != nullptr && sComboFrontEndBusy()) ? 1 : 0;
+}
+
 // Drop any unconsumed return request. Called as MM is entered: one left over from the previous session
 // would immediately quit the new one.
 static void Combo_ClearReturnRequests(void) {
@@ -191,6 +271,8 @@ static void Combo_ClearReturnRequests(void) {
     sComboResetReturnPending = false;
     sComboOwlSaveQuitPending = false;
     sComboCrossTargetOOT = -1;
+    sComboFrontEndActionKind = 0;
+    sComboFrontEndActionSlot = -1;
 }
 
 // ComboShip (teleport songs): switch to OOT and arrive at this entrance. Console: combo_warp_oot.
@@ -1182,6 +1264,16 @@ extern "C" void InitOTR(int argc, char* argv[]) {
         }
     });
     GameInteractor::Instance->RegisterGameHook<GameInteractor::OnGameStateMainStart>([]() {
+        // ComboShip (#27): MM's file select handed a file to OOT. Nothing to save (no file is loaded here).
+        if (sComboFrontEndActionKind != 0) {
+            if (gComboReturnCallback)
+                gComboReturnCallback(3);
+            if (auto fast3d =
+                    std::dynamic_pointer_cast<Fast::Fast3dWindow>(Ship::Context::GetRawInstance()->GetWindow())) {
+                fast3d->SetIsRunning(false);
+            }
+            return;
+        }
         if (!sComboReturnPending && !sComboResetReturnPending && !sComboOwlSaveQuitPending)
             return;
         const bool isReset = sComboResetReturnPending;
@@ -1189,8 +1281,9 @@ extern "C" void InitOTR(int argc, char* argv[]) {
         sComboReturnPending = false;
         sComboResetReturnPending = false;
         sComboOwlSaveQuitPending = false;
-        // An owl save quit lands on OOT's title, like Ctrl+R, rather than resuming OOT gameplay.
-        if (isOwlSaveQuit) {
+        // An owl save quit lands on OOT's title, like Ctrl+R, rather than resuming OOT gameplay (MM's title with
+        // MM's front end: the launcher decides).
+        if (isOwlSaveQuit && !sComboFrontEnd) {
             static void (*sFn)(void) = nullptr;
             static bool sTried = false;
             if (!sTried) {
