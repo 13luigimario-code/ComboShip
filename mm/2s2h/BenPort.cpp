@@ -67,6 +67,7 @@ CrowdControl* CrowdControl::Instance;
 #ifdef COMBO_BUILD
 #include "ComboMenuSharedContext.h"               // ComboShip: shared per-DLL ImGui context helper (combo-owned)
 #include "rando/SharedItems.h"                    // ComboShip: Shared Items family table
+#include "rando/ComboGames.h"                     // ComboShip: Games (OoT only / MM only / Combo)
 #include "rando/CrossWarpLogic.h"                 // ComboShip (teleport songs): cross-game warp logic bits
 #include "2s2h/Rando/MiscBehavior/MiscBehavior.h" // ComboShip: MM_LoadComboRando cache invalidation + ComboRando types
 #include "2s2h/Rando/MiscBehavior/SohSettings.h" // ComboShip: Ship of Harkinian's Infinite Upgrades, Bombchu Bag, Key Rings
@@ -194,9 +195,14 @@ static void Combo_ClearReturnRequests(void) {
 }
 
 // ComboShip (teleport songs): switch to OOT and arrive at this entrance. Console: combo_warp_oot.
+extern "C" int Combo_GamesSolo(void);
 extern "C" void Combo_RequestCrossSwitch(int ootEntrance) {
     if (gSaveContext.gameMode != GAMEMODE_NORMAL) {
         SPDLOG_WARN("[ComboShip] Combo_RequestCrossSwitch: not in gameplay (gameMode={})", (int)gSaveContext.gameMode);
+        return;
+    }
+    if (Combo_GamesSolo()) { // a solo seed never goes to the other game (ComboGames.h)
+        SPDLOG_WARN("[ComboShip] Combo_RequestCrossSwitch: refused, this seed is one game only");
         return;
     }
     sComboCrossTargetOOT = ootEntrance;
@@ -1177,7 +1183,9 @@ extern "C" void InitOTR(int argc, char* argv[]) {
         // GAMEMODE_NORMAL only: MM's attract demo (GAMEMODE_TITLE_SCREEN, after Sram_InitNewSave wiped
         // the save) scene-hops through here, and would both teleport the player to OOT and persist the
         // wiped save over the slot.
-        if (sceneId == SCENE_INSIDETOWER && spawnNum == 1 && gSaveContext.gameMode == GAMEMODE_NORMAL) {
+        // Not in a solo seed (ComboGames.h): the Clock Tower is just MM's Clock Tower there.
+        if (sceneId == SCENE_INSIDETOWER && spawnNum == 1 && gSaveContext.gameMode == GAMEMODE_NORMAL &&
+            !Combo_GamesSolo()) {
             sComboReturnPending = true;
         }
     });
@@ -4353,6 +4361,15 @@ extern "C" COMBO_EXPORT void MM_SetComboGoal(int hunt, int required, int pieces)
 extern "C" uint64_t gMMComboSharedMask = 0; // ComboRando::SharedMask
 extern "C" COMBO_EXPORT void MM_SetComboSharedItems(ComboRando::SharedMask mask) {
     gMMComboSharedMask = mask;
+}
+// ComboShip: Games (combo/rando/ComboGames.h) of the loaded seed, pushed by the launcher. A solo seed never crosses
+// into the other game: the Clock Tower door stays in Termina and cross-game teleports are refused.
+extern "C" int gMMComboGames = ComboRando::COMBO_GAMES_BOTH;
+extern "C" COMBO_EXPORT void MM_SetComboGames(int games) {
+    gMMComboGames = ComboRando::ComboGamesFromInt(games);
+}
+extern "C" int Combo_GamesSolo(void) {
+    return ComboRando::ComboGamesSolo(static_cast<ComboRando::ComboGames>(gMMComboGames)) ? 1 : 0;
 }
 extern "C" int Combo_MM_BombchuBagShared(void) {
     return (gMMComboSharedMask >> ComboRando::SF_BOMBCHU_BAG) & 1;

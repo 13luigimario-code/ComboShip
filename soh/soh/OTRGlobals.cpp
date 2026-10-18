@@ -149,6 +149,7 @@
 #include "ComboMenuSharedContext.h" // ComboShip: shared per-DLL ImGui context helper (combo-owned)
 #include "rando/CrossForeign.h"     // ComboShip (#164): g_comboForeignJson for the hint-key map replay
 #include "rando/SharedItems.h"      // ComboShip: Shared Items family table
+#include "rando/ComboGames.h"       // ComboShip: Games (OoT only / MM only / Combo)
 #include "rando/CrossWarpLogic.h"   // ComboShip (teleport songs): cross-game warp logic bits
 #include "soh/Enhancements/randomizer/hook_handlers.h" // ComboShip (#164): OOT_ForeignMapGen
 #include <functional>                                  // ComboShip (#164): shared hint-resolution callbacks
@@ -1594,6 +1595,7 @@ bool VerifyArchiveVersion(OTRVersion version) {
 
 // ComboShip: forward declarations — defined further down with the combo exports.
 extern "C" void (*gComboSceneSwitchCallback)(int fileNum);
+extern "C" int Combo_GamesSolo(void); // ComboShip: Games (combo/rando/ComboGames.h), defined below
 #ifdef COMBO_BUILD
 // ComboShip (teleport songs): pending switch to MM, acted on at the next clean frame.
 static bool sComboSwitchPending = false;
@@ -1831,8 +1833,9 @@ static void Combo_FinishInit() {
     GameInteractor::Instance->RegisterGameHook<GameInteractor::OnSceneInit>([](int16_t sceneNum) {
         // A combo-driven arrival is over once the first scene has loaded.
         gComboCrossArrival = 0;
-        // Cross-game OOT->MM trigger: entering the Happy Mask Shop.
-        if (sceneNum == SCENE_HAPPY_MASK_SHOP) {
+        // Cross-game OOT->MM trigger: entering the Happy Mask Shop. Not in a solo seed (ComboGames.h): the shop is
+        // just OOT's shop there.
+        if (sceneNum == SCENE_HAPPY_MASK_SHOP && !Combo_GamesSolo()) {
             sComboSwitchFileNum = (int)gSaveContext.fileNum;
             sComboSwitchPending = true;
         }
@@ -3286,6 +3289,19 @@ extern "C" COMBO_EXPORT void SOH_SetComboStartingGame(int mmStart) {
 extern "C" COMBO_EXPORT int SOH_ReadComboStartingGameCVar(void) {
     return CVarGetInteger("gCombo.Rando.StartingGame", 0);
 }
+// ComboShip: Games (combo/rando/ComboGames.h) — Combo, OoT only or MM only. The menu CVar, read for the launcher at
+// generation; the loaded seed's value, pushed by the launcher, keeps a solo seed from crossing into the other game
+// (Happy Mask Shop, teleports).
+extern "C" int gComboGames = ComboRando::COMBO_GAMES_BOTH;
+extern "C" COMBO_EXPORT void SOH_SetComboGames(int games) {
+    gComboGames = ComboRando::ComboGamesFromInt(games);
+}
+extern "C" COMBO_EXPORT int SOH_ReadComboGamesCVar(void) {
+    return ComboRando::ComboGamesFromInt(CVarGetInteger(ComboRando::kComboGamesCVar, 0));
+}
+extern "C" int Combo_GamesSolo(void) {
+    return ComboRando::ComboGamesSolo(static_cast<ComboRando::ComboGames>(gComboGames)) ? 1 : 0;
+}
 // An explicit MM start forces these three, so grey them out. Under Random they stay editable — the
 // force is silent when MM rolls. HandleStartingAgeUI owns RSK_STARTING_AGE in both directions.
 extern "C" COMBO_EXPORT void SOH_RefreshComboStartingGameUI(void) {
@@ -3294,10 +3310,12 @@ extern "C" COMBO_EXPORT void SOH_RefreshComboStartingGameUI(void) {
         return;
     }
     settings->HandleStartingAgeUI();
-    const bool mmStart = CVarGetInteger("gCombo.Rando.StartingGame", 0) == 1;
+    // Games = MM only starts in MM too (ComboGames.h).
+    const bool mmOnly = CVarGetInteger(ComboRando::kComboGamesCVar, 0) == ComboRando::COMBO_GAMES_MM;
+    const bool mmStart = mmOnly || CVarGetInteger("gCombo.Rando.StartingGame", 0) == 1;
     for (const RandomizerSettingKey key : { RSK_EXCLUDE_MASK_SHOP_KEY, RSK_EXCLUDE_MASK_SHOP_ENTRANCE }) {
         if (mmStart) {
-            settings->GetOption(key).Disable("Starting Game is Majora's Mask");
+            settings->GetOption(key).Disable(mmOnly ? "Games is Majora's Mask only" : "Starting Game is Majora's Mask");
         } else {
             settings->GetOption(key).Enable();
         }
@@ -3917,6 +3935,10 @@ extern "C" bool WindowIsRunning(void);
 extern "C" void Combo_RequestCrossSwitch(int mmEntrance) {
     if (gSaveContext.fileNum > 2) {
         SPDLOG_WARN("[ComboShip] Combo_RequestCrossSwitch: no save loaded (fileNum={})", (int)gSaveContext.fileNum);
+        return;
+    }
+    if (Combo_GamesSolo()) { // a solo seed never goes to the other game (ComboGames.h)
+        SPDLOG_WARN("[ComboShip] Combo_RequestCrossSwitch: refused, this seed is one game only");
         return;
     }
     sComboCrossTargetMM = mmEntrance;
