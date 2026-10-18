@@ -316,6 +316,8 @@ bool Rando::IsItemObtainable(RandoItemId randoItemId, RandoCheckId randoCheckId)
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT);
         case RI_SHIELD_DEKU:
             return !Flags_GetRandoInf(RANDO_INF_OBTAINED_SHIELD_DEKU);
+        case RI_ROCS_FEATHER:
+            return !Flags_GetRandoInf(RANDO_INF_OBTAINED_ROCS_FEATHER);
         // OOT items in MM (CrossUpgrades.cpp). The first ocarina / hookshot is the Fairy Ocarina / Short Hookshot;
         // with one of those in the inventory, the ocarina / hookshot is still obtainable as the upgrade.
         case RI_STONE_OF_AGONY:

@@ -436,6 +436,7 @@ void Kaleido_LoadItemNameStatic(void** segment, u32 texIndex) {
         gComboNameMegatonHammerTex,  // ITEM_COMBO_HAMMER
         gComboNameBoomerangTex,      // ITEM_COMBO_BOOMERANG
         gComboNameFairySlingshotTex, // ITEM_COMBO_SLINGSHOT
+        gComboNameRocsFeatherTex,    // ITEM_COMBO_ROCS_FEATHER
     };
     if (IS_COMBO_CROSS_ITEM(texIndex)) {
         *segment = (void*)sComboCrossItemNames[texIndex - ITEM_COMBO_MIN];

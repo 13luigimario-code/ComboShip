@@ -308,6 +308,7 @@ TexturePtr gItemIcons[] = {
     [ITEM_COMBO_HAMMER] = gComboIconHammerTex,
     [ITEM_COMBO_BOOMERANG] = gComboIconBoomerangTex,
     [ITEM_COMBO_SLINGSHOT] = gComboIconSlingshotTex,
+    [ITEM_COMBO_ROCS_FEATHER] = gComboIconRocsFeatherTex,
 #endif
 };
 
@@ -519,6 +520,7 @@ u8 gItemSlots[77] = {
     [ITEM_COMBO_HAMMER] = SLOT_TRADE_DEED,
     [ITEM_COMBO_BOOMERANG] = SLOT_TRADE_KEY_MAMA,
     [ITEM_COMBO_SLINGSHOT] = SLOT_TRADE_COUPLE,
+    [ITEM_COMBO_ROCS_FEATHER] = SLOT_TRADE_COUPLE,
 #endif
 };
 

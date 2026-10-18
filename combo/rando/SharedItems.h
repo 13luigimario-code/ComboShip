@@ -76,6 +76,8 @@ enum SharedFamily {
     SF_NUT_UPGRADES,
     // OoTMM's "Shared Child Swords": OOT's Kokiri Sword + Extra Child Swords and MM's Progressive Sword.
     SF_CHILD_SWORDS,
+    // Ship of Harkinian's Roc's Feather (OOT needs SoH's Roc's Feather option, MM its "Roc's Feather" option).
+    SF_ROCS_FEATHER,
     SF_COUNT
 };
 // Family bitmask (bit i = SharedFamily i). 64 bits since the cross-game item families (was uint32_t);
@@ -290,6 +292,10 @@ inline const SharedFamilyDef* SharedFamilyTable() {
           "One Kokiri Sword, Razor Sword and Gilded Sword count for both games: three progressive child swords. "
           "Requires Ocarina of Time's Extra Child Swords.",
           "Progressive Kokiri Sword", "Progressive Sword", 3, false, true, false, "Kokiri Sword" },
+        { SF_ROCS_FEATHER, "rocsFeather", "gCombo.Rando.Shared.RocsFeather", "Shared Roc's Feather",
+          "One Roc's Feather counts for both games. Requires Ocarina of Time's Roc's Feather and MM's Roc's Feather "
+          "(Ocarina of Time Gear).",
+          "Roc's Feather", "Roc's Feather", 1, false, true, false },
     };
     return table;
 }

@@ -2471,6 +2471,29 @@ off). Gameplay in `mm/2s2h/Rando/MiscBehavior/CrossUpgrades.cpp` (C ABI in `Cros
 Hookshot; without it MM's Hookshot comes with the first copy and the second is ignored there. No Shared Ocarinas yet.
 MM's copies placed in OOT draw OOT's own models (`ComboCrossGearNativeOOT`).
 
+### Roc's Feather in MM (Ship of Harkinian's, 2026-10-17)
+
+Item #15 of the 2026-10-13 notes. MM option `RO_CROSS_ROCS_FEATHER` (Item Pool, "Ocarina of Time Gear", default off)
+adds `RI_ROCS_FEATHER` (`ITEM_COMBO_ROCS_FEATHER` = `ITEM_C5`, `ITEM_COMBO_MAX` moved to `ITEM_C6`), owned as
+`RANDO_INF_OBTAINED_ROCS_FEATHER`. It sits in the Letter to Kafei / Pendant cycle (SoH keeps it with Nayru's Love,
+which is in that cycle in MM) and is used from a C button by human Link (adult Link too, under Cross-Games Age).
+
+- **Jump (`mm/2s2h/Rando/MiscBehavior/CrossRocsFeather.cpp`):** a port of SoH's `RocsFeather.cpp`. One use per time in
+  the air, back after 3 frames on the ground; SoH's own jump animation (`gPlayerAnim_link_rocs_feather_jump`, a soh.o2r
+  asset served through "@oot:"), jump speed 7.0 (7.5 for adult Link), a forward push of 5, the ripple and splash at
+  Link's feet and the skip sound; it drops the sidehop/backflip state so ledges can be grabbed. The jump itself is MM's
+  jump setup, `func_80834D50` (OOT's `func_80838940`), through a guarded `Combo_Player_Jump` in `z_player.c` that adds
+  the floor-jump sound OOT's twin always plays.
+- **Icon / name / model:** SoH's `gRocsFeatherTex` and `gRocsFeatherItemNameENGTex` ("@oot:", `CrossItemAssets.h`);
+  MM's copy draws SoH's `gGiRocsFeatherDL` by OOT item name, and in OOT it draws OOT's own (`ComboCrossGearNativeOOT`).
+- **Shared Items:** `SF_ROCS_FEATHER` (key `rocsFeather`, "Shared Roc's Feather"): needs SoH's Roc's Feather in OOT's
+  pool and MM's option. OOT's tier is `RAND_INF_OBTAINED_ROCS_FEATHER`, raised with `RG_ROCS_FEATHER`.
+- **Logic:** none in MM, like the other OOT items there.
+
+**Tested (Linux build, 2026-10-18):** headless, Shared Roc's Feather trims MM's copy from the pool, and unshared both
+copies are placed ("Roc's Feather (OOT)" / "(MM)"). In game, from a C button in MM: one jump per time in the air (peak
+about 31 units over 14 frames, no second use in the air), back after landing.
+
 ## Ageless items (OoTMM `items.ageless`) (2026-10-12)
 
 Twelve OOT options, `RSK_COMBO_AGELESS_SWORDS/SHIELDS/TUNICS/BOOTS/STICKS/BOOMERANG/HAMMER/HOOKSHOT/SLINGSHOT/BOW/

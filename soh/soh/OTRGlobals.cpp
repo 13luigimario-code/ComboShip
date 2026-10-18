@@ -3413,6 +3413,8 @@ extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
             return CUR_UPG_VALUE(UPG_BULLET_BAG);
         case ComboRando::SF_STONE_OF_AGONY:
             return CHECK_QUEST_ITEM(QUEST_STONE_OF_AGONY) ? 1 : 0;
+        case ComboRando::SF_ROCS_FEATHER:
+            return Flags_GetRandomizerInf(RAND_INF_OBTAINED_ROCS_FEATHER) ? 1 : 0;
         // Upgrades past the first capacity (10 sticks / 20 nuts, or the shuffled Deku Stick / Nut Bag).
         case ComboRando::SF_STICK_UPGRADES:
             return std::max(0, (int)CUR_UPG_VALUE(UPG_STICKS) - 1);
@@ -3592,6 +3594,9 @@ extern "C" COMBO_EXPORT void SOH_RaiseSharedTier(int family, int tier) try {
                 break;
             case ComboRando::SF_STONE_OF_AGONY:
                 rg = RG_STONE_OF_AGONY;
+                break;
+            case ComboRando::SF_ROCS_FEATHER:
+                rg = RG_ROCS_FEATHER;
                 break;
             case ComboRando::SF_STICK_UPGRADES:
                 rg = cur == 0 ? RG_DEKU_STICK_CAPACITY_20 : RG_DEKU_STICK_CAPACITY_30;

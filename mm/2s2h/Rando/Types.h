@@ -3018,6 +3018,8 @@ typedef enum {
     RI_SNOWHEAD_KEYRING,
     RI_GREAT_BAY_KEYRING,
     RI_STONE_TOWER_KEYRING,
+    // Ship of Harkinian's Roc's Feather, an OOT item human Link can use in MM (MiscBehavior/CrossRocsFeather.cpp).
+    RI_ROCS_FEATHER,
 #endif
     RI_MAX_TRAP, // Just used for ice trap ice cube model
     RI_MAX,
@@ -3470,6 +3472,8 @@ typedef enum {
     RO_KEYRINGS_SNOWHEAD,
     RO_KEYRINGS_GREAT_BAY,
     RO_KEYRINGS_STONE_TOWER,
+    // Ship of Harkinian's Roc's Feather in MM's item pool (an OOT item, like the "Ocarina of Time Gear" options).
+    RO_CROSS_ROCS_FEATHER,
 #endif
     RO_MAX,
 } RandoOptionId;
@@ -3710,6 +3714,7 @@ typedef enum {
     RANDO_INF_OBTAINED_BOMBCHU_BAG_20,
     RANDO_INF_OBTAINED_BOMBCHU_BAG_30,
     RANDO_INF_OBTAINED_BOMBCHU_BAG_40,
+    RANDO_INF_OBTAINED_ROCS_FEATHER,
 #endif
     RANDO_INF_MAX,
 } RandoInf;

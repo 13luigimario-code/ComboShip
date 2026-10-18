@@ -512,6 +512,7 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_CROSS_OCARINA_FAIRY",
                                                                    "gRando.Options.RO_CROSS_HOOKSHOT_SHORT",
                                                                    "gRando.Options.RO_CROSS_STICKS_NUTS",
+                                                                   "gRando.Options.RO_CROSS_ROCS_FEATHER",
                                                                    "gRando.Options.RO_CROSS_GAME_FW",
                                                                    "gRando.Options.RO_INFINITE_UPGRADES",
                                                                    "gRando.Options.RO_BOMBCHU_BAG",
@@ -1351,6 +1352,10 @@ static void DrawItemPoolTab() {
     ItemPoolCheckbox("Deku Stick & Nut Upgrades", RO_CROSS_STICKS_NUTS,
                      "Adds two Deku Stick and two Deku Nut capacity upgrades to the item pool, as in Ocarina of Time: "
                      "sticks 10 -> 20 -> 30, nuts 20 -> 30 -> 40.",
+                     1);
+    ItemPoolCheckbox("Roc's Feather", RO_CROSS_ROCS_FEATHER,
+                     "Adds Ship of Harkinian's Roc's Feather to the item pool (Letter to Kafei / Pendant slot). Human "
+                     "Link uses it from a C button to jump, once each time he is in the air. Not considered by logic.",
                      1);
 #endif
 #ifdef COMBO_BUILD

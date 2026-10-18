@@ -291,6 +291,8 @@ extern "C" int Combo_CrossItem_TryUse(PlayState* play, Player* player, int item)
         case ITEM_COMBO_BOOMERANG:
         case ITEM_COMBO_SLINGSHOT:
             return 0;
+        case ITEM_COMBO_ROCS_FEATHER: // CrossRocsFeather.cpp
+            return Combo_Rocs_Use(play, player);
         default:
             // Cross-game items that aren't usable this way (yet): refuse cleanly, never fall into vanilla
             // item handling with an id past its tables.
@@ -422,6 +424,7 @@ extern "C" void Combo_Gear_OnPlayerUpdate(PlayState* play, Player* player) {
     }
     Combo_Spells_OnPlayerUpdate(play, player); // CrossSpells.cpp: Din's Fire / Nayru's Love in progress
     Combo_Tools_OnPlayerUpdate(play, player);  // CrossTools.cpp: Deku Shield burning
+    Combo_Rocs_OnPlayerUpdate(play, player);   // CrossRocsFeather.cpp: the jump comes back on the ground
 }
 
 // ---- Rando item plumbing (Rando.h) ----
@@ -485,6 +488,8 @@ const char* Rando::CrossGearOOTItemName(RandoItemId randoItemId) {
             return "Fairy Slingshot";
         case RI_SHIELD_DEKU:
             return "Deku Shield";
+        case RI_ROCS_FEATHER: // CrossRocsFeather.cpp
+            return "Roc's Feather";
         // CrossUpgrades.cpp
         case RI_STONE_OF_AGONY:
             return "Stone of Agony";
@@ -582,6 +587,10 @@ bool Rando::CrossGearGive(RandoItemId randoItemId) {
             Flags_SetRandoInf(RANDO_INF_OBTAINED_SHIELD_DEKU);
             Combo_Tools_EquipDekuShield();
             return true;
+        case RI_ROCS_FEATHER:
+            Flags_SetRandoInf(RANDO_INF_OBTAINED_ROCS_FEATHER);
+            GrantSlot(ITEM_COMBO_ROCS_FEATHER);
+            return true;
         case RI_PROGRESSIVE_STRENGTH: {
             s32 tier = Combo_Gear_GetStrengthOwned();
             return CrossGearGive(tier == 0   ? RI_STRENGTH_GORONS_BRACELET
@@ -674,6 +683,10 @@ bool Rando::CrossGearRemove(RandoItemId randoItemId) {
         case RI_SHIELD_DEKU:
             Flags_ClearRandoInf(RANDO_INF_OBTAINED_SHIELD_DEKU);
             Combo_Tools_LoseDekuShield();
+            return true;
+        case RI_ROCS_FEATHER:
+            Flags_ClearRandoInf(RANDO_INF_OBTAINED_ROCS_FEATHER);
+            RemoveSlot(ITEM_COMBO_ROCS_FEATHER);
             return true;
         case RI_PROGRESSIVE_STRENGTH: {
             s32 tier = Combo_Gear_GetStrengthOwned();
