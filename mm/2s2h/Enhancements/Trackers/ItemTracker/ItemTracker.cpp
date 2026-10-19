@@ -291,6 +291,33 @@ TrackerImageObject GetImageObject(TrackerItemType itemType, u32 itemId) {
             if (randoItemId == RI_SONG_ZELDA) { // ComboShip: a song note like the others (outside their id range)
                 trackerImageObject.textureDimensions.x = 32.0f;
             }
+            // ComboShip (cross-game items): Zelda's Lullaby and the warp songs all borrow MM's soaring note; tint each
+            // with OOT's own song color (SoH's item tracker) so they can be told apart.
+            switch (randoItemId) {
+                case RI_SONG_ZELDA:
+                    trackerImageObject.textureColor = ImVec4(224 / 255.0f, 107 / 255.0f, 1.0f, 1.0f);
+                    break;
+                case RI_SONG_MINUET:
+                    trackerImageObject.textureColor = ImVec4(150 / 255.0f, 1.0f, 100 / 255.0f, 1.0f);
+                    break;
+                case RI_SONG_BOLERO:
+                    trackerImageObject.textureColor = ImVec4(1.0f, 80 / 255.0f, 40 / 255.0f, 1.0f);
+                    break;
+                case RI_SONG_SERENADE:
+                    trackerImageObject.textureColor = ImVec4(100 / 255.0f, 150 / 255.0f, 1.0f, 1.0f);
+                    break;
+                case RI_SONG_REQUIEM:
+                    trackerImageObject.textureColor = ImVec4(1.0f, 160 / 255.0f, 0.0f, 1.0f);
+                    break;
+                case RI_SONG_NOCTURNE:
+                    trackerImageObject.textureColor = ImVec4(1.0f, 100 / 255.0f, 1.0f, 1.0f);
+                    break;
+                case RI_SONG_PRELUDE:
+                    trackerImageObject.textureColor = ImVec4(1.0f, 240 / 255.0f, 100 / 255.0f, 1.0f);
+                    break;
+                default:
+                    break;
+            }
 #endif
         } break;
         case TRACKER_ITEM_SLOT: {
@@ -390,6 +417,13 @@ std::string GetItemCounts(TrackerItemType itemType, u32 itemId) {
                         countStr = std::to_string(count);
                     }
                 } break;
+#ifdef COMBO_BUILD
+                case RI_SLINGSHOT: { // ComboShip (cross-game items): the OOT Slingshot's own seeds
+                    if (Flags_GetRandoInf(RANDO_INF_OBTAINED_SLINGSHOT)) {
+                        countStr = std::to_string(gSaveContext.save.shipSaveInfo.rando.comboSlingshotSeeds);
+                    }
+                } break;
+#endif
                 case RI_GS_TOKEN_OCEAN:
                 case RI_GS_TOKEN_SWAMP: {
                     auto max =

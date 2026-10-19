@@ -331,6 +331,10 @@ item options add (see rando.md "Cross-game items" and "Songs in the other game")
   and a group with nothing to draw is skipped.
 - `ShipUtils.cpp` loads the Stone of Agony, Deku Shield and Fairy Ocarina icons for ImGui (they have no
   `gItemIcons` entry; the Fairy Ocarina is swapped into the ocarina slot's icon).
+- **Song colors:** Zelda's Lullaby and the six warp songs all borrow MM's soaring note icon, so each is tinted with
+  OOT's own song color (SoH's tracker colors) to tell them apart (2026-10-19).
+- **Slingshot seeds:** the Slingshot's count is its own Deku Seeds (`comboSlingshotSeeds`), like MM's ammo items
+  (2026-10-19).
 
 Not shown: the Fairy Ocarina and Short Hookshot (first tiers of MM's own ocarina / hookshot, in its inventory slots)
 and the Deku Stick / Nut upgrades (capacity, in the stick / nut counts).
@@ -340,3 +344,7 @@ Stone / Kamaro's Masks and the child sword on OOT's tracker and the whole "Ocari
 faded; owning some lights exactly those (the scale at Golden, the gauntlets at Silver, the sword as Gilded), in both
 the foreground and the other game's tracker. Loading a seed with only Roc's Feather on leaves just Roc's Feather on
 both.
+
+Re-tested 2026-10-19 on current develop: with every option on, both trackers list the other game's items faded;
+granting Hover Boots, two scales, two strength upgrades, the Skull Mask, Zelda's Lullaby and the Slingshot in MM lit
+exactly those (Golden Scale, Silver Gauntlets, the Slingshot with "30"), and the OOT songs show in their own colors.
