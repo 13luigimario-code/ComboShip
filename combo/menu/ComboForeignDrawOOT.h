@@ -696,6 +696,14 @@ inline RandomizerGet ComboCrossGearNativeOOT(const std::string& mmName) {
         { "Deku Nut Capacity (30)", RG_DEKU_NUT_CAPACITY_30 },
         { "Deku Nut Capacity (40)", RG_DEKU_NUT_CAPACITY_40 },
         { "Fairy Ocarina", RG_FAIRY_OCARINA },
+        // Ship of Harkinian's "Bombchu Bag" in MM: MM has no bag model (it draws OOT's, DrawBombchuBag), so OOT draws
+        // its own. RG_BOMBCHU_INF always draws the bag; RG_PROGRESSIVE_BOMBCHU_BAG resolves by OOT's own bag setting
+        // and can come out as a bombchu pack.
+        { "Bombchu Bag", RG_BOMBCHU_INF },
+        { "Bombchu Bag (20)", RG_BOMBCHU_INF },
+        { "Bombchu Bag (30)", RG_BOMBCHU_INF },
+        { "Bombchu Bag (40)", RG_BOMBCHU_INF },
+        { "Infinite Bombchus", RG_BOMBCHU_INF },
     };
     auto it = kMap.find(mmName);
     return (it == kMap.end()) ? RG_NONE : it->second;
