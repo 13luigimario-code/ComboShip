@@ -3118,7 +3118,8 @@ extern "C" COMBO_EXPORT int MM_InitRandoSaveFile(int fileNum, const char* placem
         // combo logic resolves them the same way); off when MM has no adult Link.
         Rando::AgeReq::Resolve((uint32_t)sMMComboRandoSeed, RANDO_SAVE_OPTIONS, Combo_AdultLink_AgeSystemOn() != 0);
 
-        // ComboShip (dungeon entrance shuffle): the seed's temple layout (pushed by the launcher, MM_SetDungeonEntrances).
+        // ComboShip (dungeon entrance shuffle): the seed's temple layout (pushed by the launcher,
+        // MM_SetDungeonEntrances).
         memcpy(gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances, Combo_MM_DungeonEntranceLayout(),
                sizeof(gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances));
 

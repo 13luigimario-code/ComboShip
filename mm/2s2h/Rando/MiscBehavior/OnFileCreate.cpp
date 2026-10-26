@@ -72,7 +72,8 @@ void Rando::MiscBehavior::OnFileCreate(s16 fileNum) {
                 Rando::AgeReq::Resolve(finalSeed, RANDO_SAVE_OPTIONS, Combo_AdultLink_AgeSystemConfigured() != 0);
                 // ComboShip: dungeon entrance shuffle, before the logic runs (its exits follow the layout).
                 if (RANDO_SAVE_OPTIONS[RO_SHUFFLE_DUNGEON_ENTRANCES]) {
-                    Rando::DungeonEntrances::Shuffle(finalSeed, gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances);
+                    Rando::DungeonEntrances::Shuffle(finalSeed,
+                                                     gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances);
                 }
 #endif
 

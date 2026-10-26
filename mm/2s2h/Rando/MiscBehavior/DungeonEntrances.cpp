@@ -202,8 +202,6 @@ extern "C" COMBO_EXPORT void MM_SetDungeonEntrances(const char* json) try {
         if (door >= 0 && temple >= 0)
             sComboLayout[door] = (uint8_t)(temple + 1);
     }
-} catch (...) {
-    memset(sComboLayout, 0, sizeof(sComboLayout));
-}
+} catch (...) { memset(sComboLayout, 0, sizeof(sComboLayout)); }
 
 #endif // COMBO_BUILD

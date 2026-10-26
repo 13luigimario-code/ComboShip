@@ -3474,7 +3474,8 @@ typedef enum {
     RO_KEYRINGS_STONE_TOWER,
     // Ship of Harkinian's Roc's Feather in MM's item pool (an OOT item, like the "Ocarina of Time Gear" options).
     RO_CROSS_ROCS_FEATHER,
-    // Dungeon entrance shuffle: the four temples' doors lead into a shuffled temple (MiscBehavior/DungeonEntrances.cpp).
+    // Dungeon entrance shuffle: the four temples' doors lead into a shuffled temple
+    // (MiscBehavior/DungeonEntrances.cpp).
     RO_SHUFFLE_DUNGEON_ENTRANCES,
 #endif
     RO_MAX,

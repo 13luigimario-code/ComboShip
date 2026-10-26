@@ -481,10 +481,8 @@ static FnTakeStr MM_SetDungeonEntrances = nullptr;
 // The MM temple layout recorded in a consolidated seed (empty = vanilla), into the MM DLL.
 static void PushMmDungeonEntrances(const nlohmann::json& seed) {
     if (MM_SetDungeonEntrances)
-        MM_SetDungeonEntrances(seed.value("entrances", nlohmann::json::object())
-                                   .value("mm", nlohmann::json::array())
-                                   .dump()
-                                   .c_str());
+        MM_SetDungeonEntrances(
+            seed.value("entrances", nlohmann::json::object()).value("mm", nlohmann::json::array()).dump().c_str());
 }
 
 // ---------- ComboShip merged per-slot save container (Save/file{N+1}.combosav) ----------

@@ -3078,3 +3078,48 @@ ComboShip push / pop site checks out as balanced, so the leaking code isn't know
 **Tested (Linux build, 2026-10-26):** a normal MM session logs nothing. Through the test hook, 3 pushes left on the stack
 log one line naming the leaking line (`lib2ship.so+0xc019e5` -> `ZTestHook.cpp:104` with `addr2line`). 40 more, enough to
 overflow, are absorbed, and the game keeps running with the HUD intact.
+
+## Majora's Mask dungeon entrance shuffle (2026-10-26)
+
+MM's Randomizer menu, Logic tab: "Shuffle Dungeon Entrances" (`RO_SHUFFLE_DUNGEON_ENTRANCES`, appended to the option
+enum). 2 Ship has no entrance shuffle of its own. This is the first step toward Cross-Game Dungeon Entrances, which will
+pool these doors with Ocarina of Time's.
+
+**Layout.** The temple behind each of the four temple doors (Woodfall, Snowhead, Great Bay, Stone Tower), a random
+permutation in which any temple can stay behind its own door. Inverted Stone Tower Temple stays behind the inverted
+tower's door, and Woodfall's second door (the prison, after the temple is cleared) stays vanilla. It's saved in
+`RandoSaveInfo::comboDungeonEntrances` (temple + 1 per door, all 0 = vanilla; absent on older saves). Dungeon Access
+stays with the door: it gates the way to the door, not the temple.
+
+**One rule for the logic and the game** (`Rando::DungeonEntrances::Remap`, `mm/2s2h/Rando/MiscBehavior/
+DungeonEntrances.cpp`), keyed on the scene the transition is taken from:
+- a temple door taken from outside that temple leads into the temple behind it;
+- a temple's entrance exit taken from inside it leads out of the door it's behind;
+- its boss's warp, first or repeat, from the boss lair lands outside the door it's behind (vanilla when it's behind its
+  own door).
+Nothing inside a temple moves, so a void-out respawn and the boss door are untouched. Every moved transition drops the
+destination's arrival cutscene (the turtle ride, Ikana's river after Twinmold): those scene layers belong to the
+vanilla route.
+
+- Logic: `FindReachableRegions` (`Logic.cpp`) runs each exit through `Remap` with the source region's scene.
+- Game: `Play_UpdateTransition`'s `TRANS_MODE_SETUP` (`z_play.c`) runs `play->nextEntrance` through it once, as a
+  transition starts. The first blue warp skips the Giants' Chamber (`HandleGiantsCutsceneSkip`), so its queued
+  destination goes through it too.
+
+**Generation.** Native file creation shuffles from the seed before the logic runs. The combo generator calls
+`MM_ShuffleDungeonEntrancesForCombo(masterSeed)` per attempt, after the OOT entrance shuffle; the MM oracle's reset
+copies the layout into its save context. The spoiler records it as `entrances.mm` (`[{door, temple}]`, empty =
+vanilla), and the launcher pushes it back (`MM_SetDungeonEntrances`) before `MM_InitRandoSaveFile` writes it into the
+new save. `comborando` records and replays it the same way.
+
+**Tested (Linux build, 2026-10-26):** headless, 8 seeds with the setting on generate and pass. `--playthrough` beats
+one (sphere 21); the same placements with the layout removed are unbeatable, so the fill really did use it. With the
+setting off, generation is unchanged and `entrances.mm` is empty. In game, on an MM-start seed with Great Bay and Stone
+Tower swapped (test hook warps, which go through the same transition path as doors):
+- the Great Bay door led into Stone Tower Temple;
+- leaving Stone Tower Temple by its entrance came out at Zora Cape;
+- the Woodfall door, not shuffled, was unchanged;
+- Twinmold's warp landed at Zora Cape, and Gyorg's at the top of Stone Tower;
+- re-entering Stone Tower Temple from inside it (a void-out's respawn) stayed put.
+
+Not checked in game: walking through the real doors, or a first boss warp through the Giants' Chamber skip.
