@@ -115,6 +115,8 @@ void Combo_Gear_DrawHoverGlow(struct PlayState* play, struct Player* player);
 // Player_ItemToItemAction for ITEM_COMBO_* ids: the MM item action that drives a tool (Hammer: two-handed sword,
 // Boomerang: PLAYER_IA_11, Slingshot: bow) for human Link, PLAYER_IA_NONE for anything else.
 int Combo_Tools_ItemAction(struct Player* player, int item);
+// SoH's "Instant Boomerang Recall": the button the Boomerang is on was pressed this frame (setting on).
+int Combo_Tools_BoomerangRecallPressed(struct PlayState* play);
 // Human Link holds that tool (heldItemId, with its item action in effect).
 int Combo_Tools_IsHeld(struct Player* player, int item);
 int Combo_Tools_OwnsSlingshot(void);

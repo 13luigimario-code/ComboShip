@@ -20,6 +20,7 @@
 #include "2s2h/Rando/Rando.h"
 
 #include <cstring>
+#include <libultraship/bridge/consolevariablebridge.h>
 #include <memory>
 #include <vector>
 #include <fast/resource/ResourceType.h>
@@ -230,6 +231,32 @@ extern "C" int Combo_Tools_ItemAction(Player* player, int item) {
         default:
             return PLAYER_IA_NONE;
     }
+}
+
+// SoH's "Instant Boomerang Recall" (gEnhancements.Items.FastBoomerang): the button the Boomerang is on was pressed this
+// frame (a C button, or a D-pad button with D-pad equips on). EnBoom_ComboOotFly then brings it straight back to Link.
+extern "C" int Combo_Tools_BoomerangRecallPressed(PlayState* play) {
+    if (!CVarGetInteger("gEnhancements.Items.FastBoomerang", 0) || (play == nullptr)) {
+        return 0;
+    }
+    const u16 pressed = play->state.input[0].press.button;
+    static const u16 kCButtons[] = { BTN_CLEFT, BTN_CDOWN, BTN_CRIGHT };
+    for (int i = 0; i < 3; i++) {
+        if ((BUTTON_ITEM_EQUIP(0, EQUIP_SLOT_C_LEFT + i) == ITEM_COMBO_BOOMERANG) &&
+            CHECK_BTN_ALL(pressed, kCButtons[i])) {
+            return 1;
+        }
+    }
+    if (CVarGetInteger("gEnhancements.Dpad.DpadEquips", 0)) {
+        static const u16 kDpad[] = { BTN_DRIGHT, BTN_DLEFT, BTN_DDOWN, BTN_DUP }; // EQUIP_SLOT_D_RIGHT order
+        for (int i = 0; i < 4; i++) {
+            if ((DPAD_BUTTON_ITEM_EQUIP(0, EQUIP_SLOT_D_RIGHT + i) == ITEM_COMBO_BOOMERANG) &&
+                CHECK_BTN_ALL(pressed, kDpad[i])) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 extern "C" int Combo_Tools_IsHeld(Player* player, int item) {
