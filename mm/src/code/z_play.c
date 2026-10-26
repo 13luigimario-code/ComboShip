@@ -1581,8 +1581,16 @@ SkipPostWorldDraw:
     CLOSE_DISPS(gfxCtx);
 }
 
+#ifdef COMBO_BUILD
+void Combo_Matrix_FrameCheck(void); // ComboShip: sys_matrix.c (the matrix stack guard)
+#endif
+
 void Play_Draw(PlayState* this) {
     GraphicsContext* gfxCtx = this->state.gfxCtx;
+
+#ifdef COMBO_BUILD
+    Combo_Matrix_FrameCheck(); // ComboShip: pushes left over from the last frame are reported and dropped
+#endif
 
     {
         GraphicsContext* gfxCtx2 = this->state.gfxCtx;

@@ -83,6 +83,25 @@ MtxF* sCurrentMatrix; //!< original name: "Matrix_now"
 
 #define MATRIX_STACK_SIZE 20
 
+#ifdef COMBO_BUILD
+// ComboShip: matrix stack guard. The stack sits in the play arena right below the HUD's buffers (Matrix_Init runs after
+// Interface_Init), so pushes that are never popped climb out of it frame after frame and overwrite the HUD's item icon
+// and A button label pointers, and Interface_Draw then crashes on them (a Windows crash report, 2026-10-26). Pushes
+// past the top and pops past the bottom are refused instead (the top matrix gets reused: a drawing glitch at worst),
+// and each push remembers its caller, so Combo_Matrix_FrameCheck (Play_Draw) can name the code that left pushes behind.
+// The reporting is ComboMatrixGuard.cpp.
+#if defined(_MSC_VER)
+#include <intrin.h>
+#define COMBO_RETURN_ADDRESS() _ReturnAddress()
+#else
+#define COMBO_RETURN_ADDRESS() __builtin_return_address(0)
+#endif
+void Combo_Matrix_ReportFault(s32 kind, void* caller);                         // ComboMatrixGuard.cpp
+void Combo_Matrix_ReportLeak(s32 depth, void* const* callers, s32 numCallers); // ComboMatrixGuard.cpp
+static void* sComboPushCallers[MATRIX_STACK_SIZE];
+static s32 sComboRefusedPushes = 0; // pushes refused at the top, matched by the pops that follow them
+#endif
+
 /* Stack operations */
 
 /**
@@ -93,6 +112,9 @@ MtxF* sCurrentMatrix; //!< original name: "Matrix_now"
 void Matrix_Init(GameState* gameState) {
     sMatrixStack = THA_AllocTailAlign16(&gameState->tha, MATRIX_STACK_SIZE * sizeof(MtxF));
     sCurrentMatrix = sMatrixStack;
+#ifdef COMBO_BUILD
+    sComboRefusedPushes = 0;
+#endif
 }
 
 /**
@@ -104,6 +126,14 @@ void Matrix_Push(void) {
     MtxF* prev = sCurrentMatrix;
 
     FrameInterpolation_RecordMatrixPush();
+#ifdef COMBO_BUILD
+    if (sCurrentMatrix >= &sMatrixStack[MATRIX_STACK_SIZE - 1]) {
+        sComboRefusedPushes++;
+        Combo_Matrix_ReportFault(0, COMBO_RETURN_ADDRESS());
+        return;
+    }
+    sComboPushCallers[sCurrentMatrix - sMatrixStack] = COMBO_RETURN_ADDRESS();
+#endif
     sCurrentMatrix++;
     Matrix_MtxFCopy(sCurrentMatrix, prev);
 }
@@ -115,8 +145,32 @@ void Matrix_Push(void) {
  */
 void Matrix_Pop(void) {
     FrameInterpolation_RecordMatrixPop();
+#ifdef COMBO_BUILD
+    if (sComboRefusedPushes > 0) {
+        sComboRefusedPushes--;
+        return;
+    }
+    if (sCurrentMatrix <= sMatrixStack) {
+        Combo_Matrix_ReportFault(1, COMBO_RETURN_ADDRESS());
+        return;
+    }
+#endif
     sCurrentMatrix--;
 }
+
+#ifdef COMBO_BUILD
+// Play_Draw, before anything is drawn: every push of the last frame should have been popped. Report the callers of the
+// ones left behind and start the frame from the bottom of the stack again.
+void Combo_Matrix_FrameCheck(void) {
+    if ((sMatrixStack == NULL) || ((sCurrentMatrix == sMatrixStack) && (sComboRefusedPushes == 0))) {
+        return;
+    }
+    s32 depth = (s32)(sCurrentMatrix - sMatrixStack);
+    Combo_Matrix_ReportLeak(depth + sComboRefusedPushes, sComboPushCallers, depth);
+    sCurrentMatrix = sMatrixStack;
+    sComboRefusedPushes = 0;
+}
+#endif
 
 /**
  * @brief Copy the top matrix from the stack.
