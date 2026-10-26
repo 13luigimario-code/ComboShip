@@ -3123,3 +3123,25 @@ Tower swapped (test hook warps, which go through the same transition path as doo
 - re-entering Stone Tower Temple from inside it (a void-out's respawn) stayed put.
 
 Not checked in game: walking through the real doors, or a first boss warp through the Giants' Chamber skip.
+
+### Majora's Mask boss room shuffle (2026-10-26)
+
+MM's Randomizer menu, Logic tab: "Shuffle Boss Rooms" (`RO_SHUFFLE_BOSS_ENTRANCES`). Each temple's boss door leads into
+a random boss's lair, a permutation of Odolwa's, Goht's, Gyorg's and Twinmold's, saved in
+`RandoSaveInfo::comboBossEntrances` (the lair's temple + 1 per boss door; all 0 = vanilla, which is what older saves
+read). It's the first step toward Cross-Game Boss Shuffle, and shares the remap with the temple shuffle above
+(`Rando::DungeonEntrances::Remap`, now given both layouts):
+- a temple's boss door, taken from inside that temple (its main scene, or inverted Stone Tower Temple for Twinmold's
+  door), leads into the lair behind it;
+- a boss's warp out of its lair goes back through the temple whose boss door led there, landing outside the door that
+  temple is behind (vanilla only when the boss and the temple are both in their own places).
+
+What stays with the boss: its remains check (`RC_*_BOSS_WARP`, by lair), its heart container, and the region it clears.
+Gyorg brings back Great Bay's water wherever he's fought, since the warp's clear flags and the logic's `RE_CLEARED_*`
+events are both the lair's. What stays with the door: the Boss Key it needs (the logic exit's condition). The
+boss-room warp pads near each temple's entrance aren't in the logic; taken from inside their temple, they go through
+the same remap as the boss door.
+
+Generation: `MM_ShuffleDungeonEntrancesForCombo` rolls both layouts (the boss layout from the seed salted with
+`kBossSeedSalt`, so the two never mirror each other). `entrances.mm` gains `{bossDoor, boss}` entries next to
+`{door, temple}`, and `MM_SetDungeonEntrances` reads both. Native file creation rolls both too.
