@@ -3052,3 +3052,29 @@ surfaces). A throwaway build that took every surface as a hookshot surface drew 
 Boomerang's reticle sits on the floor ahead while aiming downward. In Termina Field, a throw stayed out 46 frames, and with
 its button pressed mid-flight it came back after 6. Not checked in game: a real hookshot target turning green, the reticle
 with Zora Link's fins.
+
+## MM matrix stack guard (2026-10-26)
+
+**Crash report (Windows, build 1a64145):** MM crashed in `Interface_Draw` (`z_parameter.c`) on
+`gSPSegment(OVERLAY_DISP++, 0x09, interfaceCtx->doActionSegment[DO_ACTION_SEG_A].mainTex)`. The A button label's texture
+pointer was `0xBBD64BA338000100`, which reads as two small floats (-0.0065, 0.00003), matrix-like data rather than a
+pointer. The player was three minutes into the Swamp Spider House. The frames were resolved against the release
+`2ship.dll` (same timestamp and size as the crashed module) through its `.pdata` and disassembly.
+
+`Play_Init` allocates the HUD's buffers from the top of the play arena and then the matrix stack right below them (tail
+order: `doActionSegment`, `iconItemSegment`, `mapSegment`, then `Matrix_Init`). `Matrix_Push` grows the stack upward, and
+nothing resets it between frames, so pushes that are never popped climb out of it a matrix at a time. They go through the
+unused `mapSegment` and into the item icon and A button label pointers. The dump didn't hold the stack itself, and every
+ComboShip push / pop site checks out as balanced, so the leaking code isn't known yet.
+
+**Guard (`sys_matrix.c`, `mm/2s2h/ComboMatrixGuard.cpp`):**
+- `Matrix_Push` with the stack full is refused (the top matrix is reused, a drawing glitch at worst), and so is
+  `Matrix_Pop` with it empty. The pops that match refused pushes are absorbed.
+- Each push records its caller. `Play_Draw` starts with `Combo_Matrix_FrameCheck`: pushes still on the stack from the last
+  frame are reported and the stack starts over from the bottom.
+- Reports go to the log once per calling address, as `[ComboShip] matrix stack ... from <module>+0x<offset>`. The offset
+  names the function in that build's binary.
+
+**Tested (Linux build, 2026-10-26):** a normal MM session logs nothing. Through the test hook, 3 pushes left on the stack
+log one line naming the leaking line (`lib2ship.so+0xc019e5` -> `ZTestHook.cpp:104` with `addr2line`). 40 more, enough to
+overflow, are absorbed, and the game keeps running with the HUD intact.
