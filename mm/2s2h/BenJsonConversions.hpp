@@ -86,6 +86,7 @@ inline void to_json(json& j, const RandoSaveInfo& rando) {
                                          { "wear", loadout.wear } });
     }
     j["comboDungeonEntrances"] = rando.comboDungeonEntrances; // ComboShip: dungeon entrance shuffle
+    j["comboBossEntrances"] = rando.comboBossEntrances;       // ComboShip: boss room shuffle
 #endif
 }
 
@@ -157,6 +158,8 @@ inline void from_json(const json& j, RandoSaveInfo& rando) {
     const json noLayout = json::array();
     const json& layout = j.contains("comboDungeonEntrances") ? j["comboDungeonEntrances"] : noLayout;
     ComboGetArrayTolerant(layout, rando.comboDungeonEntrances);
+    const json& bossLayout = j.contains("comboBossEntrances") ? j["comboBossEntrances"] : noLayout;
+    ComboGetArrayTolerant(bossLayout, rando.comboBossEntrances);
 #endif
 }
 

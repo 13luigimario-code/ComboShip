@@ -409,6 +409,8 @@ typedef struct RandoSaveInfo {
     // ComboShip (dungeon entrance shuffle, DungeonEntrances.cpp): the temple behind each temple's door, by slot
     // (Woodfall, Snowhead, Great Bay, Stone Tower), as temple + 1. All 0 = vanilla.
     u8 comboDungeonEntrances[4];
+    // ComboShip (boss room shuffle): the temple whose boss's lair is behind each temple's boss door, as temple + 1.
+    u8 comboBossEntrances[4];
 #endif
 } RandoSaveInfo;
 
