@@ -45,6 +45,10 @@ void HandleGiantsCutsceneSkip() {
             transition.cutsceneIndex = 0xFFF2;
             break;
     }
+#ifdef COMBO_BUILD
+    // ComboShip: dungeon entrance shuffle — the warp lands outside the door this temple is behind.
+    Combo_MM_DungeonEntranceBossWarp(gPlayState->sceneId, &transition.entrance, &transition.cutsceneIndex);
+#endif
 
     /*
      * At the point of transition, the previous scene's information is lost, but we need it to set the proper Giants
@@ -52,10 +56,6 @@ void HandleGiantsCutsceneSkip() {
      * We're not actually using the queued transition normally, but using its values to alter a Giants' Chamber
      * transition.
      */
-#ifdef COMBO_BUILD
-    // ComboShip: dungeon entrance shuffle — the warp lands outside the door this temple is behind.
-    Combo_MM_DungeonEntranceBossWarp(gPlayState->sceneId, &transition.entrance, &transition.cutsceneIndex);
-#endif
     transition.transitionType = gPlayState->sceneId;
     GameInteractor::Instance->events.emplace_back(transition);
 }
