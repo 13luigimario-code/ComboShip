@@ -105,6 +105,8 @@ int Combo_Gear_OotTint(const char* mmId, const char* ootId, Color_RGB8* out);
 void Combo_Gear_RecolorCopy(void* copy, size_t copyCount, const void* ootCommands, size_t ootCount, const char* dlName);
 // 3 = Goron's Bracelet, 4 = gauntlet gem (the cosmetic color, or the model's own).
 Color_RGB8 Combo_Gear_CosmeticColor(int option);
+// MmGearColors.cpp: the cosmetic editor's color for the MM mask Link wears (PLAYER_MASK_*); 0 when its row is unset.
+int Combo_MmMaskTint(int mask, Color_RGB8* out);
 // Player_Draw: OOT's glowing ring under the Hover Boots while Link hovers.
 void Combo_Gear_DrawHoverGlow(struct PlayState* play, struct Player* player);
 

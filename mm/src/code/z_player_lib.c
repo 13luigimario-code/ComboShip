@@ -3850,7 +3850,22 @@ s32 func_80128640(PlayState* play, Player* player, Gfx* dlist) {
 
             MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, play->state.gfxCtx);
 
+#ifdef COMBO_BUILD
+            // ComboShip: the mask in Link's hand while he puts it on / takes it off, in its cosmetic color.
+            Color_RGB8 comboMaskTint;
+            s32 comboMaskTinted = Combo_MmMaskTint(mask, &comboMaskTint);
+
+            if (comboMaskTinted) {
+                gDPSetGrayscaleColor(POLY_OPA_DISP++, comboMaskTint.r, comboMaskTint.g, comboMaskTint.b, 255);
+                gSPGrayscale(POLY_OPA_DISP++, true);
+            }
+#endif
             gSPDisplayList(POLY_OPA_DISP++, D_801C0B20[mask - 1]);
+#ifdef COMBO_BUILD
+            if (comboMaskTinted) {
+                gSPGrayscale(POLY_OPA_DISP++, false);
+            }
+#endif
 
             Matrix_Pop();
 
@@ -4258,6 +4273,14 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
                     Combo_AdultLink_MaskTransform();
                     MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, play->state.gfxCtx);
                 }
+                // ComboShip: the cosmetic editor's mask color, a tint over the whole mask (MmGearColors.cpp).
+                Color_RGB8 comboMaskTint;
+                s32 comboMaskTinted = Combo_MmMaskTint(player->currentMask, &comboMaskTint);
+
+                if (comboMaskTinted) {
+                    gDPSetGrayscaleColor(POLY_OPA_DISP++, comboMaskTint.r, comboMaskTint.g, comboMaskTint.b, 255);
+                    gSPGrayscale(POLY_OPA_DISP++, true);
+                }
 #endif
 
                 if (player->currentMask == PLAYER_MASK_COUPLE) {
@@ -4297,6 +4320,9 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
 
                 gSPDisplayList(POLY_OPA_DISP++, D_801C0B20[maskMinusOne]);
 #ifdef COMBO_BUILD
+                if (comboMaskTinted) {
+                    gSPGrayscale(POLY_OPA_DISP++, false);
+                }
                 if (comboAdultMask) {
                     Matrix_Pop();
                 }

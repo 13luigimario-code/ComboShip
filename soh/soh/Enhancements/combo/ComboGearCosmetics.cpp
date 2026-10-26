@@ -3,7 +3,14 @@
 // The masks, the Iron/Hover Boots and Roc's Feather are tinted whole at their draw (grayscale + color, as SoH tints the
 // Bunny Hood): z_player.c (masks), z_player_lib.c (boots), randomizer/draw.cpp (Roc's Feather). The Deku Shield and the
 // Slingshot are display-list patches in CosmeticsEditor.cpp. MM reads the same settings for its "(OoT)" rows.
+//
+// The "(MM)" rows for the Razor and Gilded Swords (Extra Child Swords) are MM's: OOT draws those swords out of MM's
+// archive, and MM's own patches tint them (mm/2s2h/Rando/MiscBehavior/MmGearColors.cpp). Each frame OOT runs, it tells
+// MM through the launcher that OOT is the game being played, so OOT's rows win over MM's while it is.
 #ifdef COMBO_BUILD
+#include "soh/Enhancements/game-interactor/GameInteractor.h"
+#include "soh/ShipInit.hpp"
+#include "ComboExport.h"
 #include <libultraship/bridge/consolevariablebridge.h>
 #include <string>
 
@@ -65,5 +72,21 @@ extern "C" s32 Combo_OotBootsTint(s32 boots, Color_RGB8* out) {
 extern "C" s32 Combo_OotRocsFeatherTint(Color_RGB8* out) {
     return CosmeticTint("Equipment.RocsFeather", out);
 }
+
+// MM's MM_ComboGearTintsRefresh, handed over by the launcher (nullptr in a one-game build).
+static void (*sMmGearTintsRefresh)(int mmActive) = nullptr;
+extern "C" COMBO_EXPORT void SOH_SetMmGearTintsRefresh(void (*fn)(int)) {
+    sMmGearTintsRefresh = fn;
+}
+
+static void RegisterComboGearCosmetics() {
+    COND_HOOK(OnGameFrameUpdate, true, []() {
+        if (sMmGearTintsRefresh != nullptr) {
+            sMmGearTintsRefresh(0);
+        }
+    });
+}
+
+static RegisterShipInitFunc sComboGearCosmeticsInit(RegisterComboGearCosmetics);
 
 #endif // COMBO_BUILD

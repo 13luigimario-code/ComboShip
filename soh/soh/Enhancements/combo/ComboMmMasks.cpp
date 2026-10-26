@@ -18,6 +18,7 @@
 #include "soh/Enhancements/randomizer/randomizer.h"
 #include <libultraship/bridge/consolevariablebridge.h> // cosmetic colors
 #include <cstring>
+#include <string>
 
 extern "C" {
 #include "z64.h"
@@ -168,6 +169,8 @@ void OnPlayerUpdate() {
 // z_player.c (Player_DrawGameplay): draw the worn MM mask on the head. Segment 0x0D holds the limb matrices of
 // the skeleton just drawn; 0x1C0 is the head (limb 7), OoTMM's prepareMask. Bit 0 marks the address segmented
 // for libultraship.
+static std::string sMmTintValue; // MM's "Masks.*" color CVar, when the mask follows MM's row
+
 extern "C" void Combo_OotMask_Draw(PlayState* play, Player* player) {
     if (sWornMask == 0 || GameInteractor_InvisibleLinkActive()) {
         return;
@@ -178,7 +181,7 @@ extern "C" void Combo_OotMask_Draw(PlayState* play, Player* player) {
     };
 
     // The cosmetic editor's "Blast/Stone/Kamaro's Mask (MM)": the whole mask tinted (grayscale + color, as SoH tints
-    // the Bunny Hood); unset, MM's own colors.
+    // the Bunny Hood); unset, MM's own "Masks" row, then MM's own colors.
     const char* tintChanged = nullptr;
     const char* tintValue = nullptr;
     switch (sWornMask) {
@@ -197,12 +200,24 @@ extern "C" void Combo_OotMask_Draw(PlayState* play, Player* player) {
         default:
             break;
     }
-    const bool tinted = (tintChanged != nullptr) && CVarGetInteger(tintChanged, 0);
+    bool tinted = (tintChanged != nullptr) && CVarGetInteger(tintChanged, 0);
+    // Unset, MM's own row for the mask ("Masks" group in MM's editor, MmGearColors.cpp), if that one is set.
+    if ((tintChanged != nullptr) && !tinted) {
+        const char* mmId = (sWornMask == ITEM_COMBO_MASK_BLAST)   ? "gCosmetic.Masks.Blast"
+                           : (sWornMask == ITEM_COMBO_MASK_STONE) ? "gCosmetic.Masks.Stone"
+                                                                  : "gCosmetic.Masks.Kamaro";
+        if (CVarGetInteger((std::string(mmId) + ".Changed").c_str(), 0)) {
+            tinted = true;
+            tintValue = nullptr;
+            sMmTintValue = std::string(mmId) + ".Color";
+        }
+    }
 
     OPEN_DISPS(play->state.gfxCtx);
     gSPMatrix(POLY_OPA_DISP++, 0x0D0001C1, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
     if (tinted) {
-        const Color_RGBA8 tint = CVarGetColor(tintValue, Color_RGBA8{ 255, 255, 255, 255 });
+        const Color_RGBA8 tint =
+            CVarGetColor((tintValue != nullptr) ? tintValue : sMmTintValue.c_str(), Color_RGBA8{ 255, 255, 255, 255 });
         gDPSetGrayscaleColor(POLY_OPA_DISP++, tint.r, tint.g, tint.b, 255);
         gSPGrayscale(POLY_OPA_DISP++, true);
     }

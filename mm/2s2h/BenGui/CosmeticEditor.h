@@ -73,6 +73,8 @@ typedef enum {
     COSMETICS_GROUP_COLLECTIBLES,
     COSMETICS_GROUP_DUNGEONS,
     COSMETICS_GROUP_WORLD,
+    COSMETICS_GROUP_EQUIPMENT, // ComboShip: MM's gear (MmGearColors.cpp)
+    COSMETICS_GROUP_MASKS,     // ComboShip: MM's masks
     COSMETICS_GROUP_MAX,
 } CosmeticGroup;
 

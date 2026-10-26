@@ -51,6 +51,8 @@ static const std::map<CosmeticGroup, const char*> sCosmeticGroupLabels = {
     { COSMETICS_GROUP_COLLECTIBLES, "Collectibles" },
     { COSMETICS_GROUP_DUNGEONS, "Dungeons" },
     { COSMETICS_GROUP_WORLD, "World" },
+    { COSMETICS_GROUP_EQUIPMENT, "Equipment" }, // ComboShip
+    { COSMETICS_GROUP_MASKS, "Masks" },         // ComboShip
 };
 
 // clang-format off
@@ -150,6 +152,42 @@ std::map<std::string, CosmeticOption> cosmeticOptions = {
     COSMETIC_OPTION("Player.OotDinsSecondary",      "Din's Fire Secondary (OoT)",       COSMETICS_GROUP_PLAYER,             ColorRGBA8(255,   0,   0, 255), false, true, false),
     COSMETIC_OPTION("Player.OotNayrusPrimary",      "Nayru's Love Primary (OoT)",       COSMETICS_GROUP_PLAYER,             ColorRGBA8(170, 255, 255, 255), false, true, false),
     COSMETIC_OPTION("Player.OotNayrusSecondary",    "Nayru's Love Secondary (OoT)",     COSMETICS_GROUP_PLAYER,             ColorRGBA8(  0, 100, 255, 255), false, true, false),
+    // ComboShip: Majora's Mask's own gear and masks, which 2 Ship has no color for: a tint over the whole piece
+    // (MmGearColors.cpp; the masks through z_player_lib.c).
+    COSMETIC_OPTION("Equipment.KokiriSwordBlade",   "Kokiri Sword Blade",               COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8(220, 220, 230, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.KokiriSwordHilt",    "Kokiri Sword Hilt",                COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8( 90, 140, 200, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.RazorSwordBlade",    "Razor Sword Blade",                COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8(170, 180, 230, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.RazorSwordHilt",     "Razor Sword Hilt",                 COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8( 90,  90, 160, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.GildedSwordBlade",   "Gilded Sword Blade",               COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8(240, 230, 180, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.GildedSwordHilt",    "Gilded Sword Hilt",                COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8(230, 180,  60, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.GreatFairysSword",   "Great Fairy's Sword",              COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8(220, 120, 200, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.HerosShield",        "Hero's Shield",                    COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8( 70, 110, 200, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.HerosBow",           "Hero's Bow",                       COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8(150, 100,  50, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.Hookshot",           "Hookshot",                         COSMETICS_GROUP_EQUIPMENT,          ColorRGBA8(200,  90,  60, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Truth",                  "Mask of Truth",                    COSMETICS_GROUP_MASKS,              ColorRGBA8(220, 200, 160, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Kafei",                  "Kafei's Mask",                     COSMETICS_GROUP_MASKS,              ColorRGBA8( 90,  70, 180, 255), false, true, false),
+    COSMETIC_OPTION("Masks.AllNight",               "All-Night Mask",                   COSMETICS_GROUP_MASKS,              ColorRGBA8(200, 170,  80, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Bunny",                  "Bunny Hood",                       COSMETICS_GROUP_MASKS,              ColorRGBA8(240, 240, 240, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Keaton",                 "Keaton Mask",                      COSMETICS_GROUP_MASKS,              ColorRGBA8(255, 220, 120, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Garo",                   "Garo's Mask",                      COSMETICS_GROUP_MASKS,              ColorRGBA8(110, 100,  90, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Romani",                 "Romani's Mask",                    COSMETICS_GROUP_MASKS,              ColorRGBA8(230, 120, 140, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Circus",                 "Circus Leader's Mask",             COSMETICS_GROUP_MASKS,              ColorRGBA8(230,  90,  70, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Postman",                "Postman's Hat",                    COSMETICS_GROUP_MASKS,              ColorRGBA8(200, 160,  90, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Couple",                 "Couple's Mask",                    COSMETICS_GROUP_MASKS,              ColorRGBA8(240, 200,  90, 255), false, true, false),
+    COSMETIC_OPTION("Masks.GreatFairy",             "Great Fairy's Mask",               COSMETICS_GROUP_MASKS,              ColorRGBA8(240, 150, 200, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Gibdo",                  "Gibdo Mask",                       COSMETICS_GROUP_MASKS,              ColorRGBA8(180, 160, 130, 255), false, true, false),
+    COSMETIC_OPTION("Masks.DonGero",                "Don Gero's Mask",                  COSMETICS_GROUP_MASKS,              ColorRGBA8(110, 170,  90, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Kamaro",                 "Kamaro's Mask",                    COSMETICS_GROUP_MASKS,              ColorRGBA8(150, 110, 200, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Captain",                "Captain's Hat",                    COSMETICS_GROUP_MASKS,              ColorRGBA8(120, 110, 100, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Stone",                  "Stone Mask",                       COSMETICS_GROUP_MASKS,              ColorRGBA8(160, 160, 150, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Bremen",                 "Bremen Mask",                      COSMETICS_GROUP_MASKS,              ColorRGBA8(220, 180, 100, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Blast",                  "Blast Mask",                       COSMETICS_GROUP_MASKS,              ColorRGBA8(200, 170,  80, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Scents",                 "Mask of Scents",                   COSMETICS_GROUP_MASKS,              ColorRGBA8(170, 120,  80, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Giant",                  "Giant's Mask",                     COSMETICS_GROUP_MASKS,              ColorRGBA8(140, 110,  90, 255), false, true, false),
+    COSMETIC_OPTION("Masks.FierceDeity",            "Fierce Deity's Mask",              COSMETICS_GROUP_MASKS,              ColorRGBA8(220, 220, 230, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Goron",                  "Goron Mask",                       COSMETICS_GROUP_MASKS,              ColorRGBA8(170, 110,  60, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Zora",                   "Zora Mask",                        COSMETICS_GROUP_MASKS,              ColorRGBA8( 90, 140, 220, 255), false, true, false),
+    COSMETIC_OPTION("Masks.Deku",                   "Deku Mask",                        COSMETICS_GROUP_MASKS,              ColorRGBA8(170, 130,  70, 255), false, true, false),
 #endif
     COSMETIC_OPTION("Dungeon.Woodfall",             "Woodfall",                         COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(255, 170, 246, 255), false, true, false),
     COSMETIC_OPTION("Dungeon.Snowhead",             "Snowhead",                         COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(116, 226,  61, 255), false, true, false),
@@ -1067,6 +1105,8 @@ void CosmeticEditorWindow::DrawElement() {
         if (ImGui::BeginTabItem("Link & Items")) {
             UIWidgets::Separator(true, true, 2.0f, 2.0f);
             CosmeticEditorDrawGroup(COSMETICS_GROUP_PLAYER, "Link");
+            CosmeticEditorDrawGroup(COSMETICS_GROUP_EQUIPMENT); // ComboShip (MmGearColors.cpp)
+            CosmeticEditorDrawGroup(COSMETICS_GROUP_MASKS);
             ImGui::EndTabItem();
         }
 
