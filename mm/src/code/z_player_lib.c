@@ -2336,7 +2336,11 @@ void Player_DrawHookshotReticle(PlayState* play, Player* player, f32 hookshotDis
             MATRIX_FINALIZE_AND_LOAD(OVERLAY_DISP++, play->state.gfxCtx);
 
             gSPSegment(OVERLAY_DISP++, 0x06, play->objectCtx.slots[player->actor.objectSlot].segment);
-            gSPDisplayList(OVERLAY_DISP++, gHookshotReticleDL);
+            // ComboShip: SoH's Targetable Hookshot Reticle colors it by the surface (Enhancements/Items/
+            // HookshotReticle.cpp).
+            if (GameInteractor_Should(VB_DRAW_HOOKSHOT_RETICLE, true, play, poly, bgId)) {
+                gSPDisplayList(OVERLAY_DISP++, gHookshotReticleDL);
+            }
 
             CLOSE_DISPS(play->state.gfxCtx);
         }

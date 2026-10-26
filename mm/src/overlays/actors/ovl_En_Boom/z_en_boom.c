@@ -15,6 +15,7 @@
 // Body/Gem (OoT)" colors (CrossGearColors.cpp).
 static const ALIGN_ASSET(2) char sComboOotBoomerangDL[] = "__OTR__@oot:objects/gameplay_keep/gBoomerangDL";
 const void* Combo_Gear_Recolor(const void* dList);
+int Combo_Tools_BoomerangRecallPressed(struct PlayState* play); // CrossTools.cpp
 #endif
 
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_DRAW_CULLING_DISABLED)
@@ -231,9 +232,12 @@ static void EnBoom_ComboOotFly(EnBoom* this, PlayState* play) {
         }
     }
 
-    if (DECR(this->unk_1CC) == 0) {
+    // SoH's "Instant Boomerang Recall": its button pressed again brings it (and what it grabbed) straight back.
+    s32 recall = Combo_Tools_BoomerangRecallPressed(play);
+
+    if ((DECR(this->unk_1CC) == 0) || recall) {
         this->moveTo = &player->actor;
-        if (Math_Vec3f_DistXYZ(&this->actor.world.pos, &player->actor.focus.pos) < 40.0f) {
+        if ((Math_Vec3f_DistXYZ(&this->actor.world.pos, &player->actor.focus.pos) < 40.0f) || recall) {
             target = this->unk_1C8;
             if (target != NULL) {
                 Math_Vec3f_Copy(&target->world.pos, &player->actor.world.pos);

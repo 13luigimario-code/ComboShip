@@ -2997,6 +2997,62 @@ Sword Blade red / Hilt yellow: the swung blade is cyan (OOT's row wins) and the 
 checked in game: the Gilded Sword, the Great Fairy's Sword, the other masks, the MM masks in OOT following MM's rows, and
 the cosmetics sync rows.
 
+## Item trackers: trade-slot cells with a cross-game item in the slot (2026-10-26)
+
+The cross-game items share the other game's trade slots: OOT's gear in MM's three trade slots (`KaleidoItemPage.cpp`),
+MM's Blast/Stone/Kamaro's Masks in OOT's child trade slot (`ShuffleTradeItems.c`). Both trackers lit a trade-slot cell
+whenever the slot held anything. MM's tracker also drew the slot's first item for an id it has no icon for, so Din's
+Fire in the slot showed as an owned Moon's Tear (and Farore's Wind / the Hover Boots as the Room Key / the Letter to
+Kafei). The cross-game items already have cells of their own. With one of them in the slot, the slot's cell now shows the
+furthest trade item of that slot that Link owns (the trade cycles' own ownership flags), or stays dark. MM:
+`ComboTradeSlotMmItem` in `ItemTracker.cpp`. OOT: `DrawItem` in `randomizer_item_tracker.cpp`.
+
+**Tested (Linux build, 2026-10-26):** MM, with Din's Fire / Farore's Wind / the Hover Boots put in the three trade slots
+and only the Mountain Title Deed owned: the cells show the Mountain Title Deed lit and the Room Key and Letter to Kafei
+dark. OOT, with the Blast Mask in the child trade slot and no child trade item owned: the cell draws as not owned, the
+same as with the slot empty.
+
+## Ship of Harkinian's item settings in 2 Ship (2026-10-26)
+
+SoH's Enhancements -> Items settings for explosives, the bow / slingshot, the hookshot, the boomerang and the magic
+spells, checked against Majora's Mask. 2 Ship's menu, Explosives section, gets two new sections:
+
+**Hookshot: "Targetable Hookshot Reticle"** (`gEnhancements.Items.HookshotableReticle`,
+`Enhancements/Items/HookshotReticle.cpp`). The reticle turns green on a hookshot surface
+(`SurfaceType_IsHookshotSurface`) and stays red elsewhere. MM's reticle list sets its own red PRIM color, and the Bow
+Reticle draws the same list, so the list isn't patched. `Player_DrawHookshotReticle` asks `VB_DRAW_HOOKSHOT_RETICLE`, and
+the setting draws a frame-allocated copy with its PRIM colors replaced (any layout, so a reticle mod keeps working).
+
+**Boomerang** (Ocarina of Time's Boomerang, which human Link uses in MM):
+- "Instant Boomerang Recall" (`gEnhancements.Items.FastBoomerang`): pressing the Boomerang's button (C button, or D-pad
+  with D-pad equips) while it flies brings it straight back with what it grabbed, as SoH's `boomerangQuickRecall` does
+  (`Combo_Tools_BoomerangRecallPressed` in `CrossTools.cpp`, read by `EnBoom_ComboOotFly`). Zora Link's fins already have
+  2 Ship's "Instant Fin Boomerangs Recall".
+- "Aiming Reticle for Boomerang" (`gEnhancements.Items.BoomerangReticle`, `Enhancements/Items/BoomerangReticle.cpp`):
+  while Link aims the Boomerang or Zora Link's fins, the Hookshot's reticle sits where the throw line (released 30 / 50
+  units up, along Link's facing and aim pitch) meets the first wall.
+
+**Not ported, MM already does it or has nothing for it:**
+- Explosives: Remote Bombchu, Remove Explosive Limit and Deku Nuts Explode Bombs were already in 2 Ship. "Static
+  Explosion Radius": MM's explosion is already a fixed radius (100, Powder Keg 200). "Prevent Bombchus Forcing
+  First-Person": MM's drop calls `func_80831814(..., PLAYER_UNKAA5_0)`, which is no camera change. "Better Bombchu
+  Shopping": MM's shop never sells Bombchus out.
+- Bow / Slingshot: the reticle (2 Ship's Bow Reticle) and arrow cycling were already there, and the Bow Reticle covers the
+  OOT Slingshot (it runs on the Bow's item action). "Equip Multiple Arrows": MM's magic arrows are separate items.
+  "Blue Fire Arrows" / "Sunlight Arrows": MM has no red ice, and its Light Arrows already work sun blocks. "Bow as Child /
+  Slingshot as Adult": no ages in MM.
+- Boomerang: "Aim Boomerang in First-Person Mode": MM already aims boomerangs in the Bow's aiming mode
+  (`func_80831010`, `PLAYER_UNKAA5_3`).
+- Magic Spells: "Faster Farore's Wind": the OOT Farore's Wind in MM (`CrossSpells.cpp`) already casts with no animation.
+  "Better Farore's Wind": its changes are OOT-specific (two OOT scenes, keeping the point through the Master Sword age
+  swap).
+
+**Tested (Linux build, 2026-10-26):** the hookshot reticle shows red on the floor and on rock walls (not hookshot
+surfaces). A throwaway build that took every surface as a hookshot surface drew it green (the color swap works). The
+Boomerang's reticle sits on the floor ahead while aiming downward. In Termina Field, a throw stayed out 46 frames, and with
+its button pressed mid-flight it came back after 6. Not checked in game: a real hookshot target turning green, the reticle
+with Zora Link's fins.
+
 ## MM matrix stack guard (2026-10-26)
 
 **Crash report (Windows, build 1a64145):** MM crashed in `Interface_Draw` (`z_parameter.c`) on
