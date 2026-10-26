@@ -1569,6 +1569,8 @@ extern void Combo_SnapshotMinShopItems(); // OTRGlobals.cpp — cache min-set pl
 
 // ComboShip: run only Fill()'s confined-placement steps (skip entrances/Link's Pocket/free fill),
 // leaving confined items placed in ctx and the free pool in itemPool. See UPSTREAM_MERGES.md.
+#include "rando/CrossShuffle.h"
+extern "C" uint32_t gComboCrossShuffle; // OTRGlobals.cpp (combo/rando/CrossShuffle.h)
 void ComboFillConfined() {
     auto ctx = Rando::Context::GetInstance();
     RegionTable_Init();
@@ -1577,6 +1579,20 @@ void ComboFillConfined() {
     GenerateItemPool();
     GenerateStartingInventory();
     FillExcludedLocations();
+    // ComboShip: Cross-Game Dungeon Rewards — the bosses are the rewards' (the combined fill's Phase R), so hold them
+    // with a placeholder through the confined fills below (own-dungeon keys and maps, restricted songs, the Mask Shop
+    // Key), which would otherwise take them under "Anywhere", and free them again at the end. An excluded boss already
+    // holds junk and stays out.
+    std::vector<RandomizerCheck> heldBosses;
+    if (gComboCrossShuffle & ComboRando::CROSS_SHUFFLE_DUNGEON_REWARDS) {
+        for (RandomizerCheck rc : Rando::StaticData::dungeonRewardLocations) {
+            if (std::find(ctx->allLocations.begin(), ctx->allLocations.end(), rc) != ctx->allLocations.end() &&
+                ctx->GetItemLocation(rc)->GetPlacedRandomizerGet() == RG_NONE) {
+                ctx->GetItemLocation(rc)->SetPlacedItem(RG_RECOVERY_HEART); // no logic effect
+                heldBosses.push_back(rc);
+            }
+        }
+    }
     SetAreas();
     // Fill()'s native position for shop items + shop/scrub/merchant prices (its shopsanity block runs
     // right after SetAreas). Without prices the confined AssumedFills treat every priced slot as free.
@@ -1623,5 +1639,8 @@ void ComboFillConfined() {
     // Guard: Buy items are shop-only (placed above, never pooled); strip any that leak into itemPool.
     std::erase_if(itemPool,
                   [](const auto item) { return Rando::StaticData::RetrieveItem(item).GetItemType() == ITEMTYPE_SHOP; });
+    for (RandomizerCheck rc : heldBosses) {
+        ctx->GetItemLocation(rc)->SetPlacedItem(RG_NONE); // fillable again: the dump lists them as boss checks
+    }
 }
 #endif

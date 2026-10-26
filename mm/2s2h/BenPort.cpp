@@ -67,6 +67,7 @@ CrowdControl* CrowdControl::Instance;
 #ifdef COMBO_BUILD
 #include "ComboMenuSharedContext.h"               // ComboShip: shared per-DLL ImGui context helper (combo-owned)
 #include "rando/SharedItems.h"                    // ComboShip: Shared Items family table
+#include "rando/CrossShuffle.h"                   // ComboShip: cross-game shuffles
 #include "rando/ComboGames.h"                     // ComboShip: Games (OoT only / MM only / Combo)
 #include "rando/CrossWarpLogic.h"                 // ComboShip (teleport songs): cross-game warp logic bits
 #include "2s2h/Rando/MiscBehavior/MiscBehavior.h" // ComboShip: MM_LoadComboRando cache invalidation + ComboRando types
@@ -2989,6 +2990,21 @@ extern "C" int gMMComboGoalHunt;
 extern "C" int gMMComboGoalRequired;
 extern "C" int gMMComboGoalPieces;
 
+// ComboShip: cross-game shuffles of the seed (combo/rando/CrossShuffle.h), pushed by the launcher before the dump and
+// on slot load. MM's matching options are forced from it wherever the save-building paths read the option CVars.
+static ComboRando::CrossShuffleMask sMMComboCrossShuffle = 0;
+extern "C" COMBO_EXPORT void MM_SetComboCrossShuffle(ComboRando::CrossShuffleMask mask) {
+    sMMComboCrossShuffle = mask;
+}
+// The value an option takes in this seed: the forced one, else `value` (the CVar).
+static uint32_t Combo_MM_ForcedOption(RandoOptionId id, uint32_t value) {
+    // Cross-Game Dungeon Rewards: the combined fill puts the remains on the bosses itself, from the free pool.
+    if (id == RO_SHUFFLE_BOSS_REMAINS && (sMMComboCrossShuffle & ComboRando::CROSS_SHUFFLE_DUNGEON_REWARDS)) {
+        return RO_REMAINS_SHUFFLE_ANYWHERE;
+    }
+    return value;
+}
+
 // Combo master seed for MM's RNG, mirroring OOT's SOH_SetComboRandoSeed so confined placement
 // (PreplaceConfinedItems, via Ship_Random) is reproducible per seed.
 static uint64_t sMMComboRandoSeed = 0;
@@ -3053,7 +3069,7 @@ extern "C" COMBO_EXPORT int MM_InitRandoSaveFile(int fileNum, const char* placem
         // everything (the analog of OOT's SetAllToContext fix).
         nlohmann::json options = nlohmann::json::object();
         for (auto& [id, opt] : Rando::StaticData::Options) {
-            options[opt.name] = (uint32_t)CVarGetInteger(opt.cvar, opt.defaultValue);
+            options[opt.name] = Combo_MM_ForcedOption(id, (uint32_t)CVarGetInteger(opt.cvar, opt.defaultValue));
         }
         // ComboShip (#136): combo owns the goal and MM's own toggle is hidden, so the CVar loop above
         // would save hunt=off — leaving Majora killable pre-completion and the tracker row missing.
@@ -3455,7 +3471,7 @@ extern "C" COMBO_EXPORT const char* MM_DumpRandoStaticData(void) {
     RandoSaveInfo saveInfo = {};
     saveInfo.finalSeed = (u32)sMMComboRandoSeed; // native OnFileCreate sets it before starting items
     for (auto& [id, opt] : Rando::StaticData::Options) {
-        saveInfo.randoSaveOptions[id] = (uint32_t)CVarGetInteger(opt.cvar, opt.defaultValue);
+        saveInfo.randoSaveOptions[id] = Combo_MM_ForcedOption(id, (uint32_t)CVarGetInteger(opt.cvar, opt.defaultValue));
     }
     auto startingItems = Rando::GetStartingItemsFromConfig();
     Rando::SetStartingItemsInSave(saveInfo, startingItems);
@@ -3481,9 +3497,22 @@ extern "C" COMBO_EXPORT const char* MM_DumpRandoStaticData(void) {
             prices[cn] = p;
     }
 
+    // ComboShip: Cross-Game Dungeon Rewards — the boss warps are the rewards' (the combined fill's Phase R), so keep
+    // them out of the own-dungeon confinement below, which groups checks by scene and would put keys and maps on them.
+    std::vector<RandoCheckId> heldBosses;
+    if (sMMComboCrossShuffle & ComboRando::CROSS_SHUFFLE_DUNGEON_REWARDS) {
+        std::erase_if(checkPool, [&](RandoCheckId id) {
+            if (Rando::StaticData::Checks[id].randoCheckType != RCTYPE_REMAINS)
+                return false;
+            heldBosses.push_back(id);
+            return true;
+        });
+    }
+
     // Confine own-dungeon items via MM's own logic (writes RANDO_SAVE_CHECKS, shrinks both pools).
     std::vector<RandoCheckId> checkPoolBefore = checkPool;
     Rando::Logic::PreplaceConfinedItems(checkPool, itemPool);
+    checkPool.insert(checkPool.end(), heldBosses.begin(), heldBosses.end()); // fillable boss checks again
     std::set<RandoCheckId> stillFillable(checkPool.begin(), checkPool.end());
 
     // GeneratePools under-fills (MM's own OnFileCreate pads junk); mirror it so every fillable check
@@ -3586,7 +3615,11 @@ extern "C" COMBO_EXPORT const char* MM_DumpRandoStaticData(void) {
         const std::string& cn = Rando::StaticData::GetCheckDisplayName(id); // ComboShip: friendly name
         if (cn.empty())
             continue;
-        checks.push_back({ { "name", cn } });
+        // `bossReward`: a temple boss warp (the remains' check), for Cross-Game Dungeon Rewards.
+        nlohmann::json check = { { "name", cn } };
+        if (chkIt->second.randoCheckType == RCTYPE_REMAINS)
+            check["bossReward"] = true;
+        checks.push_back(std::move(check));
     }
 
     // Pool = the real free item pool (every settings-added item; confined items already removed).
@@ -3595,9 +3628,13 @@ extern "C" COMBO_EXPORT const char* MM_DumpRandoStaticData(void) {
         if (it == Rando::StaticData::Items.end() || !it->second.spoilerName || it->second.spoilerName[0] == '\0')
             continue;
         // ComboShip: friendly item name for the normalized combo spoiler.
-        pool.push_back({ { "name", Rando::StaticData::GetItemDisplayName(iid) },
-                         { "advancement", isAdvancement(it->second) },
-                         { "category", categoryName(it->second) } });
+        nlohmann::json item = { { "name", Rando::StaticData::GetItemDisplayName(iid) },
+                                { "advancement", isAdvancement(it->second) },
+                                { "category", categoryName(it->second) } };
+        // `dungeonReward`: a boss's remains, for Cross-Game Dungeon Rewards.
+        if (iid == RI_REMAINS_ODOLWA || iid == RI_REMAINS_GOHT || iid == RI_REMAINS_GYORG || iid == RI_REMAINS_TWINMOLD)
+            item["dungeonReward"] = true;
+        pool.push_back(std::move(item));
     }
 
     for (auto& [id, item] : Rando::StaticData::Items) {
@@ -4199,7 +4236,7 @@ extern "C" COMBO_EXPORT void Combo_MM_Rando_Reset(void) {
     gSaveContext.save.shipSaveInfo.rando.finalSeed = (u32)sMMComboRandoSeed; // clock-shuffle reseed source
     for (auto& [id, opt] : Rando::StaticData::Options) {
         gSaveContext.save.shipSaveInfo.rando.randoSaveOptions[id] =
-            (uint32_t)CVarGetInteger(opt.cvar, opt.defaultValue);
+            Combo_MM_ForcedOption(id, (uint32_t)CVarGetInteger(opt.cvar, opt.defaultValue));
     }
     // ComboShip (Cross-Games Age): the same "Random" age requirements the save will get (MM_InitRandoSaveFile).
     Rando::AgeReq::Resolve((uint32_t)sMMComboRandoSeed, gSaveContext.save.shipSaveInfo.rando.randoSaveOptions,

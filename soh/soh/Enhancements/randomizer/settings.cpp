@@ -11,8 +11,9 @@
 #include "soh/OTRGlobals.h"
 
 #ifdef COMBO_BUILD
-#include "rando/SharedItems.h" // ComboShip: Shared Items family indices (SF_WALLET)
-#include "rando/ComboGames.h"  // ComboShip: Games (the Triforce piece split)
+#include "rando/SharedItems.h"  // ComboShip: Shared Items family indices (SF_WALLET)
+#include "rando/ComboGames.h"   // ComboShip: Games (the Triforce piece split)
+#include "rando/CrossShuffle.h" // ComboShip: cross-game shuffles (forced options below)
 // ComboShip (#136): combo owns the win condition (combined Triforce goal), forced in FinalizeSettings.
 // A plain constant, not an #ifdef inside the OPT_CALLBACK macro arguments.
 extern "C" int gComboGoalHunt;
@@ -24,6 +25,8 @@ extern "C" int gComboGoalPieces;
 extern "C" int gComboStartingGameMM;
 // ComboShip: Shared Items bitmask (combo/rando/SharedItems.h), pushed by SOH_SetComboSharedItems.
 extern "C" uint64_t gComboSharedMask;
+// ComboShip: cross-game shuffles (combo/rando/CrossShuffle.h), pushed by SOH_SetComboCrossShuffle.
+extern "C" uint32_t gComboCrossShuffle;
 static constexpr bool kComboOwnsWincon = true;
 // ComboShip (#136): OOT's half of the combo-owned pool, for the menu-side dependent-count ranges.
 // Mirrors CwOotPieces in combo/rando/CrossWorldRando.h — the two splits must stay identical.
@@ -2853,6 +2856,13 @@ void Context::FinalizeSettings(const std::set<RandomizerCheck>& excludedLocation
     // ComboShip: Shared Wallets has no MM equivalent for Child Wallet, so force it off (see deviations/rando.md).
     if (gComboSharedMask & ComboRando::SharedBit(ComboRando::SF_WALLET)) {
         mOptions[RSK_SHUFFLE_CHILD_WALLET].Set(RO_GENERIC_OFF);
+    }
+    // ComboShip: Cross-Game Dungeon Rewards — the combined fill puts the rewards of both games on the bosses of both
+    // games, so OOT leaves its rewards in the free pool ("Anywhere") and keeps one in Link's Pocket: 8 OOT + 4 MM
+    // rewards for the 12 bosses. Set before the End of Dungeons block below, which would otherwise force the pocket.
+    if (gComboCrossShuffle & ComboRando::CROSS_SHUFFLE_DUNGEON_REWARDS) {
+        mOptions[RSK_SHUFFLE_DUNGEON_REWARDS].Set(RO_DUNGEON_REWARDS_ANYWHERE);
+        mOptions[RSK_LINKS_POCKET].Set(RO_LINKS_POCKET_DUNGEON_REWARD);
     }
 #endif
     // ComboShip: (#133/#134) sub-options are meaningless without their parents

@@ -23,6 +23,7 @@
 #include "SharedItems.h"
 #include "CrossWarpLogic.h"
 #include "ComboGames.h"
+#include "CrossShuffle.h"
 
 namespace ComboRando {
 
@@ -209,6 +210,7 @@ struct CwItem {
     std::string name;
     bool advancement;
     CwCat cat = CwCat::UNKNOWN;
+    bool reward = false; // a dungeon reward (stone, medallion, remains): dump "dungeonReward"
     // Only native-JUNK may absorb a surplus, and never if it gates logic: OOT files bombchus and
     // Buy Blue Fire/Arrows as ITEM_CATEGORY_JUNK with advancement=true (item_list.cpp:278-325).
     bool discardable() const {
@@ -219,6 +221,7 @@ struct CwItem {
 struct CwCheck {
     Game game;
     std::string name;
+    bool bossReward = false; // a boss's reward check (Cross-Game Dungeon Rewards): dump "bossReward"
 };
 
 struct CwPlacement {
@@ -242,6 +245,7 @@ struct CombinedFillResult {
 constexpr int kFillAttempts = 2;   // whole-fill retries (re-derives the seed, re-rolls the dumps)
 constexpr int kMaxPasses = 3;      // passes within one fill
 constexpr int kMaxPrereqTries = 4; // Tier-1 repicks of just the portal prerequisites
+constexpr int kMaxRewardTries = 8; // Phase R orders tried per pass (Cross-Game Dungeon Rewards)
 
 // MM access is gated on the OOT->MM portal region (Happy Mask Shop) via ootOracle.GetPortalOpen.
 // progress: optional thread-safe progress struct polled by the UI. May be nullptr.
@@ -252,15 +256,17 @@ constexpr int kMaxPrereqTries = 4; // Tier-1 repicks of just the portal prerequi
 // games (ComboGames.h): a solo seed keeps every item in its own game (both phases pick only checks of the item's
 // game), uses no cross-game teleports in logic, and skips the portal prerequisites / re-entry guarantee, since
 // nothing crosses between the games at runtime.
-inline CombinedFillResult
-CrossWorldCombinedFill(const std::string& sohDumpJson, const std::string& mmDumpJson, uint32_t masterSeed,
-                       const OracleFns& ootOracle, const OracleFns& mmOracle,
-                       ComboRando::ComboGenProgress* progress = nullptr, const std::string& forcedOotJson = "",
-                       OotAccess ootAccess = OotAccess::ALL_REACHABLE, CwGoal goal = {}, GameId startingGame = GAME_OOT,
-                       SharedMask sharedMask = 0, ComboGames games = COMBO_GAMES_BOTH) {
+// crossShuffle (CrossShuffle.h): Cross-Game Dungeon Rewards puts every dungeon reward of both games on the bosses of
+// both games (Phase R below); ignored in a solo seed.
+inline CombinedFillResult CrossWorldCombinedFill(
+    const std::string& sohDumpJson, const std::string& mmDumpJson, uint32_t masterSeed, const OracleFns& ootOracle,
+    const OracleFns& mmOracle, ComboRando::ComboGenProgress* progress = nullptr, const std::string& forcedOotJson = "",
+    OotAccess ootAccess = OotAccess::ALL_REACHABLE, CwGoal goal = {}, GameId startingGame = GAME_OOT,
+    SharedMask sharedMask = 0, ComboGames games = COMBO_GAMES_BOTH, CrossShuffleMask crossShuffle = 0) {
     CombinedFillResult result;
     result.success = false;
     const bool solo = ComboGamesSolo(games);
+    const bool crossRewards = !solo && (crossShuffle & CROSS_SHUFFLE_DUNGEON_REWARDS);
 
     // Portal gate: NO_LOGIC deliberately skips it (an impossible seed is that mode's point). Any other
     // mode without the export would silently fill MM as sphere-0 reachable — the bug this gate fixes.
@@ -299,7 +305,7 @@ CrossWorldCombinedFill(const std::string& sohDumpJson, const std::string& mmDump
         for (auto& c : d.value("checks", nlohmann::json::array())) {
             std::string name = c.value("name", "");
             if (!name.empty())
-                allChecks.push_back({ game, name });
+                allChecks.push_back({ game, name, c.value("bossReward", false) });
         }
 
         // Item pool: the game's real generated pool, split into advancement/junk.
@@ -313,7 +319,7 @@ CrossWorldCombinedFill(const std::string& sohDumpJson, const std::string& mmDump
                 CwCat cat = CwCatFromName(it.value("category", std::string{}));
                 ++parsed;
                 withCategory += (cat != CwCat::UNKNOWN) ? 1 : 0;
-                (adv ? advItems : junkItems).push_back({ game, name, adv, cat });
+                (adv ? advItems : junkItems).push_back({ game, name, adv, cat, it.value("dungeonReward", false) });
             }
             if (parsed > 0 && withCategory == 0)
                 missingCategory = (game == GAME_OOT ? "soh.dll" : "2ship.dll");
@@ -361,6 +367,21 @@ CrossWorldCombinedFill(const std::string& sohDumpJson, const std::string& mmDump
                        "progression and refuses to balance the pool — rebuild soh.dll / 2ship.dll";
         std::cerr << "[ComboShip] CrossWorldCombinedFill: " << result.error << "\n";
         return result;
+    }
+    // Cross-Game Dungeon Rewards needs both dumps to mark their bosses; a game with none is a stale DLL.
+    if (crossRewards) {
+        size_t bosses[2] = { 0, 0 };
+        for (const auto& c : allChecks)
+            bosses[c.game == GAME_OOT ? 0 : 1] += c.bossReward ? 1 : 0;
+        if (bosses[0] == 0 || bosses[1] == 0) {
+            result.error = std::string(bosses[0] == 0 ? "soh.dll" : "2ship.dll") +
+                           " marks no boss reward checks, so Cross-Game Dungeon Rewards can't place the rewards — "
+                           "rebuild soh.dll / 2ship.dll";
+            std::cerr << "[ComboShip] CrossWorldCombinedFill: " << result.error << "\n";
+            return result;
+        }
+        std::cout << "[ComboShip] CrossWorldCombinedFill: Cross-Game Dungeon Rewards — " << bosses[0] << " OOT + "
+                  << bosses[1] << " MM bosses\n";
     }
     // #135: under an MM start the Mask Shop Key is forced start-with, so a confined placement of it in
     // fixed[] means the force never reached OOT's settings. Warn only — A0 keeps the portal re-openable.
@@ -930,6 +951,8 @@ CrossWorldCombinedFill(const std::string& sohDumpJson, const std::string& mmDump
                 for (size_t ci = 0; ci < allChecks.size(); ++ci) {
                     if (allChecks[ci].game != GAME_OOT || filledChecks.count(checkKey(allChecks[ci])))
                         continue;
+                    if (crossRewards && allChecks[ci].bossReward)
+                        continue; // the bosses are the rewards' (Phase R)
                     if (fr.reach.count(allChecks[ci].name))
                         cands.push_back(ci);
                 }
@@ -952,6 +975,89 @@ CrossWorldCombinedFill(const std::string& sohDumpJson, const std::string& mmDump
             std::cerr << "[ComboShip] CrossWorldCombinedFill: " << lastPassError << " (pass " << pass << ", "
                       << passMs() << " ms) — retrying\n";
             continue;
+        }
+
+        // Phase R (Cross-Game Dungeon Rewards): every dungeon reward of both games onto a boss of either game, before
+        // anything else can take a boss. An assumed fill like OOT's End of Dungeons one: each reward lands on a boss
+        // reachable while every advancement item not placed yet (the other rewards too) is owned. Rewards beyond the
+        // number of bosses stay in the pool for Phase A/B. A dead end (the bosses left all need the reward in hand,
+        // e.g. the last spiritual stone with only adult bosses open behind the Door of Time) retries this phase alone
+        // in a new order, kMaxRewardTries times, before failing the pass.
+        std::vector<CwItem> junkRest = junkItems; // this pass's junk (Phase R may take a non-advancement reward)
+        if (crossRewards) {
+            std::vector<CwItem> allRewards;
+            for (auto* src : { &advRest, &junkRest }) {
+                for (size_t i = 0; i < src->size();) {
+                    if ((*src)[i].reward) {
+                        allRewards.push_back((*src)[i]);
+                        src->erase(src->begin() + static_cast<std::ptrdiff_t>(i));
+                    } else {
+                        ++i;
+                    }
+                }
+            }
+            const size_t placementsBefore = placements.size();
+            const auto filledBefore = filledChecks;
+            const auto advBefore = advRest;
+            const auto junkBefore = junkRest;
+            bool rewardsOk = false;
+            size_t onBosses = 0;
+            int tries = 0;
+            for (tries = 1; tries <= kMaxRewardTries && !rewardsOk; ++tries) {
+                placements.resize(placementsBefore);
+                filledChecks = filledBefore;
+                advRest = advBefore;
+                junkRest = junkBefore;
+                std::vector<CwItem> rewards = allRewards;
+                cwShuffle(rewards, rng);
+                onBosses = 0;
+                rewardsOk = true;
+                while (!rewards.empty()) {
+                    if (GenCancelled(progress)) {
+                        result.error = "cancelled";
+                        return result;
+                    }
+                    CwItem item = rewards.back();
+                    rewards.pop_back();
+                    std::vector<size_t> open;
+                    for (size_t ci = 0; ci < allChecks.size(); ++ci)
+                        if (allChecks[ci].bossReward && !filledChecks.count(checkKey(allChecks[ci])))
+                            open.push_back(ci);
+                    if (open.empty()) {
+                        (item.advancement ? advRest : junkRest).push_back(item); // more rewards than bosses
+                        continue;
+                    }
+                    std::vector<std::string> ootOwn, mmOwn;
+                    for (const auto* src : { &advRest, &rewards })
+                        for (const auto& it : *src)
+                            if (it.advancement)
+                                (it.game == GAME_OOT ? ootOwn : mmOwn).push_back(it.name);
+                    auto fr = reachableFixpoint(ootOwn, mmOwn);
+                    sawAdultInMm = sawAdultInMm || fr.cross.mmAdultIn;
+                    std::vector<size_t> cands;
+                    for (size_t ci : open)
+                        if ((allChecks[ci].game == GAME_OOT ? fr.ootReachable : fr.mmReachable)
+                                .count(allChecks[ci].name))
+                            cands.push_back(ci);
+                    if (cands.empty()) {
+                        lastPassError =
+                            "dead end placing the dungeon reward '" + item.name + "' (no reachable boss left)";
+                        rewardsOk = false;
+                        break;
+                    }
+                    size_t pick = cands[rng.below(static_cast<uint32_t>(cands.size()))];
+                    placements.push_back({ allChecks[pick], item });
+                    filledChecks.insert(checkKey(allChecks[pick]));
+                    ++onBosses;
+                }
+            }
+            if (!rewardsOk) {
+                std::cerr << "[ComboShip] CrossWorldCombinedFill: " << lastPassError << " after " << kMaxRewardTries
+                          << " orders (pass " << pass << ", " << passMs() << " ms) — retrying\n";
+                continue;
+            }
+            std::cout << "[ComboShip] CrossWorldCombinedFill: Phase R placed " << onBosses
+                      << " dungeon rewards on bosses (pass " << pass << ", order " << (tries - 1) << ")\n";
         }
 
         // Phase A: place advancement items with logic, assuming only UNPLACED ones are owned. NO_LOGIC
@@ -1082,7 +1188,7 @@ CrossWorldCombinedFill(const std::string& sohDumpJson, const std::string& mmDump
 
         // Phase B: fast-fill the remaining checks — zero oracle calls. Holds junk AND relaxed OOT
         // advancement, placed without logic and tolerated-if-unreachable by the validation below.
-        std::vector<CwItem> fastFillItems = junkItems;
+        std::vector<CwItem> fastFillItems = junkRest;
         if (ootAccess == OotAccess::NO_LOGIC) {
             for (const auto& it : advRest)
                 if (it.game == GAME_OOT)

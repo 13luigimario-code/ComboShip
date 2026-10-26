@@ -10,6 +10,7 @@
 //
 // --starting-game <oot|mm|random> overrides the menu's Starting Game CVar for generate mode (#135).
 // --games <ootmm|oot|mm> overrides the menu's Games CVar (combo/rando/ComboGames.h) for generate mode.
+// --cross-rewards <on|off> overrides the menu's Cross-Game Dungeon Rewards (combo/rando/CrossShuffle.h).
 //
 // Exact-seed repro (generate mode): --settings <consolidated.json> restores that seed's OOT/MM settings
 // and tricks, and --master-seed <n> uses n directly instead of hashing --seed. Together they reproduce a
@@ -131,6 +132,7 @@ static int Run(int argc, char** argv) {
     std::string sharedItemsArg;
     // Games (ComboGames.h). Absent (-1) => the menu CVar, same as in-game.
     int gamesArg = -1;
+    int crossRewardsArg = -1; // -1 = the menu CVar
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--triforce-required" && i + 1 < argc)
@@ -151,6 +153,13 @@ static int Run(int argc, char** argv) {
             gamesArg = v == "ootmm" ? 0 : v == "oot" ? 1 : v == "mm" ? 2 : -2;
             if (gamesArg == -2) {
                 std::cerr << "[comborando] --games must be ootmm, oot or mm (got '" << v << "')\n";
+                return 2;
+            }
+        } else if (a == "--cross-rewards" && i + 1 < argc) {
+            std::string v = argv[++i];
+            crossRewardsArg = v == "on" ? 1 : v == "off" ? 0 : -2;
+            if (crossRewardsArg == -2) {
+                std::cerr << "[comborando] --cross-rewards must be on or off (got '" << v << "')\n";
                 return 2;
             }
         } else if (a == "--seed" && i + 1 < argc)
@@ -220,6 +229,17 @@ static int Run(int argc, char** argv) {
     // Shared Items: also pushed before every dump (shapes OOT's wallet force + MM's trimmed pool).
     auto SOH_SetComboSharedItems = Sym<void (*)(ComboRando::SharedMask)>(soh, "SOH_SetComboSharedItems");
     auto SOH_ReadComboSharedCVars = Sym<ComboRando::SharedMask (*)(void)>(soh, "SOH_ReadComboSharedCVars");
+    // Cross-game shuffles: pushed before every dump too (they force OOT's reward shuffle and MM's remains).
+    auto SOH_SetComboCrossShuffle = Sym<void (*)(ComboRando::CrossShuffleMask)>(soh, "SOH_SetComboCrossShuffle");
+    auto MM_SetComboCrossShuffle = Sym<void (*)(ComboRando::CrossShuffleMask)>(mm, "MM_SetComboCrossShuffle");
+    auto SOH_ReadComboCrossShuffleCVars =
+        Sym<ComboRando::CrossShuffleMask (*)(void)>(soh, "SOH_ReadComboCrossShuffleCVars");
+    auto pushCrossShuffle = [&](ComboRando::CrossShuffleMask m) {
+        if (SOH_SetComboCrossShuffle)
+            SOH_SetComboCrossShuffle(m);
+        if (MM_SetComboCrossShuffle)
+            MM_SetComboCrossShuffle(m);
+    };
 
     ComboRando::OracleFns oot{ Sym<FnOracleVoid>(soh, "Combo_SOH_Rando_Reset"),
                                Sym<FnOracleSetItems>(soh, "Combo_SOH_Rando_SetOwnedItems"),
@@ -285,6 +305,9 @@ static int Run(int argc, char** argv) {
         // Games: absent on old spoilers -> combo.
         const ComboRando::ComboGames seedGames =
             ComboRando::ComboGamesFromKey(spoiler.value("games", std::string("ootmm")));
+        // Cross-game shuffles: absent on old spoilers -> none.
+        const ComboRando::CrossShuffleMask seedCrossShuffle =
+            ComboRando::CrossShuffleFromKeys(spoiler.value("crossShuffle", nlohmann::json::array()));
 
         auto ootEnabledTricks =
             spoiler.value("oot", nlohmann::json::object()).value("enabledTricks", nlohmann::json::array());
@@ -336,6 +359,7 @@ static int Run(int argc, char** argv) {
                 MM_SetComboGoal(goal.hunt ? 1 : 0, goal.required, ComboRando::CwMmPieces(goal.total, seedGames));
             if (SOH_SetComboStartingGame)
                 SOH_SetComboStartingGame(mmStart ? 1 : 0);
+            pushCrossShuffle(seedCrossShuffle);
             // A real in-game save's placement map lists only SHUFFLED checks; non-shuffled items the
             // oracle still gates on (OOT vanilla shop items, MM boss remains when not shuffled) live in
             // the dump's fixed[]. Merge them in so those gates (e.g. MM RemainsCount for the Moon) resolve.
@@ -583,6 +607,13 @@ static int Run(int argc, char** argv) {
     }
     if (solo)
         sharedMask = 0;
+    // Cross-game shuffles: --cross-rewards wins, else the menu CVars. None in a solo seed.
+    ComboRando::CrossShuffleMask crossShuffle = SOH_ReadComboCrossShuffleCVars ? SOH_ReadComboCrossShuffleCVars() : 0;
+    if (crossRewardsArg >= 0)
+        crossShuffle = crossRewardsArg ? (crossShuffle | ComboRando::CROSS_SHUFFLE_DUNGEON_REWARDS)
+                                       : (crossShuffle & ~ComboRando::CROSS_SHUFFLE_DUNGEON_REWARDS);
+    if (solo)
+        crossShuffle = 0;
     std::cout << "[comborando] validating " << count << " seed(s) from "
               << (haveMasterSeed ? "masterSeed " + std::to_string(masterSeedArg) : "'" + seed + "'")
               << (goal.hunt ? " (Triforce Hunt, " + std::to_string(goal.required) + " of " +
@@ -591,7 +622,9 @@ static int Run(int argc, char** argv) {
               << (startCfg == 1   ? ", starting game MM"
                   : startCfg == 2 ? ", starting game random"
                                   : "")
-              << (solo ? std::string(", games ") + ComboRando::ComboGamesKey(games) : std::string()) << "\n";
+              << (solo ? std::string(", games ") + ComboRando::ComboGamesKey(games) : std::string())
+              << ((crossShuffle & ComboRando::CROSS_SHUFFLE_DUNGEON_REWARDS) ? ", cross-game dungeon rewards" : "")
+              << "\n";
     int failures = 0;
     auto t0 = std::chrono::steady_clock::now();
     for (int i = 0; i < count; ++i) {
@@ -623,6 +656,7 @@ static int Run(int argc, char** argv) {
             // Shared Items: shapes OOT's wallet-force before the dump (settings.cpp reads gComboSharedMask).
             if (SOH_SetComboSharedItems)
                 SOH_SetComboSharedItems(sharedMask);
+            pushCrossShuffle(crossShuffle);
             sohDump = SOH_Dump();
             mmDump = MM_Dump();
             if (goal.hunt) {
@@ -647,7 +681,7 @@ static int Run(int argc, char** argv) {
             ComboRando::OotAccess ootAccess = ComboRando::OotAccessFromDump(sohDump);
             r = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, oot, mmO, nullptr, forced, ootAccess,
                                                    goal, mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT,
-                                                   sharedMask, games);
+                                                   sharedMask, games, crossShuffle);
             if (r.success) {
                 resolvedMmStart = mmStart;
                 // Cross-hint data (Phase 2/3 mirror of RunComboFill, incl. the same area maps so the
@@ -722,6 +756,7 @@ static int Run(int argc, char** argv) {
                                              { "totalPieces", goal.total } };
                     consolidated["startingGame"] = resolvedMmStart ? "MM" : "OOT"; // #135
                     consolidated["games"] = ComboRando::ComboGamesKey(games);
+                    consolidated["crossShuffle"] = ComboRando::CrossShuffleKeys(crossShuffle);
                     // Shared Items: the EFFECTIVE mask (families actually trimmed this fill), not the
                     // requested one — a family with no OOT copies was left alone (see CrossWorldRando.h).
                     nlohmann::json sharedItemsJson = fillSpoiler.value("sharedItems", nlohmann::json::array());
