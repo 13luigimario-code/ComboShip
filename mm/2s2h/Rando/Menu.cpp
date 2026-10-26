@@ -523,6 +523,7 @@ static RegisterShipInitFunc refreshMetricsInit(RefreshMetrics, {
                                                                    "gRando.Options.RO_KEYRINGS_GREAT_BAY",
                                                                    "gRando.Options.RO_KEYRINGS_STONE_TOWER",
                                                                    "gRando.Options.RO_SHUFFLE_DUNGEON_ENTRANCES",
+                                                                   "gRando.Options.RO_SHUFFLE_BOSS_ENTRANCES",
 #endif
                                                                });
 
@@ -750,6 +751,11 @@ static void DrawLogicConditionsTab() {
                        "came in by, and its boss's blue warp leaves him outside that door too.\n\n"
                        "Inverted Stone Tower Temple stays behind the inverted tower's door. The overworld "
                        "requirements to reach each door (Dungeon Access) stay with the door.");
+    UIWidgets::CVarCheckbox("Shuffle Boss Rooms", Rando::StaticData::Options[RO_SHUFFLE_BOSS_ENTRANCES].cvar);
+    UIWidgets::Tooltip("Each temple's boss door leads into a random boss's lair: Woodfall Temple's boss door can "
+                       "open into Gyorg's Lair. The boss door still needs its own temple's Boss Key. Beating a boss "
+                       "clears its own region (Gyorg brings back Great Bay's water) and gives its own check, and its "
+                       "blue warp takes Link back out through the temple he came from.");
 #endif
     UIWidgets::CVarCombobox("Trials Access", Rando::StaticData::Options[RO_ACCESS_TRIALS].cvar, &accessTrialsOptions);
     UIWidgets::Tooltip("Moon trial access requirements:\n\n"

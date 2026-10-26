@@ -75,6 +75,10 @@ void Rando::MiscBehavior::OnFileCreate(s16 fileNum) {
                 if (RANDO_SAVE_OPTIONS[RO_SHUFFLE_DUNGEON_ENTRANCES]) {
                     Rando::DungeonEntrances::Shuffle(finalSeed, dungeonLayout);
                 }
+                u8* bossLayout = gSaveContext.save.shipSaveInfo.rando.comboBossEntrances;
+                if (RANDO_SAVE_OPTIONS[RO_SHUFFLE_BOSS_ENTRANCES]) {
+                    Rando::DungeonEntrances::Shuffle(finalSeed ^ Rando::DungeonEntrances::kBossSeedSalt, bossLayout);
+                }
 #endif
 
                 // If Skulltula tokens are not shuffled, use the vanilla requirement

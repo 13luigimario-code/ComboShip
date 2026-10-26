@@ -213,7 +213,8 @@ void FindReachableRegions(RandoRegionId currentRegion, std::set<RandoRegionId>& 
 #ifdef COMBO_BUILD
         // ComboShip: dungeon entrance shuffle — a temple door / exit / boss warp leads where the seed's layout says.
         const u8* dungeonLayout = gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances;
-        const s32 exitTo = Rando::DungeonEntrances::Remap(exitId, sourceRegion.sceneId, dungeonLayout);
+        const u8* bossLayout = gSaveContext.save.shipSaveInfo.rando.comboBossEntrances;
+        const s32 exitTo = Rando::DungeonEntrances::Remap(exitId, sourceRegion.sceneId, dungeonLayout, bossLayout);
         RandoRegionId connectedRegionId = GetRegionIdFromEntrance(exitTo);
 #else
         RandoRegionId connectedRegionId = GetRegionIdFromEntrance(exitId);

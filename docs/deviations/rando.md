@@ -3123,3 +3123,40 @@ Tower swapped (test hook warps, which go through the same transition path as doo
 - re-entering Stone Tower Temple from inside it (a void-out's respawn) stayed put.
 
 Not checked in game: walking through the real doors, or a first boss warp through the Giants' Chamber skip.
+
+### Majora's Mask boss room shuffle (2026-10-26)
+
+MM's Randomizer menu, Logic tab: "Shuffle Boss Rooms" (`RO_SHUFFLE_BOSS_ENTRANCES`). Each temple's boss door leads into
+a random boss's lair, a permutation of Odolwa's, Goht's, Gyorg's and Twinmold's, saved in
+`RandoSaveInfo::comboBossEntrances` (the lair's temple + 1 per boss door; all 0 = vanilla, which is what older saves
+read). It's the first step toward Cross-Game Boss Shuffle, and shares the remap with the temple shuffle above
+(`Rando::DungeonEntrances::Remap`, now given both layouts):
+- a temple's boss door, taken from inside that temple (its main scene, or inverted Stone Tower Temple for Twinmold's
+  door), leads into the lair behind it;
+- a boss's warp out of its lair goes back through the temple whose boss door led there, landing outside the door that
+  temple is behind (vanilla only when the boss and the temple are both in their own places).
+
+What stays with the boss: its remains check (`RC_*_BOSS_WARP`, by lair), its heart container, and the region it clears.
+Gyorg brings back Great Bay's water wherever he's fought, since the warp's clear flags and the logic's `RE_CLEARED_*`
+events are both the lair's. What stays with the door: the Boss Key it needs (the logic exit's condition). The
+boss-room warp pads near each temple's entrance aren't in the logic; taken from inside their temple, they go through
+the same remap as the boss door.
+
+Generation: `MM_ShuffleDungeonEntrancesForCombo` rolls both layouts (the boss layout from the seed salted with
+`kBossSeedSalt`, so the two never mirror each other). `entrances.mm` gains `{bossDoor, boss}` entries next to
+`{door, temple}`, and `MM_SetDungeonEntrances` reads both. Native file creation rolls both too.
+
+**Tested (Linux build, 2026-10-26):** headless, 7 seeds with both shuffles on generate and pass, and `--playthrough`
+beats one (sphere 16). Swapping Stone Tower Temple's Boss Key onto Goht's remains check makes the playthrough reach the
+win a sphere earlier with the boss layout than without it, so the logic reads the layout. In game, on an MM-start seed
+(Stone Tower's door → Snowhead Temple, Snowhead's door → Stone Tower Temple, Snowhead's boss door → Gyorg, Stone
+Tower's boss door → Goht; test hook warps, which take the same transition path as doors):
+- Snowhead Temple's boss door led into Gyorg's Lair;
+- Gyorg's warp landed at the top of Stone Tower, outside the door Snowhead Temple is behind;
+- inverted Stone Tower Temple's boss door led into Goht's Lair;
+- Goht's warp went to Snowhead's temple-door spawn (`ENTRANCE(SNOWHEAD, 1)`), outside the door Stone Tower Temple is
+  behind.
+
+Arriving at that spawn puts Link at the bottom of the Snowhead path. A plain warp there does the same, and so does
+leaving Snowhead Temple in an unshuffled seed, so that's MM's own behavior, not the shuffle's. Not checked in game: the
+real boss door actors, the warp pads, and a first boss warp through the Giants' Chamber skip.
