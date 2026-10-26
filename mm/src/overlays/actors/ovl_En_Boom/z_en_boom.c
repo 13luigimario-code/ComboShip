@@ -9,10 +9,12 @@
 #include "2s2h/BenGui/CosmeticEditor.h"
 #ifdef COMBO_BUILD
 #include "align_asset_macro.h"
-// ComboShip (cross-game items): human Link's OOT Boomerang flies as OOT's model (OOT EnBoom_Draw: gBoomerangRefDL),
-// loaded from OOT's archive through "@oot:" routing. Player_UpperAction_14 marks it (comboOot); it also flies as OOT's
-// (EnBoom_ComboOotFly).
-static const ALIGN_ASSET(2) char sComboOotBoomerangDL[] = "__OTR__@oot:objects/gameplay_keep/gBoomerangRefDL";
+// ComboShip (cross-game items): human Link's OOT Boomerang flies as OOT's model (OOT EnBoom_Draw: gBoomerangRefDL, which
+// only calls gBoomerangDL), loaded from OOT's archive through "@oot:" routing. Player_UpperAction_14 marks it
+// (comboOot); it also flies as OOT's (EnBoom_ComboOotFly). Drawn through Combo_Gear_Recolor for MM's "Boomerang
+// Body/Gem (OoT)" colors (CrossGearColors.cpp).
+static const ALIGN_ASSET(2) char sComboOotBoomerangDL[] = "__OTR__@oot:objects/gameplay_keep/gBoomerangDL";
+const void* Combo_Gear_Recolor(const void* dList);
 #endif
 
 #define FLAGS (ACTOR_FLAG_UPDATE_CULLING_DISABLED | ACTOR_FLAG_DRAW_CULLING_DISABLED)
@@ -472,7 +474,7 @@ void EnBoom_Draw(Actor* thisx, PlayState* play) {
 
     MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, play->state.gfxCtx);
 #ifdef COMBO_BUILD
-    gSPDisplayList(POLY_OPA_DISP++, comboOotBoomerang ? (Gfx*)sComboOotBoomerangDL : sp58->unk_00);
+    gSPDisplayList(POLY_OPA_DISP++, comboOotBoomerang ? (Gfx*)Combo_Gear_Recolor(sComboOotBoomerangDL) : sp58->unk_00);
 #else
     gSPDisplayList(POLY_OPA_DISP++, sp58->unk_00);
 #endif

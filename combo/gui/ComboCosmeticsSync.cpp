@@ -68,6 +68,15 @@ const CosmeticPair kPairs[] = {
     { "Trails.KokiriSword", false, { "Trails.KokiriSwordTrail" } },
     { "Trails.Stick", true, { "Trails.DekuStickTrail" } },
     { "Trails.Boomerang", true, { "Trails.ZoraBoomerangTrail" } },
+    // OOT's tools used in MM (MM's "(OoT)" rows, CrossGearColors.cpp): the same models, so the same colors.
+    { "Equipment.BoomerangBody", false, { "Player.OotBoomerangBody" } },
+    { "Equipment.BoomerangGem", true, { "Player.OotBoomerangGem" } },
+    { "Equipment.SlingshotString", true, { "Player.OotSlingshotString" } },
+    { "Equipment.HammerHead", false, { "Player.OotHammerHead" } },
+    { "Equipment.HammerHandle", true, { "Player.OotHammerHandle" } },
+    // MM's swords in OOT (Extra Child Swords): OOT's "(MM)" trail rows drive MM's own.
+    { "Trails.RazorSword", false, { "Trails.RazorSwordTrail" } },
+    { "Trails.GildedSword", false, { "Trails.GildedSwordTrail" } },
 };
 
 // MM's live apply (ShipInit re-run). ComboMenuModel already caches it and retries until 2ship.dll

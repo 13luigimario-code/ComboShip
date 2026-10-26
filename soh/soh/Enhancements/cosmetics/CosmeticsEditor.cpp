@@ -238,6 +238,12 @@ std::map<std::string, CosmeticOption> cosmeticOptions = {
     COSMETIC_OPTION("Equipment.ChuFace",            "Bombchu Face",             COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(  0, 100, 150, 255), false, true, true),
     COSMETIC_OPTION("Equipment.ChuBody",            "Bombchu Body",             COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(180, 130,  50, 255), false, true, true),
     COSMETIC_OPTION("Equipment.BunnyHood",          "Bunny Hood",               COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(255, 235, 109, 255), false, true, true),
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): Majora's Mask's masks worn in OOT, tinted whole (ComboMmMasks.cpp); unset, MM's colors.
+    COSMETIC_OPTION("Equipment.BlastMask",          "Blast Mask (MM)",          COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(200, 170, 120, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.StoneMask",          "Stone Mask (MM)",          COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(160, 160, 150, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.KamaroMask",         "Kamaro's Mask (MM)",       COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(150, 110, 200, 255), false, true, false),
+#endif
 
     COSMETIC_OPTION("Consumable.Hearts",            "Hearts",                   COSMETICS_GROUP_CONSUMABLE,   ColorRGBA8(255,  70,  50, 255), false, true, false),
     COSMETIC_OPTION("Consumable.HeartBorder",       "Heart Border",             COSMETICS_GROUP_CONSUMABLE,   ColorRGBA8( 50,  40,  60, 255), false, true, true),
@@ -404,6 +410,11 @@ std::map<std::string, CosmeticOption> cosmeticOptions = {
     COSMETIC_OPTION("Trails.KokiriSword",           "Kokiri Sword",             COSMETICS_GROUP_TRAILS,       ColorRGBA8(255, 255, 255, 255), false, true, false),
     COSMETIC_OPTION("Trails.MasterSword",           "Master Sword",             COSMETICS_GROUP_TRAILS,       ColorRGBA8(255, 255, 255, 255), false, true, false),
     COSMETIC_OPTION("Trails.BiggoronSword",         "Biggoron Sword",           COSMETICS_GROUP_TRAILS,       ColorRGBA8(255, 255, 255, 255), false, true, true),
+#ifdef COMBO_BUILD
+    // ComboShip (Extra Child Swords): MM's "Razor/Gilded Sword Trail" for the upgraded Kokiri Sword (z_eff_blure.c).
+    COSMETIC_OPTION("Trails.RazorSword",            "Razor Sword (MM)",         COSMETICS_GROUP_TRAILS,       ColorRGBA8(255, 255, 255, 255), false, true, false),
+    COSMETIC_OPTION("Trails.GildedSword",           "Gilded Sword (MM)",        COSMETICS_GROUP_TRAILS,       ColorRGBA8(255, 255, 255, 255), false, true, false),
+#endif
     COSMETIC_OPTION("Trails.Stick",                 "Stick",                    COSMETICS_GROUP_TRAILS,       ColorRGBA8(255, 255, 255, 255), false, true, true),
     COSMETIC_OPTION("Trails.Hammer",                "Hammer",                   COSMETICS_GROUP_TRAILS,       ColorRGBA8(255, 255, 255, 255), false, true, true),
 

@@ -316,18 +316,44 @@ extern "C" void Combo_Tools_OnPlayerUpdate(PlayState* play, Player* player) {
 
 // ---- Models (z_player_lib.c hooks) ----
 
+namespace {
+
+// MM's "Hammer Head/Handle (OoT)" and "Boomerang Body/Gem (OoT)" colors on a cut tool model (CrossGearColors.cpp). A
+// cut keeps OOT's command indices up to the cut, and OOT's own list is re-read each draw so OOT's colors keep applying.
+Gfx* RecolorCut(CutDL& cut, Gfx* gfx, const char* dlName) {
+    if ((gfx != nullptr) && (cut.res != nullptr)) {
+        const std::vector<Gfx>& in = std::static_pointer_cast<Fast::DisplayList>(cut.res)->Instructions;
+        Combo_Gear_RecolorCopy(gfx, cut.gfx.size(), in.data(), in.size(), dlName);
+    }
+    return gfx;
+}
+
+Gfx* HammerCut() {
+    return RecolorCut(
+        sHammerCut,
+        CutOotDL(sHammerCut, "objects/object_link_boy/gLinkAdultLeftHandHoldingHammerNearDL", "Gauntlet", nullptr),
+        "gLinkAdultLeftHandHoldingHammerNearDL");
+}
+
+Gfx* BoomerangCut() {
+    return RecolorCut(sBoomerangCut,
+                      CutOotDL(sBoomerangCut, "objects/object_link_child/gLinkChildLeftFistAndBoomerangFarDL",
+                               "gLinkChildHandTex", sBoomerangTexturedDL),
+                      "gLinkChildLeftFistAndBoomerangFarDL");
+}
+
+} // namespace
+
 extern "C" void* Combo_Tools_LeftHandToolDL(Player* player, int leftHandType) {
     // OOT adult Link's hand holding the Hammer, cut before the gauntlet (OoTMM makeEqHammer).
     if ((leftHandType == PLAYER_MODELTYPE_LH_TWO_HAND_SWORD) && Combo_Tools_IsHeld(player, ITEM_COMBO_HAMMER)) {
-        return CutOotDL(sHammerCut, "objects/object_link_boy/gLinkAdultLeftHandHoldingHammerNearDL", "Gauntlet",
-                        nullptr);
+        return HammerCut();
     }
     // OOT child Link's fist holding the Boomerang, cut before the hand (OoTMM makeEqBoomerang). While thrown,
     // z_player_lib.c has already switched the hand to LH_OPEN.
     if ((leftHandType == PLAYER_MODELTYPE_LH_4) && Combo_Tools_IsHeld(player, ITEM_COMBO_BOOMERANG) &&
         !(player->stateFlags1 & PLAYER_STATE1_ZORA_BOOMERANG_THROWN)) {
-        return CutOotDL(sBoomerangCut, "objects/object_link_child/gLinkChildLeftFistAndBoomerangFarDL",
-                        "gLinkChildHandTex", sBoomerangTexturedDL);
+        return BoomerangCut();
     }
     return nullptr;
 }
@@ -351,13 +377,12 @@ extern "C" void* Combo_Tools_AdultHandToolDL(Player* player, int limbIndex, int 
         // OOT adult Link's own hand holding the Hammer (the whole hand: no cut needed at this age).
         if ((handType == PLAYER_MODELTYPE_LH_TWO_HAND_SWORD) && Combo_Tools_IsHeld(player, ITEM_COMBO_HAMMER)) {
             *wholeHand = 1;
-            return (void*)sHammerAdultHandDL;
+            return (void*)Combo_Gear_Recolor(sHammerAdultHandDL); // MM's "Hammer Head/Handle (OoT)" colors
         }
         // The Boomerang cut is already the tool alone.
         if ((handType == PLAYER_MODELTYPE_LH_4) && Combo_Tools_IsHeld(player, ITEM_COMBO_BOOMERANG) &&
             !(player->stateFlags1 & PLAYER_STATE1_ZORA_BOOMERANG_THROWN)) {
-            return CutOotDL(sBoomerangCut, "objects/object_link_child/gLinkChildLeftFistAndBoomerangFarDL",
-                            "gLinkChildHandTex", sBoomerangTexturedDL);
+            return BoomerangCut();
         }
         return nullptr;
     }
@@ -403,7 +428,8 @@ extern "C" void* Combo_Tools_FirstPersonRightHandDL(Player* player) {
 }
 
 extern "C" void* Combo_Tools_SlingshotStringDL(Player* player) {
-    return Combo_Tools_IsHeld(player, ITEM_COMBO_SLINGSHOT) ? (void*)sSlingshotStringDL : nullptr;
+    // MM's "Slingshot String (OoT)" color (CrossGearColors.cpp).
+    return Combo_Tools_IsHeld(player, ITEM_COMBO_SLINGSHOT) ? (void*)Combo_Gear_Recolor(sSlingshotStringDL) : nullptr;
 }
 
 extern "C" void* Combo_Tools_BackShieldDL(Player* player) {
