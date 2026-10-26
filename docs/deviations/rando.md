@@ -3145,3 +3145,18 @@ the same remap as the boss door.
 Generation: `MM_ShuffleDungeonEntrancesForCombo` rolls both layouts (the boss layout from the seed salted with
 `kBossSeedSalt`, so the two never mirror each other). `entrances.mm` gains `{bossDoor, boss}` entries next to
 `{door, temple}`, and `MM_SetDungeonEntrances` reads both. Native file creation rolls both too.
+
+**Tested (Linux build, 2026-10-26):** headless, 7 seeds with both shuffles on generate and pass, and `--playthrough`
+beats one (sphere 16). Swapping Stone Tower Temple's Boss Key onto Goht's remains check makes the playthrough reach the
+win a sphere earlier with the boss layout than without it, so the logic reads the layout. In game, on an MM-start seed
+(Stone Tower's door → Snowhead Temple, Snowhead's door → Stone Tower Temple, Snowhead's boss door → Gyorg, Stone
+Tower's boss door → Goht; test hook warps, which take the same transition path as doors):
+- Snowhead Temple's boss door led into Gyorg's Lair;
+- Gyorg's warp landed at the top of Stone Tower, outside the door Snowhead Temple is behind;
+- inverted Stone Tower Temple's boss door led into Goht's Lair;
+- Goht's warp went to Snowhead's temple-door spawn (`ENTRANCE(SNOWHEAD, 1)`), outside the door Stone Tower Temple is
+  behind.
+
+Arriving at that spawn puts Link at the bottom of the Snowhead path. A plain warp there does the same, and so does
+leaving Snowhead Temple in an unshuffled seed, so that's MM's own behavior, not the shuffle's. Not checked in game: the
+real boss door actors, the warp pads, and a first boss warp through the Giants' Chamber skip.
