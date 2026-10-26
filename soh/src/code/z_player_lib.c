@@ -1051,6 +1051,26 @@ extern Gfx gComboChildLeftGauntletPlate1DL[];
 extern Gfx gComboChildRightGauntletPlate1DL[];
 extern Gfx gComboChildLeftGauntletPlate3DL[];
 extern Gfx gComboChildRightGauntletPlate3DL[];
+
+// ComboShip: the cosmetic editor's Iron/Hover Boots colors, a tint over both boots (ComboGearCosmetics.cpp).
+s32 Combo_OotBootsTint(s32 boots, Color_RGB8* out);
+static void Combo_BootsTintBegin(PlayState* play, s32 boots) {
+    Color_RGB8 tint;
+    if (Combo_OotBootsTint(boots, &tint)) {
+        OPEN_DISPS(play->state.gfxCtx);
+        gDPSetGrayscaleColor(POLY_OPA_DISP++, tint.r, tint.g, tint.b, 255);
+        gSPGrayscale(POLY_OPA_DISP++, true);
+        CLOSE_DISPS(play->state.gfxCtx);
+    }
+}
+static void Combo_BootsTintEnd(PlayState* play, s32 boots) {
+    Color_RGB8 tint;
+    if (Combo_OotBootsTint(boots, &tint)) {
+        OPEN_DISPS(play->state.gfxCtx);
+        gSPGrayscale(POLY_OPA_DISP++, false);
+        CLOSE_DISPS(play->state.gfxCtx);
+    }
+}
 #endif
 
 Gfx* sBootDListGroups[][2] = {
@@ -1153,8 +1173,14 @@ void Player_DrawImpl(PlayState* play, void** skeleton, Vec3s* jointTable, s32 dL
             if (boots != 0) {
                 Gfx** bootDLists = sBootDListGroups[boots - 1];
 
+#ifdef COMBO_BUILD
+                Combo_BootsTintBegin(play, boots); // ComboShip: the cosmetic editor's boot colors
+#endif
                 gSPDisplayList(POLY_OPA_DISP++, bootDLists[0]);
                 gSPDisplayList(POLY_OPA_DISP++, bootDLists[1]);
+#ifdef COMBO_BUILD
+                Combo_BootsTintEnd(play, boots);
+#endif
             }
         } else {
             s32 drawGoronBracelet = Player_GetStrength() > PLAYER_STR_NONE;
@@ -1162,10 +1188,12 @@ void Player_DrawImpl(PlayState* play, void** skeleton, Vec3s* jointTable, s32 dL
             // ComboShip (ageless boots / strength): child Link wears the Iron/Hover Boots and Silver/Golden Gauntlets
             // too, with OoTMM's child-sized meshes (ComboChildGearMeshes.c), colored like adult Link's gauntlets.
             if ((boots == PLAYER_BOOTS_IRON) || (boots == PLAYER_BOOTS_HOVER)) {
+                Combo_BootsTintBegin(play, boots); // the cosmetic editor's boot colors
                 gSPDisplayList(POLY_OPA_DISP++,
                                (boots == PLAYER_BOOTS_IRON) ? gComboChildLeftIronBootDL : gComboChildLeftHoverBootDL);
                 gSPDisplayList(POLY_OPA_DISP++,
                                (boots == PLAYER_BOOTS_IRON) ? gComboChildRightIronBootDL : gComboChildRightHoverBootDL);
+                Combo_BootsTintEnd(play, boots);
             }
             if (Player_GetStrength() >= PLAYER_STR_SILVER_G) {
                 s32 strengthUpgrade = Player_GetStrength();

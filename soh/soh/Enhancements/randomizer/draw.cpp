@@ -425,6 +425,9 @@ extern "C" void Randomizer_DrawMysteryItem(PlayState* play, GetItemEntry* getIte
     CLOSE_DISPS(play->state.gfxCtx);
 }
 
+#ifdef COMBO_BUILD
+extern "C" s32 Combo_OotRocsFeatherTint(Color_RGB8* out); // ComboShip: ComboGearCosmetics.cpp
+#endif
 extern "C" void Randomizer_DrawRocsFeather(PlayState* play, GetItemEntry* getItemEntry) {
     Color_RGB8 color = { 0, 60, 100 };
 
@@ -435,7 +438,21 @@ extern "C" void Randomizer_DrawRocsFeather(PlayState* play, GetItemEntry* getIte
     gSPMatrix(POLY_XLU_DISP++, Matrix_NewMtx(play->state.gfxCtx, (char*)__FILE__, __LINE__),
               G_MTX_MODELVIEW | G_MTX_LOAD);
 
+#ifdef COMBO_BUILD
+    // ComboShip: the cosmetic editor's Roc's Feather color, a tint over the model (ComboGearCosmetics.cpp).
+    Color_RGB8 featherTint;
+    const s32 featherTinted = Combo_OotRocsFeatherTint(&featherTint);
+    if (featherTinted) {
+        gDPSetGrayscaleColor(POLY_XLU_DISP++, featherTint.r, featherTint.g, featherTint.b, 255);
+        gSPGrayscale(POLY_XLU_DISP++, true);
+    }
     gSPDisplayList(POLY_XLU_DISP++, (Gfx*)gGiRocsFeatherDL);
+    if (featherTinted) {
+        gSPGrayscale(POLY_XLU_DISP++, false);
+    }
+#else
+    gSPDisplayList(POLY_XLU_DISP++, (Gfx*)gGiRocsFeatherDL);
+#endif
 
     CLOSE_DISPS(play->state.gfxCtx);
 }

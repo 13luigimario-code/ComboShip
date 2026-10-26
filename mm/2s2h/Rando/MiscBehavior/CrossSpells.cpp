@@ -468,8 +468,13 @@ void DrawDins(PlayState* play) {
     // The sphere, at Link, scaled like the actor (actor scale, then MagicFire_Draw's 0.15).
     Gfx_SetupDL25_Xlu(play->state.gfxCtx);
     u8 alpha = (u8)(sDins.alpha * 255);
-    gDPSetPrimColor(POLY_XLU_DISP++, 0, 0x80, 255, 200, 0, alpha);
-    gDPSetEnvColor(POLY_XLU_DISP++, 255, 0, 0, alpha);
+    // The cosmetic editors' Din's Fire colors (MM's "(OoT)" rows, else OOT's Magic rows), OOT's own by default.
+    Color_RGB8 dinsPrim = { 255, 200, 0 };
+    Color_RGB8 dinsEnv = { 255, 0, 0 };
+    Combo_Gear_OotTint("Player.OotDinsPrimary", "Magic.DinsPrimary", &dinsPrim);
+    Combo_Gear_OotTint("Player.OotDinsSecondary", "Magic.DinsSecondary", &dinsEnv);
+    gDPSetPrimColor(POLY_XLU_DISP++, 0, 0x80, dinsPrim.r, dinsPrim.g, dinsPrim.b, alpha);
+    gDPSetEnvColor(POLY_XLU_DISP++, dinsEnv.r, dinsEnv.g, dinsEnv.b, alpha);
     Matrix_Translate(sDins.pos.x, sDins.pos.y, sDins.pos.z, MTXMODE_NEW);
     Matrix_Scale(sDins.scale * 0.15f, sDins.scale * 0.15f, sDins.scale * 0.15f, MTXMODE_APPLY);
     MATRIX_FINALIZE_AND_LOAD(POLY_XLU_DISP++, play->state.gfxCtx);
@@ -532,8 +537,13 @@ void DrawNayrus(PlayState* play, Player* player) {
     Matrix_Scale(scaleXZ, scaleY, scaleXZ, MTXMODE_APPLY);
     Matrix_RotateYS((s16)(sNayrusYaw + Camera_GetCamDirYaw(GET_ACTIVE_CAM(play))), MTXMODE_APPLY);
     MATRIX_FINALIZE_AND_LOAD(POLY_XLU_DISP++, play->state.gfxCtx);
-    gDPSetPrimColor(POLY_XLU_DISP++, 0, 0, 170, 255, 255, (s32)(primAlpha * 0.6f) & 0xFF);
-    gDPSetEnvColor(POLY_XLU_DISP++, 0, 100, 255, 128);
+    // The cosmetic editors' Nayru's Love colors, like Din's Fire above.
+    Color_RGB8 nayrusPrim = { 170, 255, 255 };
+    Color_RGB8 nayrusEnv = { 0, 100, 255 };
+    Combo_Gear_OotTint("Player.OotNayrusPrimary", "Magic.NayrusPrimary", &nayrusPrim);
+    Combo_Gear_OotTint("Player.OotNayrusSecondary", "Magic.NayrusSecondary", &nayrusEnv);
+    gDPSetPrimColor(POLY_XLU_DISP++, 0, 0, nayrusPrim.r, nayrusPrim.g, nayrusPrim.b, (s32)(primAlpha * 0.6f) & 0xFF);
+    gDPSetEnvColor(POLY_XLU_DISP++, nayrusEnv.r, nayrusEnv.g, nayrusEnv.b, 128);
     gSPDisplayList(POLY_XLU_DISP++, (Gfx*)sNayrusMaterialDL);
     gSPDisplayList(POLY_XLU_DISP++, Gfx_TwoTexScrollEx(play->state.gfxCtx, 0, frames * 2, frames * -4, 32, 32, 1, 0,
                                                        frames * -16, 64, 32, 2, -4, 0, -16));

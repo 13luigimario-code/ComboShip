@@ -47,6 +47,7 @@ static const ALIGN_ASSET(2) char sSlingshotStringDL[] = COMBO_OOT_LINK_CHILD_DL(
 static const ALIGN_ASSET(2) char sDekuShieldHandDL[] =
     COMBO_OOT_LINK_CHILD_DL("gLinkChildRightFistAndDekuShieldNearDL");
 static const ALIGN_ASSET(2) char sDekuShieldBackDL[] = COMBO_OOT_LINK_CHILD_DL("gLinkChildDekuShieldWithMatrixDL");
+static const ALIGN_ASSET(2) char sDekuShieldDL[] = COMBO_OOT_LINK_CHILD_DL("gLinkChildDekuShieldDL"); // called by ^
 // CrossUpgrades.cpp: OOT's Fairy Ocarina in human Link's hand while he plays it.
 static const ALIGN_ASSET(2) char sFairyOcarinaHandDL[] =
     COMBO_OOT_LINK_CHILD_DL("gLinkChildRightHandHoldingFairyOcarinaNearDL");
@@ -360,10 +361,10 @@ extern "C" void* Combo_Tools_LeftHandToolDL(Player* player, int leftHandType) {
 
 extern "C" void* Combo_Tools_RightHandDL(Player* player, int rightHandType) {
     if ((rightHandType == PLAYER_MODELTYPE_RH_BOW) && Combo_Tools_IsHeld(player, ITEM_COMBO_SLINGSHOT)) {
-        return (void*)sSlingshotHandDL;
+        return (void*)Combo_Gear_Recolor(sSlingshotHandDL); // MM's "Slingshot (OoT)" color
     }
     if ((rightHandType == PLAYER_MODELTYPE_RH_SHIELD) && IsDekuShield(player)) {
-        return (void*)sDekuShieldHandDL;
+        return (void*)Combo_Gear_Recolor(sDekuShieldHandDL); // MM's "Deku Shield (OoT)" color
     }
     if ((rightHandType == PLAYER_MODELTYPE_RH_INSTRUMENT) && Combo_Upgrades_OcarinaIsFairy()) {
         return (void*)sFairyOcarinaHandDL;
@@ -394,8 +395,11 @@ extern "C" void* Combo_Tools_AdultHandToolDL(Player* player, int limbIndex, int 
                         "gLinkChildSlingshotTex", nullptr, DROP_TRIANGLES_BEFORE);
     }
     if ((handType == PLAYER_MODELTYPE_RH_SHIELD) && IsDekuShield(player)) {
-        return CutOotDL(sDekuShieldAdultCut, "objects/object_link_child/gLinkChildRightFistAndDekuShieldNearDL",
-                        "gLinkChildHandTex", nullptr);
+        return RecolorCut(sDekuShieldAdultCut,
+                          CutOotDL(sDekuShieldAdultCut,
+                                   "objects/object_link_child/gLinkChildRightFistAndDekuShieldNearDL",
+                                   "gLinkChildHandTex", nullptr),
+                          "gLinkChildRightFistAndDekuShieldNearDL");
     }
     if ((handType == PLAYER_MODELTYPE_RH_INSTRUMENT) && Combo_Upgrades_OcarinaIsFairy()) {
         return CutOotDL(sFairyOcarinaAdultCut, "objects/object_link_child/gLinkChildRightHandHoldingFairyOcarinaNearDL",
@@ -413,7 +417,7 @@ extern "C" void* Combo_Tools_AdultFirstPersonRightHandDL(PlayState* play, Player
                          "gLinkAdultDefaultGauntlet1Tex", nullptr, DROP_TRIANGLES_BEFORE);
     Gfx* dl = (Gfx*)GRAPH_ALLOC(play->state.gfxCtx, 5 * sizeof(Gfx));
     Gfx* d = dl;
-    gSPDisplayList(d++, (Gfx*)sSlingshotFirstPersonDL);
+    gSPDisplayList(d++, (Gfx*)Combo_Gear_Recolor(sSlingshotFirstPersonDL));
     if (hand != nullptr) {
         gSPComboRMPush(d++, "oot"); // the cut list carries OOT's own resource references
         gSPDisplayList(d++, hand);
@@ -424,7 +428,8 @@ extern "C" void* Combo_Tools_AdultFirstPersonRightHandDL(PlayState* play, Player
 }
 
 extern "C" void* Combo_Tools_FirstPersonRightHandDL(Player* player) {
-    return Combo_Tools_IsHeld(player, ITEM_COMBO_SLINGSHOT) ? (void*)sSlingshotFirstPersonDL : nullptr;
+    return Combo_Tools_IsHeld(player, ITEM_COMBO_SLINGSHOT) ? (void*)Combo_Gear_Recolor(sSlingshotFirstPersonDL)
+                                                            : nullptr;
 }
 
 extern "C" void* Combo_Tools_SlingshotStringDL(Player* player) {
@@ -433,7 +438,7 @@ extern "C" void* Combo_Tools_SlingshotStringDL(Player* player) {
 }
 
 extern "C" void* Combo_Tools_BackShieldDL(Player* player) {
-    return IsDekuShield(player) ? (void*)sDekuShieldBackDL : nullptr;
+    return IsDekuShield(player) ? (void*)Combo_Gear_RecolorBackShield(sDekuShieldBackDL, sDekuShieldDL) : nullptr;
 }
 
 #endif // COMBO_BUILD

@@ -47,6 +47,7 @@ extern "C" {
 #include "objects/object_gla/object_gla.h"
 #include "objects/object_toki_objects/object_toki_objects.h"
 #include "objects/object_gi_pachinko/object_gi_pachinko.h"
+#include "objects/object_gi_shield_1/object_gi_shield_1.h" // ComboShip: Deku Shield color
 #include "objects/object_trap/object_trap.h"
 #include "overlays/ovl_Boss_Ganon2/ovl_Boss_Ganon2.h"
 #include "objects/object_gjyo_objects/object_gjyo_objects.h"
@@ -243,6 +244,21 @@ std::map<std::string, CosmeticOption> cosmeticOptions = {
     COSMETIC_OPTION("Equipment.BlastMask",          "Blast Mask (MM)",          COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(200, 170, 120, 255), false, true, false),
     COSMETIC_OPTION("Equipment.StoneMask",          "Stone Mask (MM)",          COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(160, 160, 150, 255), false, true, false),
     COSMETIC_OPTION("Equipment.KamaroMask",         "Kamaro's Mask (MM)",       COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(150, 110, 200, 255), false, true, false),
+    // ComboShip: the rest of OOT's gear, which Ship of Harkinian has no color for (ComboGearCosmetics.cpp). The boots
+    // and masks are tinted whole; the Deku Shield and the Slingshot take a color over their texture (their PRIM color,
+    // like the gauntlets), since they share Link's hand and sheath models. MM's "(OoT)" rows follow these when unset.
+    COSMETIC_OPTION("Equipment.IronBoots",          "Iron Boots",               COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(140, 140, 150, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.HoverBoots",         "Hover Boots",              COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(220, 180,  90, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.DekuShield",         "Deku Shield",              COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(255, 255, 255, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.ComboSlingshotBody", "Slingshot Body",           COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(255, 255, 255, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.KeatonMask",         "Keaton Mask",              COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(255, 220, 120, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.SkullMask",          "Skull Mask",               COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(230, 230, 220, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.SpookyMask",         "Spooky Mask",              COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(170, 140,  90, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.GoronMask",          "Goron Mask",               COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(170, 110,  60, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.ZoraMask",           "Zora Mask",                COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8( 90, 140, 220, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.GerudoMask",         "Gerudo Mask",              COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(230, 190, 140, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.MaskOfTruth",        "Mask of Truth",            COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(220, 200, 160, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.RocsFeather",        "Roc's Feather",            COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(100, 200, 255, 255), false, true, false),
 #endif
 
     COSMETIC_OPTION("Consumable.Hearts",            "Hearts",                   COSMETICS_GROUP_CONSUMABLE,   ColorRGBA8(255,  70,  50, 255), false, true, false),
@@ -1274,6 +1290,77 @@ void ApplyOrResetCustomGfxPatches(bool manualChange) {
             }
         }
     }
+
+#ifdef COMBO_BUILD
+    // ComboShip: Deku Shield and Slingshot colors. Both share their lists with Link's hand or the sword and sheath, all
+    // multiplied by one white PRIM color: the shield's (or slingshot's) gets the color, and a pipe sync (a no-op here)
+    // right before the next part's texture becomes white again. MM draws the same lists, so its "(OoT)" rows start from
+    // these (mm/2s2h/Rando/MiscBehavior/CrossGearColors.cpp).
+    static CosmeticOption& equipmentDekuShield = cosmeticOptions.at("Equipment.DekuShield");
+    if (manualChange || CVarGetInteger(equipmentDekuShield.rainbowCvar, 0)) {
+        Color_RGBA8 color = CVarGetColor(equipmentDekuShield.valuesCvar, equipmentDekuShield.defaultColor);
+        const char* changed = equipmentDekuShield.changedCvar;
+        PATCH_GFX(gLinkChildRightFistAndDekuShieldNearDL, "Combo_DekuShield1", changed, 17,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildRightFistAndDekuShieldNearDL, "Combo_DekuShield2", changed, 47,
+                  gsDPSetPrimColor(0, 0, 255, 255, 255, 255));
+        PATCH_GFX(gLinkChildRightFistAndDekuShieldFarDL, "Combo_DekuShield3", changed, 17,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildRightFistAndDekuShieldFarDL, "Combo_DekuShield4", changed, 37,
+                  gsDPSetPrimColor(0, 0, 255, 255, 255, 255));
+        PATCH_GFX(gLinkChildDekuShieldSwordAndSheathNearDL, "Combo_DekuShield5", changed, 17,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildDekuShieldSwordAndSheathNearDL, "Combo_DekuShield6", changed, 41,
+                  gsDPSetPrimColor(0, 0, 255, 255, 255, 255));
+        PATCH_GFX(gLinkChildDekuShieldSwordAndSheathFarDL, "Combo_DekuShield7", changed, 17,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildDekuShieldSwordAndSheathFarDL, "Combo_DekuShield8", changed, 37,
+                  gsDPSetPrimColor(0, 0, 255, 255, 255, 255));
+        PATCH_GFX(gLinkChildDekuShieldAndSheathNearDL, "Combo_DekuShield9", changed, 56,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildDekuShieldAndSheathFarDL, "Combo_DekuShield10", changed, 55,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildDekuShieldDL, "Combo_DekuShield11", changed, 18,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        // The get-item model: its wood materials' own PRIM / ENV pairs.
+        PATCH_GFX(gGiDekuShieldDL, "Combo_DekuShield12", changed, 38,
+                  gsDPSetPrimColor(0, 0, color.r * 5 / 8, color.g * 5 / 8, color.b * 5 / 8, 255));
+        PATCH_GFX(gGiDekuShieldDL, "Combo_DekuShield13", changed, 39,
+                  gsDPSetEnvColor(color.r / 6, color.g / 6, color.b / 6, 255));
+        PATCH_GFX(gGiDekuShieldDL, "Combo_DekuShield14", changed, 78,
+                  gsDPSetPrimColor(0, 0, color.r * 5 / 8, color.g * 5 / 8, color.b * 5 / 8, 255));
+        PATCH_GFX(gGiDekuShieldDL, "Combo_DekuShield15", changed, 79,
+                  gsDPSetEnvColor(color.r / 3, color.g / 3, color.b / 3, 255));
+        PATCH_GFX(gGiDekuShieldDL, "Combo_DekuShield16", changed, 95,
+                  gsDPSetPrimColor(0, 0, color.r / 3, color.g / 3, color.b / 3, 255));
+        PATCH_GFX(gGiDekuShieldDL, "Combo_DekuShield17", changed, 96,
+                  gsDPSetEnvColor(color.r / 6, color.g / 6, color.b / 6, 255));
+    }
+    static CosmeticOption& equipmentSlingshotBody = cosmeticOptions.at("Equipment.ComboSlingshotBody");
+    if (manualChange || CVarGetInteger(equipmentSlingshotBody.rainbowCvar, 0)) {
+        Color_RGBA8 color = CVarGetColor(equipmentSlingshotBody.valuesCvar, equipmentSlingshotBody.defaultColor);
+        const char* changed = equipmentSlingshotBody.changedCvar;
+        // Near: the hand is drawn first, so the color goes on at the sync before the slingshot's texture.
+        PATCH_GFX(gLinkChildRightHandHoldingSlingshotNearDL, "Combo_SlingshotBody1", changed, 41,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildRightHandHoldingSlingshotFarDL, "Combo_SlingshotBody2", changed, 17,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildRightHandHoldingSlingshotFarDL, "Combo_SlingshotBody3", changed, 33,
+                  gsDPSetPrimColor(0, 0, 255, 255, 255, 255));
+        PATCH_GFX(gLinkChildRightArmStretchedSlingshotDL, "Combo_SlingshotBody4", changed, 17,
+                  gsDPSetPrimColor(0, 0, color.r, color.g, color.b, 255));
+        PATCH_GFX(gLinkChildRightArmStretchedSlingshotDL, "Combo_SlingshotBody5", changed, 31,
+                  gsDPSetPrimColor(0, 0, 255, 255, 255, 255));
+        PATCH_GFX(gGiSlingshotDL, "Combo_SlingshotBody6", changed, 37,
+                  gsDPSetPrimColor(0, 0, color.r * 4 / 5, color.g * 4 / 5, color.b * 4 / 5, 255));
+        PATCH_GFX(gGiSlingshotDL, "Combo_SlingshotBody7", changed, 38,
+                  gsDPSetEnvColor(color.r / 2, color.g / 2, color.b / 2, 255));
+        PATCH_GFX(gGiSlingshotDL, "Combo_SlingshotBody8", changed, 64,
+                  gsDPSetPrimColor(0, 0, color.r * 2 / 5, color.g * 2 / 5, color.b * 2 / 5, 255));
+        PATCH_GFX(gGiSlingshotDL, "Combo_SlingshotBody9", changed, 65,
+                  gsDPSetEnvColor(color.r / 6, color.g / 6, color.b / 6, 255));
+    }
+#endif
 
     static CosmeticOption& consumableGreenRupee = cosmeticOptions.at("Consumable.GreenRupee");
     if (manualChange || CVarGetInteger(consumableGreenRupee.rainbowCvar, 0)) {

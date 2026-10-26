@@ -12352,6 +12352,7 @@ static BunnyEarKinematics sBunnyEarKinematics;
 
 #ifdef COMBO_BUILD
 void Combo_OotMask_Draw(PlayState* play, Player* player); // ComboShip: ComboMmMasks.cpp
+s32 Combo_OotMaskTint(s32 mask, Color_RGB8* out);         // ComboShip: ComboGearCosmetics.cpp
 #endif
 
 static Gfx* sMaskDlists[PLAYER_MASK_MAX - 1] = {
@@ -12402,12 +12403,27 @@ void Player_DrawGameplay(PlayState* play, Player* this, s32 lod, Gfx* cullDList,
             MATRIX_TOMTX(bunnyEarMtx);
         }
 
+#ifdef COMBO_BUILD
+        // ComboShip: the cosmetic editor's mask colors, a tint over the whole mask (ComboGearCosmetics.cpp). Around the
+        // VB too, since adult Link's masks are drawn inside it (AgeDependentMasks.cpp).
+        Color_RGB8 maskTint;
+        const s32 maskTinted = Combo_OotMaskTint(this->currentMask, &maskTint);
+        if (maskTinted) {
+            gDPSetGrayscaleColor(POLY_OPA_DISP++, maskTint.r, maskTint.g, maskTint.b, 255);
+            gSPGrayscale(POLY_OPA_DISP++, true);
+        }
+#endif
         if (!GameInteractor_InvisibleLinkActive() &&
             GameInteractor_Should(VB_DRAW_PLAYER_MASK, true, this->currentMask, play)) {
             if (this->currentMask != PLAYER_MASK_BUNNY || !CVarGetInteger(CVAR_ENHANCEMENT("HideBunnyHood"), 0)) {
                 gSPDisplayList(POLY_OPA_DISP++, sMaskDlists[this->currentMask - 1]);
             }
         }
+#ifdef COMBO_BUILD
+        if (maskTinted) {
+            gSPGrayscale(POLY_OPA_DISP++, false);
+        }
+#endif
 
         if (CVarGetInteger(CVAR_GENERAL("FixIceTrapWithBunnyHood"), 1))
             Matrix_Pop();
