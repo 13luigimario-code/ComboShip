@@ -2888,3 +2888,31 @@ OoT-only slot goes to OOT; a reset from MM and from OOT both return to MM's titl
 finalizes; a new file from MM's name entry ("Ab2.") is created with the seed, starts in Link's house, and its name shows
 on MM's file select and in both games' saves; Copy duplicates the whole slot (both games and the seed); Erase removes
 the slot and leaves no file behind; the Mask Shop still switches to MM in a two-game seed loaded this way.
+
+## Cosmetics for the cross-game gear (2026-10-26)
+
+Each game's cosmetic editor now covers the other game's gear that Link uses there, where the gear's own game has a color
+for it.
+
+**MM's editor (Link group), OoT's tools in MM:** "Boomerang Body (OoT)", "Boomerang Gem (OoT)", "Slingshot String (OoT)",
+"Hammer Head (OoT)", "Hammer Handle (OoT)" (`Player.Oot*`), SoH's own Equipment colors. They go through
+`CrossGearColors.cpp`, as the adult Link / bracelet colors do: SoH's patch points, index for index (`gBoomerangDL` 39/23,
+`gLinkChildLeftFistAndBoomerangNear/FarDL`, `gLinkChildSlinghotStringDL` 9, `gLinkAdultLeftHandHoldingHammerNear/FarDL`
+38/18). Unset, MM draws OOT's own colors.
+- The flying Boomerang (`z_en_boom.c`) draws `gBoomerangDL` (what OOT's `gBoomerangRefDL` calls) through
+  `Combo_Gear_Recolor`; so do the slingshot string and adult Link's hammer hand (`CrossTools.cpp`).
+- The held Hammer and Boomerang are cut copies of OOT's hand lists (`CutOotDL`). `Combo_Gear_RecolorCopy` rewrites
+  their patch points every draw, with MM's color or OOT's current command. Before, the copy froze whatever OOT color
+  was set the first time the tool was drawn.
+- Not covered: the Slingshot body (SoH's own option is disabled), and gear SoH has no color for (boots, Deku Shield,
+  masks, spells, Roc's Feather). The get-item models keep following OOT's editor.
+
+**OOT's editor, MM's gear in OOT:**
+- Trails: "Razor Sword (MM)" / "Gilded Sword (MM)" (`Trails.RazorSword` / `GildedSword`, MM's own Razor/Gilded Sword
+  Trail). The upgraded Kokiri Sword uses its tier's trail color when set (`Combo_ChildSwordTrailColor`, called from
+  `z_eff_blure.c`), else the Kokiri Sword's.
+- Equipment: "Blast Mask (MM)", "Stone Mask (MM)", "Kamaro's Mask (MM)". MM has no colors for them, so this is a tint
+  over the whole worn mask (grayscale + color around MM's mask list, `ComboMmMasks.cpp`); unset, MM's colors.
+
+**Cosmetics sync (`ComboCosmeticsSync.cpp`):** with "sync" on, OOT's Boomerang, Slingshot String and Hammer colors fill
+MM's "(OoT)" rows, and OOT's Razor/Gilded trail rows fill MM's Razor/Gilded Sword Trail.

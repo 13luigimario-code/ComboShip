@@ -133,6 +133,12 @@ std::map<std::string, CosmeticOption> cosmeticOptions = {
     COSMETIC_OPTION("Player.AdultBoots",            "Adult Link Boots",                 COSMETICS_GROUP_PLAYER,             ColorRGBA8( 93,  44,  18, 255), false, true, false),
     COSMETIC_OPTION("Player.OotGoronBracelet",      "Goron's Bracelet (OoT)",           COSMETICS_GROUP_PLAYER,             ColorRGBA8(255, 255, 170, 255), false, true, false),
     COSMETIC_OPTION("Player.OotGauntletsGem",       "Gauntlets Gem (OoT)",              COSMETICS_GROUP_PLAYER,             ColorRGBA8(255,  60, 100, 255), false, true, false),
+    // ComboShip: Ocarina of Time's tools used in MM (CrossTools.cpp, z_en_boom.c); unset, they keep OOT's own colors.
+    COSMETIC_OPTION("Player.OotBoomerangBody",      "Boomerang Body (OoT)",             COSMETICS_GROUP_PLAYER,             ColorRGBA8(160, 100,   0, 255), false, true, false),
+    COSMETIC_OPTION("Player.OotBoomerangGem",       "Boomerang Gem (OoT)",              COSMETICS_GROUP_PLAYER,             ColorRGBA8(255,  50, 150, 255), false, true, false),
+    COSMETIC_OPTION("Player.OotSlingshotString",    "Slingshot String (OoT)",           COSMETICS_GROUP_PLAYER,             ColorRGBA8(255, 255, 255, 255), false, true, false),
+    COSMETIC_OPTION("Player.OotHammerHead",         "Hammer Head (OoT)",                COSMETICS_GROUP_PLAYER,             ColorRGBA8(155, 192, 201, 255), false, true, false),
+    COSMETIC_OPTION("Player.OotHammerHandle",       "Hammer Handle (OoT)",              COSMETICS_GROUP_PLAYER,             ColorRGBA8(110,  60,   0, 255), false, true, false),
 #endif
     COSMETIC_OPTION("Dungeon.Woodfall",             "Woodfall",                         COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(255, 170, 246, 255), false, true, false),
     COSMETIC_OPTION("Dungeon.Snowhead",             "Snowhead",                         COSMETICS_GROUP_DUNGEONS,           ColorRGBA8(116, 226,  61, 255), false, true, false),

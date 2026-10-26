@@ -4,6 +4,10 @@
 #include "soh/frame_interpolation.h"
 #include <assert.h>
 
+#ifdef COMBO_BUILD
+s32 Combo_ChildSwordTrailColor(Color_RGBA8* color); // ComboShip: soh/soh/Enhancements/combo/ComboChildSwords.cpp
+#endif
+
 void EffectBlure_AddVertex(EffectBlure* this, Vec3f* p1, Vec3f* p2) {
     EffectBlureElement* elem;
     s32 numElements;
@@ -249,6 +253,14 @@ s32 EffectBlure_Update(void* thisx) {
             }
             break;
         case TRAIL_TYPE_KOKIRI_SWORD:
+#ifdef COMBO_BUILD
+            // ComboShip (Extra Child Swords): the Razor / Gilded Sword's own trail color when set (ComboChildSwords.cpp),
+            // else the Kokiri Sword's below.
+            if (Combo_ChildSwordTrailColor(&color)) {
+                changed = 1;
+                break;
+            }
+#endif
             if (CVarGetInteger(CVAR_COSMETIC("Trails.KokiriSword.Changed"), 0)) {
                 color = CVarGetColor(CVAR_COSMETIC("Trails.KokiriSword.Value"), (Color_RGBA8){ 255, 255, 255, 255 });
                 changed = 1;

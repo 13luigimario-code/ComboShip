@@ -176,8 +176,35 @@ extern "C" void Combo_OotMask_Draw(PlayState* play, Player* player) {
         gsSPEndDisplayList(),
     };
 
+    // The cosmetic editor's "Blast/Stone/Kamaro's Mask (MM)": the whole mask tinted (grayscale + color, as SoH tints
+    // the Bunny Hood); unset, MM's own colors.
+    const char* tintChanged = nullptr;
+    const char* tintValue = nullptr;
+    switch (sWornMask) {
+        case ITEM_COMBO_MASK_BLAST:
+            tintChanged = CVAR_COSMETIC("Equipment.BlastMask.Changed");
+            tintValue = CVAR_COSMETIC("Equipment.BlastMask.Value");
+            break;
+        case ITEM_COMBO_MASK_STONE:
+            tintChanged = CVAR_COSMETIC("Equipment.StoneMask.Changed");
+            tintValue = CVAR_COSMETIC("Equipment.StoneMask.Value");
+            break;
+        case ITEM_COMBO_MASK_KAMARO:
+            tintChanged = CVAR_COSMETIC("Equipment.KamaroMask.Changed");
+            tintValue = CVAR_COSMETIC("Equipment.KamaroMask.Value");
+            break;
+        default:
+            break;
+    }
+    const bool tinted = (tintChanged != nullptr) && CVarGetInteger(tintChanged, 0);
+
     OPEN_DISPS(play->state.gfxCtx);
     gSPMatrix(POLY_OPA_DISP++, 0x0D0001C1, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+    if (tinted) {
+        const Color_RGBA8 tint = CVarGetColor(tintValue, Color_RGBA8{ 255, 255, 255, 255 });
+        gDPSetGrayscaleColor(POLY_OPA_DISP++, tint.r, tint.g, tint.b, 255);
+        gSPGrayscale(POLY_OPA_DISP++, true);
+    }
     switch (sWornMask) {
         case ITEM_COMBO_MASK_BLAST:
             // MM's Player_DrawBlastMask with the fuse not lit: segment 9 just sets an opaque env color.
@@ -192,6 +219,9 @@ extern "C" void Combo_OotMask_Draw(PlayState* play, Player* player) {
             break;
         default:
             break;
+    }
+    if (tinted) {
+        gSPGrayscale(POLY_OPA_DISP++, false);
     }
     CLOSE_DISPS(play->state.gfxCtx);
 }

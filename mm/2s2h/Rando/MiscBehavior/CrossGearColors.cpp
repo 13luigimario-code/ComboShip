@@ -35,7 +35,20 @@ extern "C" int CosmeticEditor_IsComboColorChanged(const char* id);
 
 namespace {
 
-enum Option : uint8_t { HAIR, LINEN, BOOTS, BRACELET, GEM, OPTION_COUNT };
+enum Option : uint8_t {
+    HAIR,
+    LINEN,
+    BOOTS,
+    BRACELET,
+    GEM,
+    // OOT's tools human Link uses in MM (CrossTools.cpp, z_en_boom.c).
+    BOOMERANG_BODY,
+    BOOMERANG_GEM,
+    SLINGSHOT_STRING,
+    HAMMER_HEAD,
+    HAMMER_HANDLE,
+    OPTION_COUNT
+};
 
 struct OptionDef {
     const char* id;
@@ -46,7 +59,9 @@ struct OptionDef {
 constexpr OptionDef kOptions[OPTION_COUNT] = {
     { "Player.AdultHair", { 255, 173, 27 } },       { "Player.AdultLinen", { 255, 255, 255 } },
     { "Player.AdultBoots", { 93, 44, 18 } },        { "Player.OotGoronBracelet", { 255, 255, 170 } },
-    { "Player.OotGauntletsGem", { 255, 60, 100 } },
+    { "Player.OotGauntletsGem", { 255, 60, 100 } }, { "Player.OotBoomerangBody", { 160, 100, 0 } },
+    { "Player.OotBoomerangGem", { 255, 50, 150 } }, { "Player.OotSlingshotString", { 255, 255, 255 } },
+    { "Player.OotHammerHead", { 155, 192, 201 } },  { "Player.OotHammerHandle", { 110, 60, 0 } },
 };
 
 enum Kind : uint8_t {
@@ -127,6 +142,19 @@ constexpr Patch kPatches[] = {
     { "gLinkAdultRightGauntletPlate2DL", 42, PRIM, GEM },
     { "gLinkAdultLeftGauntletPlate3DL", 42, PRIM, GEM },
     { "gLinkAdultRightGauntletPlate3DL", 42, PRIM, GEM },
+    // OOT's tools ("Equipment.BoomerangBody" / "BoomerangGem" / "SlingshotString" / "HammerHead" / "HammerHandle"). The
+    // held Boomerang and Hammer are cut copies (CrossTools.cpp CutOotDL), rewritten in place by Combo_Gear_RecolorCopy;
+    // the flying Boomerang and the slingshot string are whole lists, copied by Combo_Gear_Recolor.
+    { "gBoomerangDL", 39, PRIM, BOOMERANG_BODY },
+    { "gBoomerangDL", 23, PRIM, BOOMERANG_GEM },
+    { "gLinkChildLeftFistAndBoomerangNearDL", 34, PRIM, BOOMERANG_BODY },
+    { "gLinkChildLeftFistAndBoomerangNearDL", 16, PRIM, BOOMERANG_GEM },
+    { "gLinkChildLeftFistAndBoomerangFarDL", 9, PRIM, BOOMERANG_BODY }, // the far model has no gem (as in SoH)
+    { "gLinkChildSlinghotStringDL", 9, PRIM, SLINGSHOT_STRING },        // sic: OOT's resource name
+    { "gLinkAdultLeftHandHoldingHammerNearDL", 38, PRIM, HAMMER_HEAD },
+    { "gLinkAdultLeftHandHoldingHammerNearDL", 18, PRIM, HAMMER_HANDLE },
+    { "gLinkAdultLeftHandHoldingHammerFarDL", 38, PRIM, HAMMER_HEAD },
+    { "gLinkAdultLeftHandHoldingHammerFarDL", 18, PRIM, HAMMER_HANDLE },
 };
 
 bool IsTwoWordOpcode(uint8_t op) {
@@ -285,6 +313,27 @@ extern "C" const void* Combo_Gear_Recolor(const void* dList) {
                 : in[p->index];
     }
     return r.gfx.data();
+}
+
+// A copy MM made of an OOT list (CrossTools.cpp's cut tool models), its commands at the same indices as OOT's: every
+// patch point of `dlName` inside it gets MM's color when set, else OOT's current command (so OOT's own cosmetic editor
+// keeps applying, including changes made after the copy was taken).
+extern "C" void Combo_Gear_RecolorCopy(void* copy, size_t copyCount, const void* ootCommands, size_t ootCount,
+                                       const char* dlName) {
+    if ((copy == nullptr) || (ootCommands == nullptr) || (dlName == nullptr)) {
+        return;
+    }
+    Gfx* out = (Gfx*)copy;
+    const Gfx* in = (const Gfx*)ootCommands;
+    for (const Patch& p : kPatches) {
+        if ((strcmp(p.dl, dlName) != 0) || (p.index >= copyCount) || (p.index >= ootCount)) {
+            continue;
+        }
+        out[p.index] =
+            CosmeticEditor_IsComboColorChanged(kOptions[p.option].id)
+                ? Command(p, CosmeticEditor_GetComboColor(kOptions[p.option].id, kOptions[p.option].defaultColor))
+                : in[p.index];
+    }
 }
 
 #endif // COMBO_BUILD

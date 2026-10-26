@@ -156,6 +156,21 @@ extern "C" int Combo_ChildSwordTier(void) {
     return Flags_GetRandomizerInf(RAND_INF_OBTAINED_COMBO_RAZOR_SWORD) ? 1 : 0;
 }
 
+// z_eff_blure.c: the upgraded Kokiri Sword's trail color, when the cosmetic editor's "Razor/Gilded Sword (MM)" trail is
+// set (MM's own "Razor/Gilded Sword Trail"). 0 = not upgraded or not set: the Kokiri Sword's trail color applies.
+extern "C" s32 Combo_ChildSwordTrailColor(Color_RGBA8* color) {
+    const int tier = Combo_ChildSwordTier();
+    if ((tier == 2) && CVarGetInteger(CVAR_COSMETIC("Trails.GildedSword.Changed"), 0)) {
+        *color = CVarGetColor(CVAR_COSMETIC("Trails.GildedSword.Value"), Color_RGBA8{ 255, 255, 255, 255 });
+        return 1;
+    }
+    if ((tier == 1) && CVarGetInteger(CVAR_COSMETIC("Trails.RazorSword.Changed"), 0)) {
+        *color = CVarGetColor(CVAR_COSMETIC("Trails.RazorSword.Value"), Color_RGBA8{ 255, 255, 255, 255 });
+        return 1;
+    }
+    return 0;
+}
+
 extern "C" f32 Combo_ChildSwordDamage(u32 dmgFlags, f32 damage) {
     if ((dmgFlags & (DMG_SLASH_KOKIRI | DMG_SPIN_KOKIRI | DMG_JUMP_KOKIRI)) == 0) {
         return damage;
