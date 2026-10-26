@@ -176,6 +176,51 @@ static std::vector<std::pair<TrackerItemType, u32>> ComboVisibleItems(const Trac
 }
 #endif
 
+#ifdef COMBO_BUILD
+// ComboShip (cross-game items): OOT's items share MM's three trade slots (KaleidoItemPage.cpp), so the slot can hold
+// Din's Fire or the Iron Boots, which have cells of their own. The slot's cell then shows the MM trade item Link has
+// for that slot, the furthest one along its list, or ITEM_NONE (nothing: the cell stays dark).
+static u32 ComboTradeSlotMmItem(u32 slot) {
+    struct TradeItem {
+        RandoInf owned;
+        ItemId item;
+    };
+    static const TradeItem kDeed[] = { { RANDO_INF_OBTAINED_MOONS_TEAR, ITEM_MOONS_TEAR },
+                                       { RANDO_INF_OBTAINED_DEED_LAND, ITEM_DEED_LAND },
+                                       { RANDO_INF_OBTAINED_DEED_SWAMP, ITEM_DEED_SWAMP },
+                                       { RANDO_INF_OBTAINED_DEED_MOUNTAIN, ITEM_DEED_MOUNTAIN },
+                                       { RANDO_INF_OBTAINED_DEED_OCEAN, ITEM_DEED_OCEAN } };
+    static const TradeItem kKeyMama[] = { { RANDO_INF_OBTAINED_ROOM_KEY, ITEM_ROOM_KEY },
+                                          { RANDO_INF_OBTAINED_LETTER_TO_MAMA, ITEM_LETTER_MAMA } };
+    static const TradeItem kCouple[] = { { RANDO_INF_OBTAINED_LETTER_TO_KAFEI, ITEM_LETTER_TO_KAFEI },
+                                         { RANDO_INF_OBTAINED_PENDANT_OF_MEMORIES, ITEM_PENDANT_OF_MEMORIES } };
+    const TradeItem* list = nullptr;
+    size_t count = 0;
+    switch (slot) {
+        case SLOT_TRADE_DEED:
+            list = kDeed;
+            count = ARRAY_COUNT(kDeed);
+            break;
+        case SLOT_TRADE_KEY_MAMA:
+            list = kKeyMama;
+            count = ARRAY_COUNT(kKeyMama);
+            break;
+        case SLOT_TRADE_COUPLE:
+            list = kCouple;
+            count = ARRAY_COUNT(kCouple);
+            break;
+        default:
+            return ITEM_NONE;
+    }
+    for (size_t i = count; i-- > 0;) {
+        if (Flags_GetRandoInf(list[i].owned)) {
+            return list[i].item;
+        }
+    }
+    return ITEM_NONE;
+}
+#endif
+
 // When the file isn't loaded everythin is ocarinas, so we fall back to the first safe item
 u32 GetVanillaItemIdForSlot(u32 slot) {
     bool isSaveLoaded = gPlayState != NULL && gSaveContext.gameMode == GAMEMODE_NORMAL;
@@ -184,6 +229,11 @@ u32 GetVanillaItemIdForSlot(u32 slot) {
     isSaveLoaded = isSaveLoaded || (!Combo_MmIsForeground() && IS_RANDO && gSaveContext.fileNum >= 0);
 #endif
     u32 vanillaItemId = isSaveLoaded ? gSaveContext.save.saveInfo.inventory.items[slot] : ITEM_NONE;
+#ifdef COMBO_BUILD
+    if (IS_COMBO_CROSS_ITEM(vanillaItemId)) { // an OOT item in a trade slot: the MM trade item Link has, if any
+        vanillaItemId = ComboTradeSlotMmItem(slot);
+    }
+#endif
 
     if (vanillaItemId == ITEM_NONE || vanillaItemId >= ITEM_RECOVERY_HEART) {
 #ifdef COMBO_BUILD
@@ -322,6 +372,12 @@ TrackerImageObject GetImageObject(TrackerItemType itemType, u32 itemId) {
         } break;
         case TRACKER_ITEM_SLOT: {
             itemObtained = gSaveContext.save.saveInfo.inventory.items[itemId] != ITEM_NONE;
+#ifdef COMBO_BUILD
+            // An OOT item in a trade slot is tracked in its own cell: lit only for an MM trade item Link has.
+            if (IS_COMBO_CROSS_ITEM(gSaveContext.save.saveInfo.inventory.items[itemId])) {
+                itemObtained = ComboTradeSlotMmItem(itemId) != ITEM_NONE;
+            }
+#endif
             auto vanillaItemId = GetVanillaItemIdForSlot(itemId);
 #ifdef COMBO_BUILD
             // ComboShip: ITEM_NONE (empty safe-item list) is past the end of gItemIcons; draw no icon.

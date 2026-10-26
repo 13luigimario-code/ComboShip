@@ -2996,3 +2996,18 @@ Keaton Mask is magenta. In OOT (Extra Child Swords, Razor tier), with OOT's "Raz
 Sword Blade red / Hilt yellow: the swung blade is cyan (OOT's row wins) and the sheathed hilt is yellow (MM's row). Not
 checked in game: the Gilded Sword, the Great Fairy's Sword, the other masks, the MM masks in OOT following MM's rows, and
 the cosmetics sync rows.
+
+## Item trackers: trade-slot cells with a cross-game item in the slot (2026-10-26)
+
+The cross-game items share the other game's trade slots: OOT's gear in MM's three trade slots (`KaleidoItemPage.cpp`),
+MM's Blast/Stone/Kamaro's Masks in OOT's child trade slot (`ShuffleTradeItems.c`). Both trackers lit a trade-slot cell
+whenever the slot held anything. MM's tracker also drew the slot's first item for an id it has no icon for, so Din's
+Fire in the slot showed as an owned Moon's Tear (and Farore's Wind / the Hover Boots as the Room Key / the Letter to
+Kafei). The cross-game items already have cells of their own. With one of them in the slot, the slot's cell now shows the
+furthest trade item of that slot that Link owns (the trade cycles' own ownership flags), or stays dark. MM:
+`ComboTradeSlotMmItem` in `ItemTracker.cpp`. OOT: `DrawItem` in `randomizer_item_tracker.cpp`.
+
+**Tested (Linux build, 2026-10-26):** MM, with Din's Fire / Farore's Wind / the Hover Boots put in the three trade slots
+and only the Mountain Title Deed owned: the cells show the Mountain Title Deed lit and the Room Key and Letter to Kafei
+dark. OOT, with the Blast Mask in the child trade slot and no child trade item owned: the cell draws as not owned, the
+same as with the slot empty.

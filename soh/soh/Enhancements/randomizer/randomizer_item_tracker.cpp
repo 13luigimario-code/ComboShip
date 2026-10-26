@@ -1257,6 +1257,22 @@ void DrawItem(ItemTrackerItem item) {
         }
     }
 
+#ifdef COMBO_BUILD
+    // ComboShip (cross-game items): MM's Blast/Stone/Kamaro Masks share the child trade slot (ShuffleTradeItems.c) and
+    // have cells of their own. With one of them in the slot, the slot's cell shows the furthest child trade item Link
+    // has, or stays dark: the slot being filled isn't enough.
+    if ((item.kind == ITEM_KIND_ITEM) && (actualItemId >= ITEM_COMBO_MASK_BLAST) &&
+        (actualItemId <= ITEM_COMBO_MASK_KAMARO)) {
+        hasItem = false;
+        for (int i = ITEM_MASK_TRUTH - ITEM_WEIRD_EGG; i >= 0; i--) {
+            if (Flags_GetRandomizerInf((RandomizerInf)(RAND_INF_CHILD_TRADES_HAS_WEIRD_EGG + i))) {
+                actualItemId = ITEM_WEIRD_EGG + i;
+                hasItem = true;
+                break;
+            }
+        }
+    }
+#endif
     if (hasItem && item.kind == ITEM_KIND_ITEM && item.id != actualItemId &&
         actualItemTrackerItemMap.contains(actualItemId)) {
         item = actualItemTrackerItemMap[actualItemId];
