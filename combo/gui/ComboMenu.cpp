@@ -15,6 +15,7 @@
 #include "rando/CrossForeign.h"     // ComboRando::ContainerPath — anchored save-container location
 #include "rando/ComboPlaythrough.h" // plando: ParseSpoilerPlacements + Suffix/BuildForeignArray + slot paths
 #include "rando/ComboGames.h"       // Games (OoT only / MM only / Combo)
+#include "rando/CrossShuffle.h"     // Cross-game shuffles
 #include <imgui.h>
 #include <libultraship/libultraship.h>         // CVar bridge (CVarGet/Set* incl. color) + color.h (Color_RGBA8)
 #include <ship/window/gui/IconsFontAwesome4.h> // ICON_FA_* for the header action buttons
@@ -1799,6 +1800,29 @@ void ComboMenu::DrawComboPanel() {
                         "Majora's Mask's OoT Warp Songs. Boots, tunics, scales and strength need the matching\n"
                         "Majora's Mask Ocarina of Time Gear option. Kokiri Sword needs Ocarina of Time's\n"
                         "Extra Child Swords.");
+    ImGui::EndDisabled();
+    if (solo)
+        ImGui::TextDisabled("Off in a one-game seed.");
+    ImGui::Separator();
+
+    // Cross-game shuffles (combo/rando/CrossShuffle.h, OoTMM's cross-games options): pooled over both games.
+    ImGui::SeparatorText("Cross-Game Shuffles");
+    ImGui::BeginDisabled(solo);
+    {
+        const ComboRando::CrossShuffleDef& def = ComboRando::kCrossShuffleDefs[0]; // dungeon rewards
+        bool on = CVarGetInteger(def.cvar, 0) != 0;
+        ComboRando::ComboMenu_PushCheckbox(goalTheme);
+        if (ImGui::Checkbox("Cross-Game Dungeon Rewards", &on)) {
+            CVarSetInteger(def.cvar, on ? 1 : 0);
+        }
+        ComboRando::ComboMenu_PopCheckbox();
+        ImGui::SetItemTooltip("The spiritual stones, the medallions and the boss remains are shuffled together, and\n"
+                              "every boss of both games gives one of them: Odolwa can have the Forest Medallion,\n"
+                              "Queen Gohma Gyorg's Remains.");
+    }
+    ImGui::TextDisabled("Dungeon Rewards: every boss of both games (8 + 4) holds a reward of either game, and Link\n"
+                        "starts with one Ocarina of Time reward in his pocket. Overrides Ocarina of Time's Dungeon\n"
+                        "Rewards and Link's Pocket and Majora's Mask's Boss Remains.");
     ImGui::EndDisabled();
     if (solo)
         ImGui::TextDisabled("Off in a one-game seed.");
