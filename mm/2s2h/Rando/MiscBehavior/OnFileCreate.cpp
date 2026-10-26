@@ -71,9 +71,9 @@ void Rando::MiscBehavior::OnFileCreate(s16 fileNum) {
                 // ComboShip (Cross-Games Age): "Random" MM age requirements become child or adult from the seed.
                 Rando::AgeReq::Resolve(finalSeed, RANDO_SAVE_OPTIONS, Combo_AdultLink_AgeSystemConfigured() != 0);
                 // ComboShip: dungeon entrance shuffle, before the logic runs (its exits follow the layout).
+                u8* dungeonLayout = gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances;
                 if (RANDO_SAVE_OPTIONS[RO_SHUFFLE_DUNGEON_ENTRANCES]) {
-                    Rando::DungeonEntrances::Shuffle(finalSeed,
-                                                     gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances);
+                    Rando::DungeonEntrances::Shuffle(finalSeed, dungeonLayout);
                 }
 #endif
 

@@ -39,32 +39,18 @@ struct Temple {
     s16 bossScene;
 };
 
+// clang-format off
 const Temple kTemples[kSlots] = {
-    { "Woodfall Temple",
-      ENTRANCE(WOODFALL_TEMPLE, 0),
-      ENTRANCE(WOODFALL, 1),
-      { ENTRANCE(WOODFALL_TEMPLE, 1), ENTRANCE(WOODFALL, 0) },
-      SCENE_MITURIN,
-      SCENE_MITURIN_BS },
-    { "Snowhead Temple",
-      ENTRANCE(SNOWHEAD_TEMPLE, 0),
-      ENTRANCE(SNOWHEAD, 1),
-      { ENTRANCE(MOUNTAIN_VILLAGE_SPRING, 7), -1 },
-      SCENE_HAKUGIN,
-      SCENE_HAKUGIN_BS },
-    { "Great Bay Temple",
-      ENTRANCE(GREAT_BAY_TEMPLE, 0),
-      ENTRANCE(ZORA_CAPE, 7),
-      { ENTRANCE(ZORA_CAPE, 9), ENTRANCE(ZORA_CAPE, 8) },
-      SCENE_SEA,
-      SCENE_SEA_BS },
-    { "Stone Tower Temple",
-      ENTRANCE(STONE_TOWER_TEMPLE, 0),
-      ENTRANCE(STONE_TOWER, 2),
-      { ENTRANCE(IKANA_CANYON, 15), -1 },
-      SCENE_INISIE_N,
-      SCENE_INISIE_BS },
+    { "Woodfall Temple",    ENTRANCE(WOODFALL_TEMPLE, 0),    ENTRANCE(WOODFALL, 1),    { ENTRANCE(WOODFALL_TEMPLE, 1), ENTRANCE(WOODFALL, 0) },
+      SCENE_MITURIN,  SCENE_MITURIN_BS },
+    { "Snowhead Temple",    ENTRANCE(SNOWHEAD_TEMPLE, 0),    ENTRANCE(SNOWHEAD, 1),    { ENTRANCE(MOUNTAIN_VILLAGE_SPRING, 7), -1 },
+      SCENE_HAKUGIN,  SCENE_HAKUGIN_BS },
+    { "Great Bay Temple",   ENTRANCE(GREAT_BAY_TEMPLE, 0),   ENTRANCE(ZORA_CAPE, 7),   { ENTRANCE(ZORA_CAPE, 9), ENTRANCE(ZORA_CAPE, 8) },
+      SCENE_SEA,      SCENE_SEA_BS },
+    { "Stone Tower Temple", ENTRANCE(STONE_TOWER_TEMPLE, 0), ENTRANCE(STONE_TOWER, 2), { ENTRANCE(IKANA_CANYON, 15), -1 },
+      SCENE_INISIE_N, SCENE_INISIE_BS },
 };
+// clang-format on
 
 // templeAt[slot]: the temple behind that slot's door. False (and the identity) for vanilla or a malformed layout.
 bool Decode(const uint8_t layout[kSlots], int templeAt[kSlots]) {
@@ -188,20 +174,30 @@ extern "C" COMBO_EXPORT const char* MM_DumpDungeonEntrances(void) {
 }
 
 // A seed's layout back from its spoiler (slot bind, reload, validation). Unknown or empty = vanilla.
-extern "C" COMBO_EXPORT void MM_SetDungeonEntrances(const char* json) try {
+extern "C" COMBO_EXPORT void MM_SetDungeonEntrances(const char* json) {
     memset(sComboLayout, 0, sizeof(sComboLayout));
+    nlohmann::json entries;
+    try {
+        entries = nlohmann::json::parse(json ? json : "[]");
+    } catch (...) {
+        return; // vanilla
+    }
     auto nameIndex = [](const std::string& n) {
         for (int i = 0; i < kSlots; i++)
             if (n == kTemples[i].name)
                 return i;
         return -1;
     };
-    for (const auto& e : nlohmann::json::parse(json ? json : "[]")) {
+    if (!entries.is_array())
+        return;
+    for (const auto& e : entries) {
+        if (!e.is_object())
+            continue;
         const int door = nameIndex(e.value("door", std::string()));
         const int temple = nameIndex(e.value("temple", std::string()));
         if (door >= 0 && temple >= 0)
             sComboLayout[door] = (uint8_t)(temple + 1);
     }
-} catch (...) { memset(sComboLayout, 0, sizeof(sComboLayout)); }
+}
 
 #endif // COMBO_BUILD

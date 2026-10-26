@@ -154,8 +154,9 @@ inline void from_json(const json& j, RandoSaveInfo& rando) {
         }
     }
     // ComboShip (dungeon entrance shuffle): absent on older saves = vanilla.
-    ComboGetArrayTolerant(j.contains("comboDungeonEntrances") ? j["comboDungeonEntrances"] : json(),
-                          rando.comboDungeonEntrances);
+    const json noLayout = json::array();
+    const json& layout = j.contains("comboDungeonEntrances") ? j["comboDungeonEntrances"] : noLayout;
+    ComboGetArrayTolerant(layout, rando.comboDungeonEntrances);
 #endif
 }
 

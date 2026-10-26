@@ -744,14 +744,12 @@ static void DrawLogicConditionsTab() {
                        "Open - Dungeons will be open with no requirements.");
 #ifdef COMBO_BUILD
     // ComboShip: dungeon entrance shuffle (MiscBehavior/DungeonEntrances.cpp).
-    UIWidgets::CVarCheckbox(
-        "Shuffle Dungeon Entrances", Rando::StaticData::Options[RO_SHUFFLE_DUNGEON_ENTRANCES].cvar,
-        UIWidgets::CheckboxOptions().Tooltip(
-            "The doors of the four temples lead into a random temple: Woodfall Temple's door can open into Great Bay "
-            "Temple. Leaving a temple by its entrance takes Link back outside the door he came in by, and its boss's "
-            "blue warp leaves him outside that door too.\n\n"
-            "Inverted Stone Tower Temple stays behind the inverted tower's door. The overworld requirements to reach "
-            "each door (Dungeon Access) stay with the door."));
+    UIWidgets::CVarCheckbox("Shuffle Dungeon Entrances", Rando::StaticData::Options[RO_SHUFFLE_DUNGEON_ENTRANCES].cvar);
+    UIWidgets::Tooltip("The doors of the four temples lead into a random temple: Woodfall Temple's door can open "
+                       "into Great Bay Temple. Leaving a temple by its entrance takes Link back outside the door he "
+                       "came in by, and its boss's blue warp leaves him outside that door too.\n\n"
+                       "Inverted Stone Tower Temple stays behind the inverted tower's door. The overworld "
+                       "requirements to reach each door (Dungeon Access) stay with the door.");
 #endif
     UIWidgets::CVarCombobox("Trials Access", Rando::StaticData::Options[RO_ACCESS_TRIALS].cvar, &accessTrialsOptions);
     UIWidgets::Tooltip("Moon trial access requirements:\n\n"

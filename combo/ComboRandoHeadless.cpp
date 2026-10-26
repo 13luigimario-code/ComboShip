@@ -290,11 +290,11 @@ static int Run(int argc, char** argv) {
             spoiler.value("oot", nlohmann::json::object()).value("enabledTricks", nlohmann::json::array());
         auto ootEntrances = spoiler.value("entrances", nlohmann::json::object()).value("oot", nlohmann::json::array());
         // The seed's MM temple layout (absent/empty = vanilla), which the MM oracle's exits follow.
-        if (MM_SetDungeonEntrances)
-            MM_SetDungeonEntrances(spoiler.value("entrances", nlohmann::json::object())
-                                       .value("mm", nlohmann::json::array())
-                                       .dump()
-                                       .c_str());
+        if (MM_SetDungeonEntrances) {
+            const nlohmann::json entrances = spoiler.value("entrances", nlohmann::json::object());
+            const std::string mmLayout = entrances.value("mm", nlohmann::json::array()).dump();
+            MM_SetDungeonEntrances(mmLayout.c_str());
+        }
 
         // Prices are part of the seed: an unknown price can never be treated as buyable, so a spoiler
         // without them can't be validated honestly. Hard-fail rather than emit an optimistic verdict.
