@@ -1976,6 +1976,17 @@ typedef enum {
     // - `s16 yawTarget` (stick world-space yaw, promoted to int in va_list)
     VB_PLAYER_ROLL_STEER,
 
+    // ComboShip: SoH's Targetable Hookshot Reticle (Enhancements/Items/HookshotReticle.cpp)
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
+    // - `*PlayState`
+    // - `*CollisionPoly` (the polygon the reticle sits on)
+    // - `s32` (its bgId)
+    VB_DRAW_HOOKSHOT_RETICLE,
+
     // #### `result`
     // ```c
     // true

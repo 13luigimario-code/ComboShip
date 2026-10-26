@@ -1347,6 +1347,24 @@ void BenMenu::AddEnhancements() {
         .Options(CheckboxOptions().Tooltip("Make Deku Nuts explode Bombs, similar to how they interact with Bombchus. "
                                            "This does not affect Powder Kegs."));
 
+    // ComboShip: SoH's Hookshot and Boomerang settings (Enhancements/Items/HookshotReticle.cpp, BoomerangReticle.cpp,
+    // Rando/MiscBehavior/CrossTools.cpp). The Boomerang is Ocarina of Time's, which human Link can use in a combo seed.
+    AddWidget(path, "Hookshot", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path, "Targetable Hookshot Reticle", WIDGET_CVAR_CHECKBOX)
+        .CVar("gEnhancements.Items.HookshotableReticle")
+        .Options(CheckboxOptions().Tooltip(
+            "The Hookshot's reticle turns green on a surface the Hookshot can latch onto, and stays red elsewhere."));
+    AddWidget(path, "Boomerang", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path, "Instant Boomerang Recall", WIDGET_CVAR_CHECKBOX)
+        .CVar("gEnhancements.Items.FastBoomerang")
+        .Options(CheckboxOptions().Tooltip(
+            "Instantly return Ocarina of Time's Boomerang to Link by pressing its item button while it's in the air, "
+            "along with anything it grabbed. (Zora Link's fins have \"Instant Fin Boomerangs Recall\".)"));
+    AddWidget(path, "Aiming Reticle for Boomerang", WIDGET_CVAR_CHECKBOX)
+        .CVar("gEnhancements.Items.BoomerangReticle")
+        .Options(CheckboxOptions().Tooltip("Aiming Ocarina of Time's Boomerang or Zora Link's fins displays a reticle "
+                                           "where the throw is headed, as with the Hookshot."));
+
     path.column = SECTION_COLUMN_3;
     AddWidget(path, "Saving", WIDGET_SEPARATOR_TEXT);
     AddWidget(path, "3rd Save File Slot", WIDGET_CVAR_CHECKBOX)
