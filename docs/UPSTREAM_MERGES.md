@@ -214,7 +214,7 @@ it: a PR to `main` that changes `upstream-pins.json` fails unless its head is
   case — soh releases are months apart), **cherry-pick** the combo commits to main instead, and
   accept that main's combo code lags develop.
 - Release-track PRs move a pin, so they need at least a **minor** `COMBO_RELEASE_VERSION` bump
-  before the next `v*` tag (see the version section above). The derived build version follows
+  before the next version tag (see the version section above). The derived build version follows
   main's pins on its own.
 - To merge a release by hand: `scripts/upstream-merge.ps1 -Only <key> -Target refs/tags/<tag> -Merge`
   (`-Target` also takes a SHA; it must be a descendant of the current pin).

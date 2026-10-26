@@ -18,6 +18,10 @@ on:
       validator:
         type: boolean
         default: false
+      # The tag or commit to build; empty = the triggering ref. release.yml's manual run passes the release's tag.
+      ref:
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -25,6 +29,8 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Set up MSVC
         uses: ilammy/msvc-dev-cmd@v1

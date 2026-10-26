@@ -8,6 +8,11 @@ name: Build (macOS)
 
 on:
   workflow_call:
+    inputs:
+      # The tag or commit to build; empty = the triggering ref. release.yml's manual run passes the release's tag.
+      ref:
+        type: string
+        default: ''
 
 env:
   # Genuine SDL2, built from source: Homebrew's `sdl2` is sdl2-compat (SDL2 on SDL3), which loads
@@ -23,6 +28,8 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
 
       # The README's macOS dependency set, minus sdl2/sdl2_net (built below). cmake ships on the
       # runner image; ninja does not.
