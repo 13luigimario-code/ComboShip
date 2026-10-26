@@ -321,16 +321,11 @@ void DrawSmallKey(RandoItemId randoItemId) {
 }
 
 #ifdef COMBO_BUILD
-// ComboShip: Ship of Harkinian's "Key Rings" - the temple's small key, fanned out three times.
+// ComboShip: Ship of Harkinian's "Key Rings", drawn like OoTMM's: OoTMM gives its key rings the plain silver small key
+// (gi.yml MM_KEY_RING_*: draw [SMALL_KEY, 0] from MM's object_gi_key; drawgi.c DrawGi_CustomSmallKey colors it silver,
+// prim 255,255,255 / env 60,80,90, the colors MM's gGiSmallKeyDL already sets), not a temple's emblem key.
 void DrawKeyring(RandoItemId randoItemId) {
-    static const s16 kFanAngles[] = { -0x1000, 0, 0x1000 };
-    for (s16 angle : kFanAngles) {
-        Matrix_Push();
-        Matrix_RotateZS(angle, MTXMODE_APPLY);
-        Matrix_Translate(0.0f, 4.0f, 0.0f, MTXMODE_APPLY);
-        DrawSmallKey(randoItemId);
-        Matrix_Pop();
-    }
+    GetItem_Draw(gPlayState, GID_KEY_SMALL);
 }
 
 // ComboShip: Ship of Harkinian's "Bombchu Bag" - MM has no bag model, so draw Ocarina of Time's.
