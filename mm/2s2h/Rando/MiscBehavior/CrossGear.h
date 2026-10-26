@@ -97,8 +97,7 @@ Color_RGB8 Combo_Gear_GauntletColor(int strength);
 const void* Combo_Gear_Recolor(const void* dList);
 // The same colors for a copy MM made of an OOT list, at OOT's command indices (CrossTools.cpp's cut tool models):
 // each patch point of `dlName` gets MM's color when set, else OOT's current command.
-void Combo_Gear_RecolorCopy(void* copy, size_t copyCount, const void* ootCommands, size_t ootCount,
-                            const char* dlName);
+void Combo_Gear_RecolorCopy(void* copy, size_t copyCount, const void* ootCommands, size_t ootCount, const char* dlName);
 // 3 = Goron's Bracelet, 4 = gauntlet gem (the cosmetic color, or the model's own).
 Color_RGB8 Combo_Gear_CosmeticColor(int option);
 // Player_Draw: OOT's glowing ring under the Hover Boots while Link hovers.

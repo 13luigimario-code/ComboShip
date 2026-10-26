@@ -2916,3 +2916,9 @@ for it.
 
 **Cosmetics sync (`ComboCosmeticsSync.cpp`):** with "sync" on, OOT's Boomerang, Slingshot String and Hammer colors fill
 MM's "(OoT)" rows, and OOT's Razor/Gilded trail rows fill MM's Razor/Gilded Sword Trail.
+
+**Tested (Linux build, 2026-10-26):** in MM with "Hammer Head (OoT)" red, "Boomerang Body (OoT)" blue and "Slingshot
+String (OoT)" green: the held Hammer's head is red, the held and the thrown Boomerang are blue (gem unset, so OOT's
+pink), and the Slingshot's string is green. In OOT with "Stone Mask (MM)" red, the worn Stone Mask is red, and MM's gray
+stone again once the color is reset. Not checked in game: the Razor/Gilded trail colors, the mask tint on the Blast and
+Kamaro's Masks, the cosmetics sync rows.
