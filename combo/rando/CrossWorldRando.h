@@ -245,6 +245,7 @@ struct CombinedFillResult {
 constexpr int kFillAttempts = 2;   // whole-fill retries (re-derives the seed, re-rolls the dumps)
 constexpr int kMaxPasses = 3;      // passes within one fill
 constexpr int kMaxPrereqTries = 4; // Tier-1 repicks of just the portal prerequisites
+constexpr int kMaxRewardTries = 8; // Phase R orders tried per pass (Cross-Game Dungeon Rewards)
 
 // MM access is gated on the OOT->MM portal region (Happy Mask Shop) via ootOracle.GetPortalOpen.
 // progress: optional thread-safe progress struct polled by the UI. May be nullptr.
@@ -979,65 +980,84 @@ inline CombinedFillResult CrossWorldCombinedFill(
         // Phase R (Cross-Game Dungeon Rewards): every dungeon reward of both games onto a boss of either game, before
         // anything else can take a boss. An assumed fill like OOT's End of Dungeons one: each reward lands on a boss
         // reachable while every advancement item not placed yet (the other rewards too) is owned. Rewards beyond the
-        // number of bosses stay in the pool for Phase A/B.
+        // number of bosses stay in the pool for Phase A/B. A dead end (the bosses left all need the reward in hand,
+        // e.g. the last spiritual stone with only adult bosses open behind the Door of Time) retries this phase alone
+        // in a new order, kMaxRewardTries times, before failing the pass.
         std::vector<CwItem> junkRest = junkItems; // this pass's junk (Phase R may take a non-advancement reward)
         if (crossRewards) {
-            std::vector<CwItem> rewards;
+            std::vector<CwItem> allRewards;
             for (auto* src : { &advRest, &junkRest }) {
                 for (size_t i = 0; i < src->size();) {
                     if ((*src)[i].reward) {
-                        rewards.push_back((*src)[i]);
+                        allRewards.push_back((*src)[i]);
                         src->erase(src->begin() + static_cast<std::ptrdiff_t>(i));
                     } else {
                         ++i;
                     }
                 }
             }
-            cwShuffle(rewards, rng);
-            bool rewardDeadEnd = false;
+            const size_t placementsBefore = placements.size();
+            const auto filledBefore = filledChecks;
+            const auto advBefore = advRest;
+            const auto junkBefore = junkRest;
+            bool rewardsOk = false;
             size_t onBosses = 0;
-            while (!rewards.empty()) {
-                if (GenCancelled(progress)) {
-                    result.error = "cancelled";
-                    return result;
+            int tries = 0;
+            for (tries = 1; tries <= kMaxRewardTries && !rewardsOk; ++tries) {
+                placements.resize(placementsBefore);
+                filledChecks = filledBefore;
+                advRest = advBefore;
+                junkRest = junkBefore;
+                std::vector<CwItem> rewards = allRewards;
+                cwShuffle(rewards, rng);
+                onBosses = 0;
+                rewardsOk = true;
+                while (!rewards.empty()) {
+                    if (GenCancelled(progress)) {
+                        result.error = "cancelled";
+                        return result;
+                    }
+                    CwItem item = rewards.back();
+                    rewards.pop_back();
+                    std::vector<size_t> open;
+                    for (size_t ci = 0; ci < allChecks.size(); ++ci)
+                        if (allChecks[ci].bossReward && !filledChecks.count(checkKey(allChecks[ci])))
+                            open.push_back(ci);
+                    if (open.empty()) {
+                        (item.advancement ? advRest : junkRest).push_back(item); // more rewards than bosses
+                        continue;
+                    }
+                    std::vector<std::string> ootOwn, mmOwn;
+                    for (const auto* src : { &advRest, &rewards })
+                        for (const auto& it : *src)
+                            if (it.advancement)
+                                (it.game == GAME_OOT ? ootOwn : mmOwn).push_back(it.name);
+                    auto fr = reachableFixpoint(ootOwn, mmOwn);
+                    sawAdultInMm = sawAdultInMm || fr.cross.mmAdultIn;
+                    std::vector<size_t> cands;
+                    for (size_t ci : open)
+                        if ((allChecks[ci].game == GAME_OOT ? fr.ootReachable : fr.mmReachable)
+                                .count(allChecks[ci].name))
+                            cands.push_back(ci);
+                    if (cands.empty()) {
+                        lastPassError =
+                            "dead end placing the dungeon reward '" + item.name + "' (no reachable boss left)";
+                        rewardsOk = false;
+                        break;
+                    }
+                    size_t pick = cands[rng.below(static_cast<uint32_t>(cands.size()))];
+                    placements.push_back({ allChecks[pick], item });
+                    filledChecks.insert(checkKey(allChecks[pick]));
+                    ++onBosses;
                 }
-                CwItem item = rewards.back();
-                rewards.pop_back();
-                std::vector<size_t> open;
-                for (size_t ci = 0; ci < allChecks.size(); ++ci)
-                    if (allChecks[ci].bossReward && !filledChecks.count(checkKey(allChecks[ci])))
-                        open.push_back(ci);
-                if (open.empty()) {
-                    (item.advancement ? advRest : junkRest).push_back(item); // more rewards than bosses
-                    continue;
-                }
-                std::vector<std::string> ootOwn, mmOwn;
-                for (const auto* src : { &advRest, &rewards })
-                    for (const auto& it : *src)
-                        if (it.advancement)
-                            (it.game == GAME_OOT ? ootOwn : mmOwn).push_back(it.name);
-                auto fr = reachableFixpoint(ootOwn, mmOwn);
-                sawAdultInMm = sawAdultInMm || fr.cross.mmAdultIn;
-                std::vector<size_t> cands;
-                for (size_t ci : open)
-                    if ((allChecks[ci].game == GAME_OOT ? fr.ootReachable : fr.mmReachable).count(allChecks[ci].name))
-                        cands.push_back(ci);
-                if (cands.empty()) {
-                    lastPassError = "dead end placing the dungeon reward '" + item.name + "' (no reachable boss left)";
-                    std::cerr << "[ComboShip] CrossWorldCombinedFill: " << lastPassError << " (pass " << pass << ", "
-                              << passMs() << " ms) — retrying\n";
-                    rewardDeadEnd = true;
-                    break;
-                }
-                size_t pick = cands[rng.below(static_cast<uint32_t>(cands.size()))];
-                placements.push_back({ allChecks[pick], item });
-                filledChecks.insert(checkKey(allChecks[pick]));
-                ++onBosses;
             }
-            if (rewardDeadEnd)
+            if (!rewardsOk) {
+                std::cerr << "[ComboShip] CrossWorldCombinedFill: " << lastPassError << " after " << kMaxRewardTries
+                          << " orders (pass " << pass << ", " << passMs() << " ms) — retrying\n";
                 continue;
+            }
             std::cout << "[ComboShip] CrossWorldCombinedFill: Phase R placed " << onBosses
-                      << " dungeon rewards on bosses (pass " << pass << ")\n";
+                      << " dungeon rewards on bosses (pass " << pass << ", order " << (tries - 1) << ")\n";
         }
 
         // Phase A: place advancement items with logic, assuming only UNPLACED ones are owned. NO_LOGIC

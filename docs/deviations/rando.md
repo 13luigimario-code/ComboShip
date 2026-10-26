@@ -3104,9 +3104,16 @@ and on reload. `comborando` takes `--cross-rewards on|off` and reads `crossShuff
 **Fill.** The dumps mark rewards (`pool[].dungeonReward`) and bosses (`checks[].bossReward`). `CrossWorldCombinedFill`
 (`crossShuffle` argument) adds Phase R after the portal prerequisites (Phase A0, which no longer takes a boss): every
 reward, in random order, goes to a random boss that is reachable while every advancement item not placed yet (the other
-rewards too) is owned, the assumed fill SoH's End of Dungeons uses. A reward with no reachable boss left fails the pass
-(retried like any dead end); rewards beyond the bosses' count stay in the pool. A dump with no marked boss is a stale DLL
-and fails the generation.
+rewards too) is owned, the assumed fill SoH's End of Dungeons uses. A reward with no reachable boss left (the last stone
+with only adult bosses open behind a closed Door of Time) retries the phase in a new order, `kMaxRewardTries` (8) times,
+before failing the pass; rewards beyond the bosses' count stay in the pool. A dump with no marked boss is a stale DLL and
+fails the generation.
+
+The bosses stay free for Phase R: each game's own confined placement would otherwise take them under "Anywhere" (the
+first test seed had dungeon maps and keys on three OOT bosses). `ComboFillConfined` holds the empty OOT bosses with a
+placeholder through its confined fills (own-dungeon items, restricted songs, the Mask Shop Key) and frees them at the end;
+the MM dump keeps the boss warps out of `PreplaceConfinedItems`. A boss the player excluded already holds junk and is
+skipped.
 
 **Runtime.** Nothing new: a reward in the other game's boss check is an ordinary cross-game item (foreign marker, real
 model, delivery), and both trackers already list the boss checks under Anywhere. The Temple of Time altar text already
@@ -3115,3 +3122,8 @@ resolves rewards placed in MM (`CrossHints.h`), and the Clock Town "Boss Remains
 
 **Not changed:** the Combo menu doesn't grey out the overridden options in the per-game menus (the Combo menu says what
 it overrides). A reward picked as a portal prerequisite (none in practice) is placed by Phase A0, not on a boss.
+
+**Tested (Linux build, 2026-10-26):** headless, 9 seeds with the setting on all generate on the first pass (Phase R needed
+up to 3 orders), with a reward on all 12 bosses and the 13th in Link's Pocket, OOT rewards on MM bosses and remains on OOT
+bosses; `--playthrough` beats one of them (sphere 19); the same seed with the setting off generates as before. Not
+checked in game: a boss handing over the other game's reward.

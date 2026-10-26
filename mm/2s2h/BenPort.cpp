@@ -3491,9 +3491,22 @@ extern "C" COMBO_EXPORT const char* MM_DumpRandoStaticData(void) {
             prices[cn] = p;
     }
 
+    // ComboShip: Cross-Game Dungeon Rewards — the boss warps are the rewards' (the combined fill's Phase R), so keep
+    // them out of the own-dungeon confinement below, which groups checks by scene and would put keys and maps on them.
+    std::vector<RandoCheckId> heldBosses;
+    if (sMMComboCrossShuffle & ComboRando::CROSS_SHUFFLE_DUNGEON_REWARDS) {
+        std::erase_if(checkPool, [&](RandoCheckId id) {
+            if (Rando::StaticData::Checks[id].randoCheckType != RCTYPE_REMAINS)
+                return false;
+            heldBosses.push_back(id);
+            return true;
+        });
+    }
+
     // Confine own-dungeon items via MM's own logic (writes RANDO_SAVE_CHECKS, shrinks both pools).
     std::vector<RandoCheckId> checkPoolBefore = checkPool;
     Rando::Logic::PreplaceConfinedItems(checkPool, itemPool);
+    checkPool.insert(checkPool.end(), heldBosses.begin(), heldBosses.end()); // fillable boss checks again
     std::set<RandoCheckId> stillFillable(checkPool.begin(), checkPool.end());
 
     // GeneratePools under-fills (MM's own OnFileCreate pads junk); mirror it so every fillable check
