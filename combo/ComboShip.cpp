@@ -988,6 +988,11 @@ static FnGetOwlFlags MM_GetOwlActivationFlags = nullptr;
 static FnGetOwlWarpEntrance MM_GetOwlWarpEntrance = nullptr;
 static FnSetOwlFlagsProvider SOH_SetOwlFlagsProvider = nullptr;
 static FnSetOwlWarpEntranceProvider SOH_SetOwlWarpEntranceProvider = nullptr;
+// Cosmetics: MM's gear tints follow OOT's "(MM)" rows while OOT is played (MmGearColors.cpp, ComboGearCosmetics.cpp).
+typedef void (*FnGearTintsRefresh)(int);
+typedef void (*FnSetGearTintsRefresh)(FnGearTintsRefresh);
+static FnGearTintsRefresh MM_ComboGearTintsRefresh = nullptr;
+static FnSetGearTintsRefresh SOH_SetMmGearTintsRefresh = nullptr;
 
 namespace ComboAnchor {
 static std::thread sThread;
@@ -3356,6 +3361,8 @@ int main(int argc, char** argv) {
     MM_GetOwlWarpEntrance = (FnGetOwlWarpEntrance)GetSym(mmModule, "MM_GetOwlWarpEntrance");
     SOH_SetOwlFlagsProvider = (FnSetOwlFlagsProvider)GetSym(sohModule, "SOH_SetOwlFlagsProvider");
     SOH_SetOwlWarpEntranceProvider = (FnSetOwlWarpEntranceProvider)GetSym(sohModule, "SOH_SetOwlWarpEntranceProvider");
+    MM_ComboGearTintsRefresh = (FnGearTintsRefresh)GetSym(mmModule, "MM_ComboGearTintsRefresh");
+    SOH_SetMmGearTintsRefresh = (FnSetGearTintsRefresh)GetSym(sohModule, "SOH_SetMmGearTintsRefresh");
 
     // Title screen + file select front end (#27): optional, a missing export keeps OOT's.
     SOH_ReadComboFrontEndCVar = (FnReadComboFrontEndCVar)GetSym(sohModule, "SOH_ReadComboFrontEndCVar");
@@ -3592,6 +3599,9 @@ int main(int argc, char** argv) {
         SOH_SetOwlFlagsProvider(Combo_GetMmOwlFlags);
     if (SOH_SetOwlWarpEntranceProvider)
         SOH_SetOwlWarpEntranceProvider(Combo_GetMmOwlWarpEntrance);
+    // Cosmetics: OOT tells MM each frame that OOT is the game being played (MM's gear tints, OOT's "(MM)" rows).
+    if (SOH_SetMmGearTintsRefresh && MM_ComboGearTintsRefresh)
+        SOH_SetMmGearTintsRefresh(MM_ComboGearTintsRefresh);
     // Shared Items: tier-changed pokes in, per-frame drain seam.
     if (SOH_SetSharedChangedCb)
         SOH_SetSharedChangedCb(Combo_OnSharedChanged);

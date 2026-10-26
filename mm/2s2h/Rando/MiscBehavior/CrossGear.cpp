@@ -706,7 +706,17 @@ extern "C" void Combo_Gear_DrawBoots(PlayState* play, Player* player) {
         return;
     }
     const bool adult = Combo_AdultLink_Is(player) != 0; // Cross-Games Age: OOT's own adult meshes
+    // The cosmetic editors' boot / mask colors (MM's "(OoT)" rows, else OOT's own): a tint over the whole piece.
+    Color_RGB8 bootsTint;
+    const bool bootsTinted =
+        (boots == COMBO_BOOTS_IRON)    ? Combo_Gear_OotTint("Player.OotIronBoots", "Equipment.IronBoots", &bootsTint)
+        : (boots == COMBO_BOOTS_HOVER) ? Combo_Gear_OotTint("Player.OotHoverBoots", "Equipment.HoverBoots", &bootsTint)
+                                       : false;
     OPEN_DISPS(play->state.gfxCtx);
+    if (bootsTinted) {
+        gDPSetGrayscaleColor(POLY_OPA_DISP++, bootsTint.r, bootsTint.g, bootsTint.b, 255);
+        gSPGrayscale(POLY_OPA_DISP++, true);
+    }
     if (adult && (boots == COMBO_BOOTS_IRON)) {
         gSPDisplayList(POLY_OPA_DISP++, (Gfx*)gComboLinkAdultLeftIronBootDL);
         gSPDisplayList(POLY_OPA_DISP++, (Gfx*)gComboLinkAdultRightIronBootDL);
@@ -720,7 +730,13 @@ extern "C" void Combo_Gear_DrawBoots(PlayState* play, Player* player) {
         gSPDisplayList(POLY_OPA_DISP++, gComboLinkLeftHoverBootDL);
         gSPDisplayList(POLY_OPA_DISP++, gComboLinkRightHoverBootDL);
     }
+    if (bootsTinted) {
+        gSPGrayscale(POLY_OPA_DISP++, false);
+    }
     if (mask != COMBO_MASK_NONE) {
+        static const char* const kMaskTintIds[][2] = { { "Player.OotGerudoMask", "Equipment.GerudoMask" },
+                                                       { "Player.OotSkullMask", "Equipment.SkullMask" },
+                                                       { "Player.OotSpookyMask", "Equipment.SpookyMask" } };
         static const char* const kMaskDLs[] = { gComboLinkChildGerudoMaskDL, gComboLinkChildSkullMaskDL,
                                                 gComboLinkChildSpookyMaskDL };
         // Head limb matrix (OoTMM's prepareMask: 0x0D0001C0), then OOT's own worn-mask mesh.
@@ -733,7 +749,17 @@ extern "C" void Combo_Gear_DrawBoots(PlayState* play, Player* player) {
             gSPMatrix(POLY_OPA_DISP++, Matrix_Finalize(play->state.gfxCtx), G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
             Matrix_Pop();
         }
+        Color_RGB8 maskTint;
+        const bool maskTinted = Combo_Gear_OotTint(kMaskTintIds[mask - COMBO_MASK_GERUDO][0],
+                                                   kMaskTintIds[mask - COMBO_MASK_GERUDO][1], &maskTint) != 0;
+        if (maskTinted) {
+            gDPSetGrayscaleColor(POLY_OPA_DISP++, maskTint.r, maskTint.g, maskTint.b, 255);
+            gSPGrayscale(POLY_OPA_DISP++, true);
+        }
         gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kMaskDLs[mask - COMBO_MASK_GERUDO]);
+        if (maskTinted) {
+            gSPGrayscale(POLY_OPA_DISP++, false);
+        }
     }
     CLOSE_DISPS(play->state.gfxCtx);
 }

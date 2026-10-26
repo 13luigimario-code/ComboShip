@@ -25,6 +25,7 @@
 #include <ship/resource/ResourceManager.h>
 #include <ship/resource/ResourceManagerScope.h>
 #include <spdlog/spdlog.h>
+#include <libultraship/bridge/consolevariablebridge.h> // OOT's cosmetic CVars
 
 extern "C" {
 #include "variables.h"
@@ -47,6 +48,9 @@ enum Option : uint8_t {
     SLINGSHOT_STRING,
     HAMMER_HEAD,
     HAMMER_HANDLE,
+    // OOT gear Ship of Harkinian has no color for; OOT's own rows are ComboShip's (ComboGearCosmetics.cpp).
+    DEKU_SHIELD,
+    SLINGSHOT_BODY,
     OPTION_COUNT
 };
 
@@ -62,6 +66,7 @@ constexpr OptionDef kOptions[OPTION_COUNT] = {
     { "Player.OotGauntletsGem", { 255, 60, 100 } }, { "Player.OotBoomerangBody", { 160, 100, 0 } },
     { "Player.OotBoomerangGem", { 255, 50, 150 } }, { "Player.OotSlingshotString", { 255, 255, 255 } },
     { "Player.OotHammerHead", { 155, 192, 201 } },  { "Player.OotHammerHandle", { 110, 60, 0 } },
+    { "Player.OotDekuShield", { 255, 255, 255 } },  { "Player.OotSlingshotBody", { 255, 255, 255 } },
 };
 
 enum Kind : uint8_t {
@@ -155,6 +160,19 @@ constexpr Patch kPatches[] = {
     { "gLinkAdultLeftHandHoldingHammerNearDL", 18, PRIM, HAMMER_HANDLE },
     { "gLinkAdultLeftHandHoldingHammerFarDL", 38, PRIM, HAMMER_HEAD },
     { "gLinkAdultLeftHandHoldingHammerFarDL", 18, PRIM, HAMMER_HANDLE },
+    // The Deku Shield and the Slingshot body: OOT's "Equipment.DekuShield" / "Equipment.ComboSlingshotBody" patches
+    // (CosmeticsEditor.cpp), index for index. The shield's PRIM is shared with the hand / sheath drawn after it, which
+    // a no-op pipe sync before their texture turns back to white.
+    { "gLinkChildRightFistAndDekuShieldNearDL", 17, PRIM, DEKU_SHIELD },
+    { "gLinkChildRightFistAndDekuShieldNearDL", 47, PRIM_WHITE, DEKU_SHIELD },
+    { "gLinkChildRightFistAndDekuShieldFarDL", 17, PRIM, DEKU_SHIELD },
+    { "gLinkChildRightFistAndDekuShieldFarDL", 37, PRIM_WHITE, DEKU_SHIELD },
+    { "gLinkChildDekuShieldDL", 18, PRIM, DEKU_SHIELD }, // on the back (gLinkChildDekuShieldWithMatrixDL calls it)
+    { "gLinkChildRightHandHoldingSlingshotNearDL", 41, PRIM, SLINGSHOT_BODY },
+    { "gLinkChildRightHandHoldingSlingshotFarDL", 17, PRIM, SLINGSHOT_BODY },
+    { "gLinkChildRightHandHoldingSlingshotFarDL", 33, PRIM_WHITE, SLINGSHOT_BODY },
+    { "gLinkChildRightArmStretchedSlingshotDL", 17, PRIM, SLINGSHOT_BODY },
+    { "gLinkChildRightArmStretchedSlingshotDL", 31, PRIM_WHITE, SLINGSHOT_BODY },
 };
 
 bool IsTwoWordOpcode(uint8_t op) {
@@ -334,6 +352,59 @@ extern "C" void Combo_Gear_RecolorCopy(void* copy, size_t copyCount, const void*
                 ? Command(p, CosmeticEditor_GetComboColor(kOptions[p.option].id, kOptions[p.option].defaultColor))
                 : in[p.index];
     }
+}
+
+// An OOT-gear color for MM: MM's own row (`mmId`, a "Player.Oot*" option) when set, else OOT's cosmetic editor row
+// (`ootId`, its CVar under "gCosmetics."; the CVar store is shared by both games) when set. False: neither is set.
+extern "C" int Combo_Gear_OotTint(const char* mmId, const char* ootId, Color_RGB8* out) {
+    if (CosmeticEditor_IsComboColorChanged(mmId)) {
+        *out = CosmeticEditor_GetComboColor(mmId, { 255, 255, 255 });
+        return 1;
+    }
+    if (ootId == nullptr) {
+        return 0;
+    }
+    const std::string base = std::string("gCosmetics.") + ootId;
+    if (!CVarGetInteger((base + ".Changed").c_str(), 0)) {
+        return 0;
+    }
+    const Color_RGBA8 color = CVarGetColor((base + ".Value").c_str(), { 255, 255, 255, 255 });
+    *out = { color.r, color.g, color.b };
+    return 1;
+}
+
+// The Deku Shield on Link's back: OOT's gLinkChildDekuShieldWithMatrixDL, with its call to gLinkChildDekuShieldDL
+// pointed at the recolored copy while MM's "Deku Shield (OoT)" is set; the list itself otherwise.
+extern "C" const void* Combo_Gear_RecolorBackShield(const void* outerPath, const void* innerPath) {
+    const void* inner = Combo_Gear_Recolor(innerPath);
+    if (inner == innerPath) {
+        return outerPath; // no MM color: OOT's own list (and OOT's own shield color)
+    }
+    Recolored& sOuter = sRecolored["#backShield"]; // in the cache, so the teardown listener releases it too
+    if (!sOuter.tried) {
+        static constexpr char kPrefix[] = "__OTR__@oot:";
+        if (!Build(sOuter, std::string((const char*)outerPath + sizeof(kPrefix) - 1))) {
+            return outerPath;
+        }
+    }
+    if (sOuter.gfx.empty()) {
+        return outerPath;
+    }
+    // Repoint the call each draw (the inner copy is only built while the option is set). Index 0 is the RM push.
+    for (size_t i = 1; i + 1 < sOuter.gfx.size();) {
+        const uint8_t op = (uint8_t)(sOuter.gfx[i].words.w0 >> 24);
+        if ((op == G_DL_OTR_HASH) || (op == G_DL)) {
+            Gfx call = gsSPDisplayList((Gfx*)inner);
+            sOuter.gfx[i] = call;
+            if (op == G_DL_OTR_HASH) {
+                Gfx noop = gsDPNoOp();
+                sOuter.gfx[i + 1] = noop;
+            }
+            break;
+        }
+        i += IsTwoWordOpcode(op) ? 2 : 1;
+    }
+    return sOuter.gfx.data();
 }
 
 #endif // COMBO_BUILD
