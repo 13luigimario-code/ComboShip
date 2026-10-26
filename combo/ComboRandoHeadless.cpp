@@ -206,6 +206,10 @@ static int Run(int argc, char** argv) {
     // OOT entrance shuffle (#90) — without this the validator checks a vanilla entrance graph.
     auto SOH_ShuffleEntrances = Sym<int (*)(uint64_t)>(soh, "SOH_ShuffleEntrancesForCombo");
     auto SOH_DumpEntranceOverrides = Sym<FnDump>(soh, "SOH_DumpEntranceOverrides");
+    // MM's dungeon entrance shuffle (the four temples): a layout per attempt, recorded as "entrances.mm".
+    auto MM_ShuffleDungeonEntrances = Sym<int (*)(uint64_t)>(mm, "MM_ShuffleDungeonEntrancesForCombo");
+    auto MM_DumpDungeonEntrances = Sym<FnDump>(mm, "MM_DumpDungeonEntrances");
+    auto MM_SetDungeonEntrances = Sym<FnTakeStr>(mm, "MM_SetDungeonEntrances");
     auto SOH_ApplyEntranceOverrides = Sym<int (*)(const char*)>(soh, "SOH_ApplyEntranceOverridesForCombo");
     auto MM_Restore = Sym<FnOracleVoid>(mm, "Combo_MM_Rando_Restore");
     auto SOH_DumpEnabledTricks = Sym<FnDump>(soh, "SOH_DumpEnabledTricks");
@@ -308,6 +312,12 @@ static int Run(int argc, char** argv) {
         auto ootEnabledTricks =
             spoiler.value("oot", nlohmann::json::object()).value("enabledTricks", nlohmann::json::array());
         auto ootEntrances = spoiler.value("entrances", nlohmann::json::object()).value("oot", nlohmann::json::array());
+        // The seed's MM temple layout (absent/empty = vanilla), which the MM oracle's exits follow.
+        if (MM_SetDungeonEntrances) {
+            const nlohmann::json entrances = spoiler.value("entrances", nlohmann::json::object());
+            const std::string mmLayout = entrances.value("mm", nlohmann::json::array()).dump();
+            MM_SetDungeonEntrances(mmLayout.c_str());
+        }
 
         // Prices are part of the seed: an unknown price can never be treated as buyable, so a spoiler
         // without them can't be validated honestly. Hard-fail rather than emit an optimistic verdict.
@@ -666,6 +676,8 @@ static int Run(int argc, char** argv) {
                     pinStartOot = true;
                 continue;
             }
+            if (MM_ShuffleDungeonEntrances)
+                MM_ShuffleDungeonEntrances(masterSeed);
             ComboRando::OotAccess ootAccess = ComboRando::OotAccessFromDump(sohDump);
             r = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, oot, mmO, nullptr, forced, ootAccess,
                                                    goal, mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT,
@@ -785,7 +797,13 @@ static int Run(int argc, char** argv) {
                                 ootEnt = nlohmann::json::parse(SOH_DumpEntranceOverrides());
                             } catch (...) {}
                         }
-                        consolidated["entrances"] = { { "oot", std::move(ootEnt) } };
+                        nlohmann::json mmEnt = nlohmann::json::array();
+                        if (MM_DumpDungeonEntrances) {
+                            try {
+                                mmEnt = nlohmann::json::parse(MM_DumpDungeonEntrances());
+                            } catch (...) {}
+                        }
+                        consolidated["entrances"] = { { "oot", std::move(ootEnt) }, { "mm", std::move(mmEnt) } };
                     }
                     // Cross-hint generation (mirrors RunComboFill) — enables the headless determinism check.
                     consolidated["hints"] =

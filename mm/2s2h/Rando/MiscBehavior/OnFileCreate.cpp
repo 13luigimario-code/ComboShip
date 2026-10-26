@@ -2,6 +2,7 @@
 #ifdef COMBO_BUILD
 #include "AgeRequirements.h"
 #include "AdultLink.h"
+#include "DungeonEntrances.h"
 #endif
 #include "Rando/Rando.h"
 #include "Rando/Spoiler/Spoiler.h"
@@ -69,6 +70,11 @@ void Rando::MiscBehavior::OnFileCreate(s16 fileNum) {
 #ifdef COMBO_BUILD
                 // ComboShip (Cross-Games Age): "Random" MM age requirements become child or adult from the seed.
                 Rando::AgeReq::Resolve(finalSeed, RANDO_SAVE_OPTIONS, Combo_AdultLink_AgeSystemConfigured() != 0);
+                // ComboShip: dungeon entrance shuffle, before the logic runs (its exits follow the layout).
+                u8* dungeonLayout = gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances;
+                if (RANDO_SAVE_OPTIONS[RO_SHUFFLE_DUNGEON_ENTRANCES]) {
+                    Rando::DungeonEntrances::Shuffle(finalSeed, dungeonLayout);
+                }
 #endif
 
                 // If Skulltula tokens are not shuffled, use the vanilla requirement

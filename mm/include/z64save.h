@@ -406,6 +406,9 @@ typedef struct RandoSaveInfo {
         u8 cButtonSlots[4]; // likewise
         u8 wear;            // bit 0 Iron Boots, 1 Hover Boots, 2 Goron Tunic, 3 Zora Tunic
     } comboAgeLoadout[2];
+    // ComboShip (dungeon entrance shuffle, DungeonEntrances.cpp): the temple behind each temple's door, by slot
+    // (Woodfall, Snowhead, Great Bay, Stone Tower), as temple + 1. All 0 = vanilla.
+    u8 comboDungeonEntrances[4];
 #endif
 } RandoSaveInfo;
 

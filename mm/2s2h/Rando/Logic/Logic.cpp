@@ -2,6 +2,9 @@
 #include "2s2h/ShipInit.hpp"
 
 #include "Logic.h"
+#ifdef COMBO_BUILD
+#include "2s2h/Rando/MiscBehavior/DungeonEntrances.h"
+#endif
 
 namespace Rando {
 
@@ -207,7 +210,14 @@ void FindReachableRegions(RandoRegionId currentRegion, std::set<RandoRegionId>& 
         // Set global time for check evaluation
         gCurrentRegionTime = currentTime;
 
+#ifdef COMBO_BUILD
+        // ComboShip: dungeon entrance shuffle — a temple door / exit / boss warp leads where the seed's layout says.
+        const u8* dungeonLayout = gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances;
+        const s32 exitTo = Rando::DungeonEntrances::Remap(exitId, sourceRegion.sceneId, dungeonLayout);
+        RandoRegionId connectedRegionId = GetRegionIdFromEntrance(exitTo);
+#else
         RandoRegionId connectedRegionId = GetRegionIdFromEntrance(exitId);
+#endif
         if (regionExit.condition()) {
             auto& targetRegion = Regions[connectedRegionId];
             RegionTimeState incomingState = { .timeSlices = currentTime,

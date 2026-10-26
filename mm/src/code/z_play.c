@@ -47,6 +47,9 @@ u8 sMotionBlurStatus;
 #include "2s2h/DeveloperTools/CollisionViewer.h"
 #include "2s2h/framebuffer_effects.h"
 #include <string.h>
+#ifdef COMBO_BUILD
+#include "2s2h/Rando/MiscBehavior/DungeonEntrances.h" // ComboShip: dungeon entrance shuffle
+#endif
 
 s32 gDbgCamEnabled = false;
 u8 D_801D0D54 = false;
@@ -621,6 +624,12 @@ void Play_UpdateTransition(PlayState* this) {
         case TRANS_MODE_SETUP:
             if (this->transitionTrigger != TRANS_TRIGGER_END) {
                 s16 sceneLayer = 0;
+
+#ifdef COMBO_BUILD
+                // ComboShip: dungeon entrance shuffle — a temple door, a temple's exit or a boss warp goes where the
+                // seed's layout says (once, as the transition starts).
+                this->nextEntrance = Combo_MM_DungeonEntranceOverride(this->nextEntrance, this->sceneId);
+#endif
 
                 Interface_SetHudVisibility(HUD_VISIBILITY_NONE);
 

@@ -2981,6 +2981,8 @@ extern "C" COMBO_EXPORT int MM_LoadSaveForCombo(int fileNum) {
 }
 
 static void Combo_MM_ApplyCheckPrices();
+extern "C" const uint8_t* Combo_MM_DungeonEntranceLayout(void); // DungeonEntrances.cpp
+#include "2s2h/Rando/MiscBehavior/DungeonEntrances.h"
 
 // ComboShip (#136): defined further down (MM_SetComboGoal). The save-building paths below force MM's
 // Triforce options from these — combo owns the goal and MM's own CVars are hidden in combo builds.
@@ -3132,6 +3134,10 @@ extern "C" COMBO_EXPORT int MM_InitRandoSaveFile(int fileNum, const char* placem
         // ComboShip (Cross-Games Age): "Random" MM age requirements become child or adult from the combo seed (the
         // combo logic resolves them the same way); off when MM has no adult Link.
         Rando::AgeReq::Resolve((uint32_t)sMMComboRandoSeed, RANDO_SAVE_OPTIONS, Combo_AdultLink_AgeSystemOn() != 0);
+
+        // ComboShip (dungeon entrance shuffle): the seed's temple layout (the launcher's MM_SetDungeonEntrances).
+        u8* dungeonLayout = gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances;
+        memcpy(dungeonLayout, Combo_MM_DungeonEntranceLayout(), Rando::DungeonEntrances::kSlots);
 
         // ComboShip: the apply stamps shuffled=true on every payload check incl. non-shuffled Remains;
         // restore native state (delivery reads randoItemId, not shuffled) so stones/tracker skip them.
@@ -4235,6 +4241,9 @@ extern "C" COMBO_EXPORT void Combo_MM_Rando_Reset(void) {
     // ComboShip (Cross-Games Age): the same "Random" age requirements the save will get (MM_InitRandoSaveFile).
     Rando::AgeReq::Resolve((uint32_t)sMMComboRandoSeed, gSaveContext.save.shipSaveInfo.rando.randoSaveOptions,
                            Combo_AdultLink_AgeSystemOn() != 0);
+    // ComboShip (dungeon entrance shuffle): this generation's temple layout, which the logic's exits follow.
+    u8* dungeonLayout = gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances;
+    memcpy(dungeonLayout, Combo_MM_DungeonEntranceLayout(), Rando::DungeonEntrances::kSlots);
     // ComboShip (#136): combo owns the goal, so the hidden CVars above must not decide it here either.
     gSaveContext.save.shipSaveInfo.rando.randoSaveOptions[RO_SHUFFLE_TRIFORCE_PIECES] =
         gMMComboGoalHunt ? RO_GENERIC_YES : RO_GENERIC_NO;

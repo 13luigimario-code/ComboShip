@@ -3079,51 +3079,47 @@ ComboShip push / pop site checks out as balanced, so the leaking code isn't know
 log one line naming the leaking line (`lib2ship.so+0xc019e5` -> `ZTestHook.cpp:104` with `addr2line`). 40 more, enough to
 overflow, are absorbed, and the game keeps running with the HUD intact.
 
-## Cross-Game Dungeon Rewards (OoTMM cross-games rewards, 2026-10-26)
+## Majora's Mask dungeon entrance shuffle (2026-10-26)
 
-Combo menu "Cross-Game Shuffles" > "Cross-Game Dungeon Rewards" (`gCombo.Rando.CrossDungeonRewards`;
-`combo/rando/CrossShuffle.h`). The spiritual stones, the medallions and the boss remains are one pool, and every boss of
-both games holds one of them: the eight Ocarina of Time dungeon bosses (`Rando::StaticData::dungeonRewardLocations`)
-and the four Majora's Mask temple boss warps (`RCTYPE_REMAINS`). 9 + 4 rewards for 12 bosses: one OOT reward goes in
-Link's Pocket, as in SoH's End of Dungeons.
+MM's Randomizer menu, Logic tab: "Shuffle Dungeon Entrances" (`RO_SHUFFLE_DUNGEON_ENTRANCES`, appended to the option
+enum). 2 Ship has no entrance shuffle of its own. This is the first step toward Cross-Game Dungeon Entrances, which will
+pool these doors with Ocarina of Time's.
 
-**Seed-bound.** The spoiler (and so the slot's `combo.rando`) records top-level `crossShuffle` (an array of keys,
-`"dungeonRewards"`); absent = none, so every older seed is unchanged. The launcher reads the menu through
-`SOH_ReadComboCrossShuffleCVars` (none in a solo seed) and pushes the mask into both DLLs before every dump
-(`SOH_SetComboCrossShuffle` / `MM_SetComboCrossShuffle`), on slot load, after a generation (back to the loaded slot's)
-and on reload. `comborando` takes `--cross-rewards on|off` and reads `crossShuffle` back in `--playthrough`.
+**Layout.** The temple behind each of the four temple doors (Woodfall, Snowhead, Great Bay, Stone Tower), a random
+permutation in which any temple can stay behind its own door. Inverted Stone Tower Temple stays behind the inverted
+tower's door, and Woodfall's second door (the prison, after the temple is cleared) stays vanilla. It's saved in
+`RandoSaveInfo::comboDungeonEntrances` (temple + 1 per door, all 0 = vanilla; absent on older saves). Dungeon Access
+stays with the door: it gates the way to the door, not the temple.
 
-**Forced per-game options.** Each game's own reward shuffle is overridden for the seed:
-- OOT (`settings.cpp` FinalizeSettings, COMBO block): Dungeon Rewards = Anywhere, Link's Pocket = Dungeon Reward (set
-  before the native End of Dungeons block, so the pocket's reward kind stays the player's). `ComboFillConfined`'s
-  `RandomizeDungeonRewards` then puts one reward in the pocket and leaves the other eight in the free pool.
-- MM (`Combo_MM_ForcedOption`, `BenPort.cpp`): Boss Remains = Anywhere, wherever the save-building paths read the option
-  CVars (`MM_InitRandoSaveFile`'s options, `MM_DumpRandoStaticData`, the oracle reset). The boss warps are then checks
-  and the remains are free pool items.
+**One rule for the logic and the game** (`Rando::DungeonEntrances::Remap`, `mm/2s2h/Rando/MiscBehavior/
+DungeonEntrances.cpp`), keyed on the scene the transition is taken from:
+- a temple door taken from outside that temple leads into the temple behind it;
+- a temple's entrance exit taken from inside it leads out of the door it's behind;
+- its boss's warp, first or repeat, from the boss lair lands outside the door it's behind (vanilla when it's behind its
+  own door).
+Nothing inside a temple moves, so a void-out respawn and the boss door are untouched. Every moved transition drops the
+destination's arrival cutscene (the turtle ride, Ikana's river after Twinmold): those scene layers belong to the
+vanilla route.
 
-**Fill.** The dumps mark rewards (`pool[].dungeonReward`) and bosses (`checks[].bossReward`). `CrossWorldCombinedFill`
-(`crossShuffle` argument) adds Phase R after the portal prerequisites (Phase A0, which no longer takes a boss): every
-reward, in random order, goes to a random boss that is reachable while every advancement item not placed yet (the other
-rewards too) is owned, the assumed fill SoH's End of Dungeons uses. A reward with no reachable boss left (the last stone
-with only adult bosses open behind a closed Door of Time) retries the phase in a new order, `kMaxRewardTries` (8) times,
-before failing the pass; rewards beyond the bosses' count stay in the pool. A dump with no marked boss is a stale DLL and
-fails the generation.
+- Logic: `FindReachableRegions` (`Logic.cpp`) runs each exit through `Remap` with the source region's scene.
+- Game: `Play_UpdateTransition`'s `TRANS_MODE_SETUP` (`z_play.c`) runs `play->nextEntrance` through it once, as a
+  transition starts. The first blue warp skips the Giants' Chamber (`HandleGiantsCutsceneSkip`), so its queued
+  destination goes through it too.
 
-The bosses stay free for Phase R: each game's own confined placement would otherwise take them under "Anywhere" (the
-first test seed had dungeon maps and keys on three OOT bosses). `ComboFillConfined` holds the empty OOT bosses with a
-placeholder through its confined fills (own-dungeon items, restricted songs, the Mask Shop Key) and frees them at the end;
-the MM dump keeps the boss warps out of `PreplaceConfinedItems`. A boss the player excluded already holds junk and is
-skipped.
+**Generation.** Native file creation shuffles from the seed before the logic runs. The combo generator calls
+`MM_ShuffleDungeonEntrancesForCombo(masterSeed)` per attempt, after the OOT entrance shuffle; the MM oracle's reset
+copies the layout into its save context. The spoiler records it as `entrances.mm` (`[{door, temple}]`, empty =
+vanilla), and the launcher pushes it back (`MM_SetDungeonEntrances`) before `MM_InitRandoSaveFile` writes it into the
+new save. `comborando` records and replays it the same way.
 
-**Runtime.** Nothing new: a reward in the other game's boss check is an ordinary cross-game item (foreign marker, real
-model, delivery), and both trackers already list the boss checks under Anywhere. The Temple of Time altar text already
-resolves rewards placed in MM (`CrossHints.h`), and the Clock Town "Boss Remains" posters remains placed in OOT
-(`GetItemLocationHintName`).
+**Tested (Linux build, 2026-10-26):** headless, 8 seeds with the setting on generate and pass. `--playthrough` beats
+one (sphere 21); the same placements with the layout removed are unbeatable, so the fill really did use it. With the
+setting off, generation is unchanged and `entrances.mm` is empty. In game, on an MM-start seed with Great Bay and Stone
+Tower swapped (test hook warps, which go through the same transition path as doors):
+- the Great Bay door led into Stone Tower Temple;
+- leaving Stone Tower Temple by its entrance came out at Zora Cape;
+- the Woodfall door, not shuffled, was unchanged;
+- Twinmold's warp landed at Zora Cape, and Gyorg's at the top of Stone Tower;
+- re-entering Stone Tower Temple from inside it (a void-out's respawn) stayed put.
 
-**Not changed:** the Combo menu doesn't grey out the overridden options in the per-game menus (the Combo menu says what
-it overrides). A reward picked as a portal prerequisite (none in practice) is placed by Phase A0, not on a boss.
-
-**Tested (Linux build, 2026-10-26):** headless, 9 seeds with the setting on all generate on the first pass (Phase R needed
-up to 3 orders), with a reward on all 12 bosses and the 13th in Link's Pocket, OOT rewards on MM bosses and remains on OOT
-bosses; `--playthrough` beats one of them (sphere 19); the same seed with the setting off generates as before. Not
-checked in game: a boss handing over the other game's reward.
+Not checked in game: walking through the real doors, or a first boss warp through the Giants' Chamber skip.
