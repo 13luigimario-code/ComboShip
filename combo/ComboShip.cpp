@@ -473,6 +473,19 @@ static FnOracleVoid Combo_MM_Rando_Restore = nullptr;
 typedef int (*FnShuffleEntrances)(uint64_t);
 static FnShuffleEntrances SOH_ShuffleEntrancesForCombo = nullptr;
 static FnDumpData SOH_DumpEntranceOverrides = nullptr;
+// MM's dungeon entrance shuffle (the four temples, mm/2s2h/Rando/MiscBehavior/DungeonEntrances.cpp): a layout per
+// generation attempt, recorded in the spoiler ("entrances.mm") and pushed back before the MM save is created.
+static FnShuffleEntrances MM_ShuffleDungeonEntrancesForCombo = nullptr;
+static FnDumpData MM_DumpDungeonEntrances = nullptr;
+static FnTakeStr MM_SetDungeonEntrances = nullptr;
+// The MM temple layout recorded in a consolidated seed (empty = vanilla), into the MM DLL.
+static void PushMmDungeonEntrances(const nlohmann::json& seed) {
+    if (MM_SetDungeonEntrances)
+        MM_SetDungeonEntrances(seed.value("entrances", nlohmann::json::object())
+                                   .value("mm", nlohmann::json::array())
+                                   .dump()
+                                   .c_str());
+}
 
 // ---------- ComboShip merged per-slot save container (Save/file{N+1}.combosav) ----------
 // One JSON file per slot holds both games' saves verbatim + combo metadata (completion + baked rando).
@@ -1931,6 +1944,9 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
                 Combo_MM_Rando_Restore();
             continue;
         }
+        // MM's temple layout for this attempt (vanilla when its option is off); the MM oracle follows it.
+        if (MM_ShuffleDungeonEntrancesForCombo)
+            MM_ShuffleDungeonEntrancesForCombo(masterSeed);
         if (cancelled())
             return;
         if (!haveOracles)
@@ -2203,7 +2219,13 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
                     ootEnt = nlohmann::json::parse(SOH_DumpEntranceOverrides());
                 } catch (...) {}
             }
-            consolidated["entrances"] = { { "oot", std::move(ootEnt) } };
+            nlohmann::json mmEnt = nlohmann::json::array();
+            if (MM_DumpDungeonEntrances) {
+                try {
+                    mmEnt = nlohmann::json::parse(MM_DumpDungeonEntrances());
+                } catch (...) {}
+            }
+            consolidated["entrances"] = { { "oot", std::move(ootEnt) }, { "mm", std::move(mmEnt) } };
         }
         // ComboShip: cross-game hint generation (Phase 3) — real per-seed hint assignments, from the
         // pare-down computed above. usedCombinedFill guards the no-logic fallback path (no oracles/
@@ -2331,6 +2353,8 @@ static int RunComboGenTest(int numSeeds, uint32_t seedBase) {
                 Combo_MM_Rando_Restore();
                 continue; // a different masterSeed yields a different layout — reroll, like RunComboFill
             }
+            if (MM_ShuffleDungeonEntrancesForCombo)
+                MM_ShuffleDungeonEntrancesForCombo(seed);
             result = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, seed, ootOracle, mmOracle, nullptr, forcedOot,
                                                         ComboRando::OotAccessFromDump(sohDump), {},
                                                         mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT);
@@ -2432,6 +2456,8 @@ static void RunComboPlaythrough(const std::string& inputSeed) {
             Combo_MM_Rando_Restore();
             continue;
         }
+        if (MM_ShuffleDungeonEntrancesForCombo)
+            MM_ShuffleDungeonEntrancesForCombo(masterSeed);
         fill = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, ootOracle, mmOracle, nullptr, forcedOot,
                                                   ComboRando::OotAccessFromDump(sohDump), {},
                                                   mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT);
@@ -2893,6 +2919,8 @@ static void Combo_OnOOTSaveInit(int fileNum) {
         // them) — never at reload time, so they can't leak into comboship.json before a slot is bound.
         if (!g_PendingMMSettingsJson.empty() && MM_RestoreRandoSettings)
             MM_RestoreRandoSettings(g_PendingMMSettingsJson.c_str());
+        // The seed's MM temple layout (dungeon entrance shuffle) goes into the save with it.
+        PushMmDungeonEntrances(seed);
         if (MM_InitRandoSaveFile(fileNum, mmPlacements.c_str(), playerName) != 0) {
             std::cerr << "[ComboShip] ERROR: MM rando save creation FAILED for slot " << fileNum
                       << " — this slot's MM save has no placements. Re-create it." << std::endl;
@@ -3423,6 +3451,9 @@ int main(int argc, char** argv) {
     // OOT entrance-shuffle wiring (#90)
     SOH_ShuffleEntrancesForCombo = (FnShuffleEntrances)GetSym(sohModule, "SOH_ShuffleEntrancesForCombo");
     SOH_DumpEntranceOverrides = (FnDumpData)GetSym(sohModule, "SOH_DumpEntranceOverrides");
+    MM_ShuffleDungeonEntrancesForCombo = (FnShuffleEntrances)GetSym(mmModule, "MM_ShuffleDungeonEntrancesForCombo");
+    MM_DumpDungeonEntrances = (FnDumpData)GetSym(mmModule, "MM_DumpDungeonEntrances");
+    MM_SetDungeonEntrances = (FnTakeStr)GetSym(mmModule, "MM_SetDungeonEntrances");
 
     // Cross-game erase seam (issue #1)
     SOH_SetComboSaveIO = (FnSetComboSaveIO)GetSym(sohModule, "SOH_SetComboSaveIO");

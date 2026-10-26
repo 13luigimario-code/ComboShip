@@ -85,6 +85,7 @@ inline void to_json(json& j, const RandoSaveInfo& rando) {
                                          { "cButtonSlots", loadout.cButtonSlots },
                                          { "wear", loadout.wear } });
     }
+    j["comboDungeonEntrances"] = rando.comboDungeonEntrances; // ComboShip: dungeon entrance shuffle
 #endif
 }
 
@@ -152,6 +153,9 @@ inline void from_json(const json& j, RandoSaveInfo& rando) {
             rando.comboAgeLoadout[n].wear = l.value("wear", (u8)0);
         }
     }
+    // ComboShip (dungeon entrance shuffle): absent on older saves = vanilla.
+    ComboGetArrayTolerant(j.contains("comboDungeonEntrances") ? j["comboDungeonEntrances"] : json(),
+                          rando.comboDungeonEntrances);
 #endif
 }
 

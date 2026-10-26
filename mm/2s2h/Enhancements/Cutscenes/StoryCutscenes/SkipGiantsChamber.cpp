@@ -4,6 +4,9 @@
 #include "2s2h/CustomItem/CustomItem.h"
 #include "2s2h/Rando/Rando.h"
 #include "2s2h/ShipInit.hpp"
+#ifdef COMBO_BUILD
+#include "2s2h/Rando/MiscBehavior/DungeonEntrances.h"
+#endif
 
 extern "C" {
 #include "variables.h"
@@ -49,6 +52,10 @@ void HandleGiantsCutsceneSkip() {
      * We're not actually using the queued transition normally, but using its values to alter a Giants' Chamber
      * transition.
      */
+#ifdef COMBO_BUILD
+    // ComboShip: dungeon entrance shuffle — the warp lands outside the door this temple is behind.
+    Combo_MM_DungeonEntranceBossWarp(gPlayState->sceneId, &transition.entrance, &transition.cutsceneIndex);
+#endif
     transition.transitionType = gPlayState->sceneId;
     GameInteractor::Instance->events.emplace_back(transition);
 }
