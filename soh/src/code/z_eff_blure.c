@@ -254,8 +254,8 @@ s32 EffectBlure_Update(void* thisx) {
             break;
         case TRAIL_TYPE_KOKIRI_SWORD:
 #ifdef COMBO_BUILD
-            // ComboShip (Extra Child Swords): the Razor / Gilded Sword's own trail color when set (ComboChildSwords.cpp),
-            // else the Kokiri Sword's below.
+            // ComboShip (Extra Child Swords): the Razor / Gilded Sword's own trail color when set
+            // (ComboChildSwords.cpp), else the Kokiri Sword's below.
             if (Combo_ChildSwordTrailColor(&color)) {
                 changed = 1;
                 break;
