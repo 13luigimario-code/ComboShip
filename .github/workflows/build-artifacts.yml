@@ -101,7 +101,11 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y clang-format-14
           ./run-clang-format.sh
-          git diff --exit-code
+          if ! git diff --quiet; then
+            d=$(git diff | head -c 20000 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=clang-format diff::${d}"
+            exit 1
+          fi
 
       - name: Filter changed paths
         id: filter
