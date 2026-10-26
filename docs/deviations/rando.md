@@ -2960,3 +2960,39 @@ row over OOT's red), the Deku Shield on the back blue, and Din's Fire's sphere g
 with its row set and yellow again with it cleared, the child Iron Boots' soles red against the default gray, and the Deku
 Shield on the back blue. Not checked in game: the held Slingshot and Deku Shield in either game, the Hover Boots, the
 other masks, Nayru's Love, the Roc's Feather and the get-item models, the cosmetics sync rows.
+
+## Cosmetics for Majora's Mask's gear (2026-10-26)
+
+Follows "Cosmetics for the rest of OOT's gear": MM's own gear and masks get colors too, in MM's editor and, for the MM
+gear Link uses in Hyrule, in OOT's.
+
+**MM's editor, "Link & Items" tab:** two new groups, "Equipment" (Kokiri / Razor / Gilded Sword Blade and Hilt, Great
+Fairy's Sword, Hero's Shield, Hero's Bow, Hookshot) and "Masks" (all 24 masks Link wears, transformation masks included).
+2 Ship has no colors for these. MM's gear has palette textures under a white PRIM color, so each color is a tint over the
+whole piece (grayscale + color), like the OOT gear tints. Unset, nothing changes.
+- Gear (`mm/2s2h/Rando/MiscBehavior/MmGearColors.cpp`): every draw site (hand, sheath, back, first person) calls the
+  gear's own leaf list (`gKokiriSwordBladeDL`, `gLinkHumanHerosShieldDL`, ...), so the leaf is patched in place. Its
+  leading `G_MARKER` becomes a call that turns the tint on, and its `gsSPEndDisplayList` becomes a branch that turns it
+  off. The first-person bow and hookshot hands (`object_link_child_DL_018490` / `_017B40`) draw the item and the hand in
+  one list, so the tint is turned off where the hand starts, at that list's pipe sync. A list whose commands don't match
+  the vanilla asset (a mod's model) is left alone.
+- Masks: `z_player_lib.c` wraps the worn mask's draw, and the mask in Link's hand while he puts it on or takes it off
+  (`Combo_MmMaskTint`).
+- Not covered: the get-item models, the Hookshot's chain and tip (`Arms_Hook`), and Fierce Deity's sword.
+
+**OOT's editor, Equipment group:** "Razor Sword Blade / Hilt (MM)" and "Gilded Sword Blade / Hilt (MM)" (Extra Child
+Swords). OOT draws those swords from MM's archive, so MM's patches color them in Hyrule too. While OOT is the game being
+played, OOT's rows come first, then MM's rows. Each game settles this every frame: MM through its frame hook, OOT through
+a new launcher seam (`SOH_SetMmGearTintsRefresh` <- `MM_ComboGearTintsRefresh`). The patches change only when the result
+does, and the refresh from OOT runs with MM's resource manager in scope. The worn Blast / Stone / Kamaro's Masks in OOT
+(`ComboMmMasks.cpp`) follow MM's "Masks" row when OOT's own row is unset.
+
+**Cosmetics sync:** OOT's Razor/Gilded rows and its Blast/Stone/Kamaro rows fill MM's matching rows.
+
+**Tested (Linux build, 2026-10-26):** in MM, with the Kokiri Sword Blade red, Hilt green, Hero's Shield blue, Hero's Bow
+magenta, Hookshot cyan and the Keaton Mask magenta: the shield on the back and in hand is blue, the swung blade is red
+with a green hilt, the first-person bow is magenta and the hookshot cyan (the hand keeps its skin color), and the worn
+Keaton Mask is magenta. In OOT (Extra Child Swords, Razor tier), with OOT's "Razor Sword Blade (MM)" cyan and MM's Razor
+Sword Blade red / Hilt yellow: the swung blade is cyan (OOT's row wins) and the sheathed hilt is yellow (MM's row). Not
+checked in game: the Gilded Sword, the Great Fairy's Sword, the other masks, the MM masks in OOT following MM's rows, and
+the cosmetics sync rows.

@@ -259,6 +259,12 @@ std::map<std::string, CosmeticOption> cosmeticOptions = {
     COSMETIC_OPTION("Equipment.GerudoMask",         "Gerudo Mask",              COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(230, 190, 140, 255), false, true, false),
     COSMETIC_OPTION("Equipment.MaskOfTruth",        "Mask of Truth",            COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(220, 200, 160, 255), false, true, false),
     COSMETIC_OPTION("Equipment.RocsFeather",        "Roc's Feather",            COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(100, 200, 255, 255), false, true, false),
+    // ComboShip: MM's Razor and Gilded Swords (Extra Child Swords), drawn out of MM's archive: MM tints them
+    // (MmGearColors.cpp), with these rows first while OOT is played and MM's own rows otherwise.
+    COSMETIC_OPTION("Equipment.RazorSwordBlade",    "Razor Sword Blade (MM)",   COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(170, 180, 230, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.RazorSwordHilt",     "Razor Sword Hilt (MM)",    COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8( 90,  90, 160, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.GildedSwordBlade",   "Gilded Sword Blade (MM)",  COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(240, 230, 180, 255), false, true, false),
+    COSMETIC_OPTION("Equipment.GildedSwordHilt",    "Gilded Sword Hilt (MM)",   COSMETICS_GROUP_EQUIPMENT,    ColorRGBA8(230, 180,  60, 255), false, true, false),
 #endif
 
     COSMETIC_OPTION("Consumable.Hearts",            "Hearts",                   COSMETICS_GROUP_CONSUMABLE,   ColorRGBA8(255,  70,  50, 255), false, true, false),

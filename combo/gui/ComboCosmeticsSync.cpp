@@ -85,6 +85,14 @@ const CosmeticPair kPairs[] = {
     { "Magic.DinsSecondary", true, { "Player.OotDinsSecondary" } },
     { "Magic.NayrusPrimary", false, { "Player.OotNayrusPrimary" } },
     { "Magic.NayrusSecondary", true, { "Player.OotNayrusSecondary" } },
+    // MM's gear in OOT (Extra Child Swords, MM's masks): OOT's "(MM)" rows drive MM's own rows.
+    { "Equipment.RazorSwordBlade", false, { "Equipment.RazorSwordBlade" } },
+    { "Equipment.RazorSwordHilt", false, { "Equipment.RazorSwordHilt" } },
+    { "Equipment.GildedSwordBlade", false, { "Equipment.GildedSwordBlade" } },
+    { "Equipment.GildedSwordHilt", false, { "Equipment.GildedSwordHilt" } },
+    { "Equipment.BlastMask", false, { "Masks.Blast" } },
+    { "Equipment.StoneMask", false, { "Masks.Stone" } },
+    { "Equipment.KamaroMask", false, { "Masks.Kamaro" } },
     // MM's swords in OOT (Extra Child Swords): OOT's "(MM)" trail rows drive MM's own.
     { "Trails.RazorSword", false, { "Trails.RazorSwordTrail" } },
     { "Trails.GildedSword", false, { "Trails.GildedSwordTrail" } },
