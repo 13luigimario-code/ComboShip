@@ -9,8 +9,8 @@
 #include "2s2h/BenGui/CosmeticEditor.h"
 #ifdef COMBO_BUILD
 #include "align_asset_macro.h"
-// ComboShip (cross-game items): human Link's OOT Boomerang flies as OOT's model (OOT EnBoom_Draw: gBoomerangRefDL, which
-// only calls gBoomerangDL), loaded from OOT's archive through "@oot:" routing. Player_UpperAction_14 marks it
+// ComboShip (cross-game items): human Link's OOT Boomerang flies as OOT's model (OOT EnBoom_Draw: gBoomerangRefDL,
+// which only calls gBoomerangDL), loaded from OOT's archive through "@oot:" routing. Player_UpperAction_14 marks it
 // (comboOot); it also flies as OOT's (EnBoom_ComboOotFly). Drawn through Combo_Gear_Recolor for MM's "Boomerang
 // Body/Gem (OoT)" colors (CrossGearColors.cpp).
 static const ALIGN_ASSET(2) char sComboOotBoomerangDL[] = "__OTR__@oot:objects/gameplay_keep/gBoomerangDL";
