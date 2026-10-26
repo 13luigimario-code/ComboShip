@@ -150,6 +150,7 @@
 #include "ComboFileNames.h"         // ComboShip: file-name glyph codes shared with MM
 #include "rando/CrossForeign.h"     // ComboShip (#164): g_comboForeignJson for the hint-key map replay
 #include "rando/SharedItems.h"      // ComboShip: Shared Items family table
+#include "rando/CrossShuffle.h"     // ComboShip: cross-game shuffles
 #include "rando/ComboGames.h"       // ComboShip: Games (OoT only / MM only / Combo)
 #include "rando/CrossWarpLogic.h"   // ComboShip (teleport songs): cross-game warp logic bits
 #include "soh/Enhancements/randomizer/hook_handlers.h" // ComboShip (#164): OOT_ForeignMapGen
@@ -3341,6 +3342,22 @@ extern "C" COMBO_EXPORT ComboRando::SharedMask SOH_ReadComboSharedCVars(void) {
     return mask;
 }
 
+// ComboShip: cross-game shuffles (combo/rando/CrossShuffle.h). gComboCrossShuffle forces OOT's matching options at
+// generation (settings.cpp's FinalizeSettings); the menu CVars are read through SOH_ReadComboCrossShuffleCVars.
+extern "C" uint32_t gComboCrossShuffle = 0; // ComboRando::CrossShuffleMask
+extern "C" COMBO_EXPORT void SOH_SetComboCrossShuffle(ComboRando::CrossShuffleMask mask) {
+    gComboCrossShuffle = mask;
+}
+extern "C" COMBO_EXPORT ComboRando::CrossShuffleMask SOH_ReadComboCrossShuffleCVars(void) {
+    ComboRando::CrossShuffleMask mask = 0;
+    for (const auto& def : ComboRando::kCrossShuffleDefs) {
+        if (CVarGetInteger(def.cvar, 0)) {
+            mask |= def.bit;
+        }
+    }
+    return mask;
+}
+
 extern "C" COMBO_EXPORT int SOH_GetSharedTier(int family) try {
     if (family < 0 || family >= ComboRando::SF_COUNT)
         return 0;
@@ -4673,7 +4690,14 @@ extern "C" COMBO_EXPORT const char* SOH_DumpRandoStaticData(void) {
                 // meta markers (Link's Pocket, wincon) are skipped above, so emit regardless of vanilla
                 // item — red ice / icicles / fountain fairies have NO vanilla item (the item exists only
                 // when shuffled) and were being wrongly dropped, leaving them unfilled ("No Item").
-                checks.push_back({ { "name", name } });
+                // `bossReward`: an end-of-dungeon reward check (the bosses), for Cross-Game Dungeon Rewards.
+                nlohmann::json check = { { "name", name } };
+                if (std::find(Rando::StaticData::dungeonRewardLocations.begin(),
+                              Rando::StaticData::dungeonRewardLocations.end(),
+                              rc) != Rando::StaticData::dungeonRewardLocations.end()) {
+                    check["bossReward"] = true;
+                }
+                checks.push_back(std::move(check));
             }
         }
 
@@ -4683,10 +4707,15 @@ extern "C" COMBO_EXPORT const char* SOH_DumpRandoStaticData(void) {
             const std::string& in = Rando::StaticData::RetrieveItem(rg).GetName().GetEnglish();
             if (in.empty())
                 continue;
-            pool.push_back({ { "name", in },
-                             { "advancement", comboIsAdv(rg) },
-                             { "major", isMajor(rg) },
-                             { "category", comboCategory(rg) } });
+            nlohmann::json item = { { "name", in },
+                                    { "advancement", comboIsAdv(rg) },
+                                    { "major", isMajor(rg) },
+                                    { "category", comboCategory(rg) } };
+            // `dungeonReward`: a stone or medallion, for Cross-Game Dungeon Rewards.
+            if (Rando::StaticData::RetrieveItem(rg).GetItemType() == ITEMTYPE_DUNGEONREWARD) {
+                item["dungeonReward"] = true;
+            }
+            pool.push_back(std::move(item));
         }
         // itemPool excludes shop slots (CountEmptyLocations(false)); shuffled shop checks are covered
         // by junk, exactly like native FastFill's GetJunkItem() padding — Buy items stay shop-only.

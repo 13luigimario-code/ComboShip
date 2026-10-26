@@ -3078,3 +3078,52 @@ ComboShip push / pop site checks out as balanced, so the leaking code isn't know
 **Tested (Linux build, 2026-10-26):** a normal MM session logs nothing. Through the test hook, 3 pushes left on the stack
 log one line naming the leaking line (`lib2ship.so+0xc019e5` -> `ZTestHook.cpp:104` with `addr2line`). 40 more, enough to
 overflow, are absorbed, and the game keeps running with the HUD intact.
+
+## Cross-Game Dungeon Rewards (OoTMM cross-games rewards, 2026-10-26)
+
+Combo menu "Cross-Game Shuffles" > "Cross-Game Dungeon Rewards" (`gCombo.Rando.CrossDungeonRewards`;
+`combo/rando/CrossShuffle.h`). The spiritual stones, the medallions and the boss remains are one pool, and every boss of
+both games holds one of them: the eight Ocarina of Time dungeon bosses (`Rando::StaticData::dungeonRewardLocations`)
+and the four Majora's Mask temple boss warps (`RCTYPE_REMAINS`). 9 + 4 rewards for 12 bosses: one OOT reward goes in
+Link's Pocket, as in SoH's End of Dungeons.
+
+**Seed-bound.** The spoiler (and so the slot's `combo.rando`) records top-level `crossShuffle` (an array of keys,
+`"dungeonRewards"`); absent = none, so every older seed is unchanged. The launcher reads the menu through
+`SOH_ReadComboCrossShuffleCVars` (none in a solo seed) and pushes the mask into both DLLs before every dump
+(`SOH_SetComboCrossShuffle` / `MM_SetComboCrossShuffle`), on slot load, after a generation (back to the loaded slot's)
+and on reload. `comborando` takes `--cross-rewards on|off` and reads `crossShuffle` back in `--playthrough`.
+
+**Forced per-game options.** Each game's own reward shuffle is overridden for the seed:
+- OOT (`settings.cpp` FinalizeSettings, COMBO block): Dungeon Rewards = Anywhere, Link's Pocket = Dungeon Reward (set
+  before the native End of Dungeons block, so the pocket's reward kind stays the player's). `ComboFillConfined`'s
+  `RandomizeDungeonRewards` then puts one reward in the pocket and leaves the other eight in the free pool.
+- MM (`Combo_MM_ForcedOption`, `BenPort.cpp`): Boss Remains = Anywhere, wherever the save-building paths read the option
+  CVars (`MM_InitRandoSaveFile`'s options, `MM_DumpRandoStaticData`, the oracle reset). The boss warps are then checks
+  and the remains are free pool items.
+
+**Fill.** The dumps mark rewards (`pool[].dungeonReward`) and bosses (`checks[].bossReward`). `CrossWorldCombinedFill`
+(`crossShuffle` argument) adds Phase R after the portal prerequisites (Phase A0, which no longer takes a boss): every
+reward, in random order, goes to a random boss that is reachable while every advancement item not placed yet (the other
+rewards too) is owned, the assumed fill SoH's End of Dungeons uses. A reward with no reachable boss left (the last stone
+with only adult bosses open behind a closed Door of Time) retries the phase in a new order, `kMaxRewardTries` (8) times,
+before failing the pass; rewards beyond the bosses' count stay in the pool. A dump with no marked boss is a stale DLL and
+fails the generation.
+
+The bosses stay free for Phase R: each game's own confined placement would otherwise take them under "Anywhere" (the
+first test seed had dungeon maps and keys on three OOT bosses). `ComboFillConfined` holds the empty OOT bosses with a
+placeholder through its confined fills (own-dungeon items, restricted songs, the Mask Shop Key) and frees them at the end;
+the MM dump keeps the boss warps out of `PreplaceConfinedItems`. A boss the player excluded already holds junk and is
+skipped.
+
+**Runtime.** Nothing new: a reward in the other game's boss check is an ordinary cross-game item (foreign marker, real
+model, delivery), and both trackers already list the boss checks under Anywhere. The Temple of Time altar text already
+resolves rewards placed in MM (`CrossHints.h`), and the Clock Town "Boss Remains" posters remains placed in OOT
+(`GetItemLocationHintName`).
+
+**Not changed:** the Combo menu doesn't grey out the overridden options in the per-game menus (the Combo menu says what
+it overrides). A reward picked as a portal prerequisite (none in practice) is placed by Phase A0, not on a boss.
+
+**Tested (Linux build, 2026-10-26):** headless, 9 seeds with the setting on all generate on the first pass (Phase R needed
+up to 3 orders), with a reward on all 12 bosses and the 13th in Link's Pocket, OOT rewards on MM bosses and remains on OOT
+bosses; `--playthrough` beats one of them (sphere 19); the same seed with the setting off generates as before. Not
+checked in game: a boss handing over the other game's reward.

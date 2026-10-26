@@ -977,6 +977,28 @@ static FnSetComboFwPeer SOH_SetComboFwPeer = nullptr;
 static FnSetComboFwPeer MM_SetComboFwPeer = nullptr;
 // Shared-items mask of the LOADED slot (seed-bound, like g_goalHunt/g_startingGameMM). Absent key = 0.
 static ComboRando::SharedMask g_sharedMask = 0;
+// Cross-game shuffles (combo/rando/CrossShuffle.h): read from soh.dll's CVars at generation, seed-bound after (spoiler
+// "crossShuffle"), pushed to both DLLs, which force their matching options from it (OOT's FinalizeSettings, MM's save
+// and dump).
+typedef void (*FnSetComboCrossShuffle)(ComboRando::CrossShuffleMask mask);
+typedef ComboRando::CrossShuffleMask (*FnReadComboCrossShuffleCVars)(void);
+static FnSetComboCrossShuffle SOH_SetComboCrossShuffle = nullptr;
+static FnSetComboCrossShuffle MM_SetComboCrossShuffle = nullptr;
+static FnReadComboCrossShuffleCVars SOH_ReadComboCrossShuffleCVars = nullptr;
+// Cross-game shuffles of the LOADED slot. Absent key = 0.
+static ComboRando::CrossShuffleMask g_crossShuffle = 0;
+static void PushComboCrossShuffle(ComboRando::CrossShuffleMask mask) {
+    if (SOH_SetComboCrossShuffle)
+        SOH_SetComboCrossShuffle(mask);
+    if (MM_SetComboCrossShuffle)
+        MM_SetComboCrossShuffle(mask);
+}
+// The menu's cross-game shuffles for a generation (none in a solo seed).
+static ComboRando::CrossShuffleMask MenuCrossShuffle(ComboRando::ComboGames games) {
+    if (ComboRando::ComboGamesSolo(games) || !SOH_ReadComboCrossShuffleCVars)
+        return 0;
+    return SOH_ReadComboCrossShuffleCVars();
+}
 static bool g_sharedReconcilePending = false;
 
 // ComboShip (teleport songs): OOT's Song of Soaring reads MM's owl-statue flags and arrival entrances.
@@ -1395,6 +1417,7 @@ static void LoadComboCompletion(int slot) {
     g_goalTotal = -1;
     g_startingGameMM = false;
     g_sharedMask = 0;
+    g_crossShuffle = 0;
     g_comboGames = ComboRando::COMBO_GAMES_BOTH;
     if (MM_SetComboSharedItems)
         MM_SetComboSharedItems(0); // clear before the slot read below re-pushes the loaded value (or stays 0)
@@ -1418,9 +1441,12 @@ static void LoadComboCompletion(int slot) {
         g_sharedMask = ComboRando::SharedMaskFromKeys(rando.value("sharedItems", nlohmann::json::array()));
         // Games: absent = combo (every seed before the setting).
         g_comboGames = ComboRando::ComboGamesFromKey(rando.value("games", std::string("ootmm")));
+        // Cross-game shuffles: absent = none (every seed before them).
+        g_crossShuffle = ComboRando::CrossShuffleFromKeys(rando.value("crossShuffle", nlohmann::json::array()));
     }
     // Push outside the container lock — the DLL setters must never re-enter the sidecar.
     PushComboGames(g_comboGames);
+    PushComboCrossShuffle(g_crossShuffle);
     if (SOH_SetComboGoal)
         SOH_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwOotPieces(g_goalTotal, g_comboGames));
     if (MM_SetComboGoal)
@@ -1441,6 +1467,7 @@ static void RestoreLoadedSlotGoal() {
     if (g_comboCompletionSlot < 0)
         return;
     PushComboGames(g_comboGames);
+    PushComboCrossShuffle(g_crossShuffle);
     if (SOH_SetComboGoal)
         SOH_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwOotPieces(g_goalTotal, g_comboGames));
     if (MM_SetComboGoal)
@@ -1812,6 +1839,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
     bool resolvedMmStart = false;
     // Shared Items: read via soh.dll — the launcher has no CVar access.
     const ComboRando::SharedMask sharedMask = solo ? 0 : (SOH_ReadComboSharedCVars ? SOH_ReadComboSharedCVars() : 0);
+    const ComboRando::CrossShuffleMask crossShuffle = MenuCrossShuffle(games);
     if (solo)
         std::cout << "[ComboShip] RunComboFill: games = " << ComboRando::ComboGamesKey(games)
                   << " (solo: items stay in their own game, no Shared Items)\n";
@@ -1891,6 +1919,9 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         // Shared Items: shapes OOT's wallet force before the dump (settings.cpp reads gComboSharedMask).
         if (SOH_SetComboSharedItems)
             SOH_SetComboSharedItems(sharedMask);
+        // Cross-game shuffles force each game's matching options (OOT's reward shuffle, MM's remains), which shape
+        // both pools.
+        PushComboCrossShuffle(crossShuffle);
 
         sohDump = SOH_DumpRandoStaticData();
         mmDump = MM_DumpRandoStaticData();
@@ -1952,7 +1983,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         ComboRando::OotAccess ootAccess = ComboRando::OotAccessFromDump(sohDump);
         auto result = ComboRando::CrossWorldCombinedFill(
             sohDump, mmDump, masterSeed, ootOracle, mmOracle, progress, forcedOot, ootAccess, goal,
-            mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, sharedMask, games);
+            mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, sharedMask, games, crossShuffle);
         if (cancelled()) // before the success/retry branch, so a cancel never retries
             return;
 
@@ -2195,6 +2226,8 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         consolidated["startingGame"] = resolvedMmStart ? "MM" : "OOT";
         // Games (ComboGames.h): seed-bound too. Absent on older seeds = combo.
         consolidated["games"] = ComboRando::ComboGamesKey(games);
+        // Cross-game shuffles (CrossShuffle.h): seed-bound too. Absent on older seeds = none.
+        consolidated["crossShuffle"] = ComboRando::CrossShuffleKeys(crossShuffle);
         // ComboShip (#90): OOT entrance layout — informational, reload re-derives it from masterSeed.
         {
             nlohmann::json ootEnt = nlohmann::json::array();
@@ -2294,6 +2327,7 @@ static int RunComboGenTest(int numSeeds, uint32_t seedBase) {
     std::cout << "[GENTEST] running " << numSeeds << " cross-world generations (seedBase=" << seedBase
               << ") — asserting every advancement item is reachable from an empty start in both games\n";
     const int startCfg = SOH_ReadComboStartingGameCVar ? SOH_ReadComboStartingGameCVar() : 0;
+    const ComboRando::CrossShuffleMask crossShuffle = MenuCrossShuffle(ComboRando::COMBO_GAMES_BOTH);
     int failures = 0;
     auto t0 = std::chrono::steady_clock::now();
     for (int i = 0; i < numSeeds; ++i) {
@@ -2314,6 +2348,7 @@ static int RunComboGenTest(int numSeeds, uint32_t seedBase) {
                 MM_SetComboRandoSeed(seed);
             if (SOH_SetComboStartingGame)
                 SOH_SetComboStartingGame(mmStart ? 1 : 0);
+            PushComboCrossShuffle(crossShuffle);
             std::string sohDump = SOH_DumpRandoStaticData();
             std::string mmDump = MM_DumpRandoStaticData();
             if (sohDump.empty() || mmDump.empty()) {
@@ -2333,7 +2368,8 @@ static int RunComboGenTest(int numSeeds, uint32_t seedBase) {
             }
             result = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, seed, ootOracle, mmOracle, nullptr, forcedOot,
                                                         ComboRando::OotAccessFromDump(sohDump), {},
-                                                        mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT);
+                                                        mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, 0,
+                                                        ComboRando::COMBO_GAMES_BOTH, crossShuffle);
             if (!result.success && mmStart && startCfg == 2)
                 pinStartOot = true;
             Combo_MM_Rando_Restore(); // reset the MM oracle's snapshot guard for the next fill
@@ -2402,6 +2438,7 @@ static void RunComboPlaythrough(const std::string& inputSeed) {
     std::string sohDump, mmDump;
     ComboRando::CombinedFillResult fill{};
     const int startCfg = SOH_ReadComboStartingGameCVar ? SOH_ReadComboStartingGameCVar() : 0;
+    const ComboRando::CrossShuffleMask crossShuffle = MenuCrossShuffle(ComboRando::COMBO_GAMES_BOTH);
     bool pinStartOot = false, resolvedMmStart = false; // #135, same fallback as RunComboFill
     // Mirror RunComboFill including its retries — the player's seed may have come from attempt 1, and
     // validating only attempt 0 would either report "did not generate" or log a world they never got.
@@ -2415,6 +2452,7 @@ static void RunComboPlaythrough(const std::string& inputSeed) {
             MM_SetComboRandoSeed(masterSeed);
         if (SOH_SetComboStartingGame)
             SOH_SetComboStartingGame(mmStart ? 1 : 0);
+        PushComboCrossShuffle(crossShuffle);
         sohDump = SOH_DumpRandoStaticData();
         mmDump = MM_DumpRandoStaticData();
         if (sohDump.empty() || mmDump.empty()) {
@@ -2434,7 +2472,8 @@ static void RunComboPlaythrough(const std::string& inputSeed) {
         }
         fill = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, ootOracle, mmOracle, nullptr, forcedOot,
                                                   ComboRando::OotAccessFromDump(sohDump), {},
-                                                  mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT);
+                                                  mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, 0,
+                                                  ComboRando::COMBO_GAMES_BOTH, crossShuffle);
         if (!fill.success) {
             if (mmStart && startCfg == 2)
                 pinStartOot = true;
@@ -2710,6 +2749,8 @@ static int Combo_OnReloadRequest(const char* path) {
             if (SOH_SetComboSharedItems)
                 SOH_SetComboSharedItems(
                     ComboRando::SharedMaskFromKeys(j.value("sharedItems", nlohmann::json::array())));
+            // Cross-game shuffles: same, for the options they force.
+            PushComboCrossShuffle(ComboRando::CrossShuffleFromKeys(j.value("crossShuffle", nlohmann::json::array())));
         }
         auto oot = j.value("oot", nlohmann::json::object());
         auto mm = j.value("mm", nlohmann::json::object());
@@ -3393,6 +3434,10 @@ int main(int argc, char** argv) {
     // keeps its 2ship defaults, never suppressed).
     MM_SetComboSharedItems = (FnSetComboSharedItems)GetSym(mmModule, "MM_SetComboSharedItems");
     SOH_ReadComboSharedCVars = (FnReadComboSharedCVars)GetSym(sohModule, "SOH_ReadComboSharedCVars");
+    // Cross-game shuffles seam (CrossShuffle.h): optional, a missing export reads as none.
+    SOH_SetComboCrossShuffle = (FnSetComboCrossShuffle)GetSym(sohModule, "SOH_SetComboCrossShuffle");
+    MM_SetComboCrossShuffle = (FnSetComboCrossShuffle)GetSym(mmModule, "MM_SetComboCrossShuffle");
+    SOH_ReadComboCrossShuffleCVars = (FnReadComboCrossShuffleCVars)GetSym(sohModule, "SOH_ReadComboCrossShuffleCVars");
     SOH_GetSharedTier = (FnGetSharedTier)GetSym(sohModule, "SOH_GetSharedTier");
     MM_GetSharedTier = (FnGetSharedTier)GetSym(mmModule, "MM_GetSharedTier");
     SOH_RaiseSharedTier = (FnRaiseSharedTier)GetSym(sohModule, "SOH_RaiseSharedTier");
