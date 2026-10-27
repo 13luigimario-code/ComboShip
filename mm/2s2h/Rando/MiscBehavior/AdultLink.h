@@ -55,6 +55,9 @@ float Combo_AdultLink_MeleeWeaponLength(struct Player* player, int meleeWeapon, 
 void* Combo_AdultLink_BottleDL(void);
 // OOT adult Link's bow string.
 void* Combo_AdultLink_BowStringDL(void);
+// Sheath-limb space, instead of MM's shield on his back: an installed model's custom shield (AdultLinkModel.h), or
+// NULL to draw MM's.
+void* Combo_AdultLink_CustomBackShieldDL(struct Player* player);
 // Sheath-limb space: the transform that sizes MM's back shields for adult Link (push the matrix stack first).
 void Combo_AdultLink_GearTransform(void);
 // OOT adult Link's closed fist for a hand limb (near/far by lod).

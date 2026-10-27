@@ -83,6 +83,7 @@ CrowdControl* CrowdControl::Instance;
 #ifdef COMBO_BUILD
 #include "2s2h/Rando/MiscBehavior/AgeRequirements.h"
 #include "2s2h/Rando/MiscBehavior/AdultLink.h"
+#include "2s2h/Rando/MiscBehavior/AdultLinkModel.h"
 #endif
 #include "2s2h/Rando/Rando.h"
 #include "2s2h/Rando/Spoiler/Spoiler.h"
@@ -1385,6 +1386,7 @@ extern "C" void DeinitOTR() {
     // ComboShip: drop the resident-RM refs now so MM's ResourceManager dies on the main thread
     // during shutdown. Left in these statics/registry, it would instead die in DLL-unload static
     // destructors, where its thread pool joins workers under the loader lock and deadlocks.
+    Combo_AdultLinkModel_Shutdown(); // the adult Link model's own ResourceManager, likewise
     Ship::CrossRMRegistry::Unregister("mm");
     sMMResourceManager = nullptr;
 #endif

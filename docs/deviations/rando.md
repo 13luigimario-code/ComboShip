@@ -2677,6 +2677,37 @@ created (`Player_Init`, human form only, `Combo_AdultLink_IsAdultAge`).
 - **Known gaps:** a held Deku Stick and the transformation-mask cutscene items keep MM's child placement. The
   All-Night and Kamaro masks fit closely enough that adult Link's face shows through at the edges.
 
+### Cross-Games Age: a player-installed adult Link model (2026-10-27)
+
+Ship of Harkinian model mods for adult Link can give MM's adult Link another look without touching OOT's Link
+(`mm/2s2h/Rando/MiscBehavior/AdultLinkModel.{h,cpp}`). Nothing is bundled: players put the mod files (`.o2r`, `.otr`
+or `.zip`) in `mods/mm-adult-link`, next to `mods/soh` and `mods/2ship`. The folder is made, with a note file, the
+first time adult Link appears.
+
+- **Loading:** the first time adult Link is set up in a session, the folder's files are layered over OOT's own
+  archives (the ones OOT's ResourceManager has, OOT's mods included) in a ResourceManager of their own, with
+  alternate assets on, registered as `mmadult` for the interpreter's `@<game>:` routing. Model mods use OOT adult
+  Link's own textures, which resolve there. OOT's ResourceManager never sees these files, so OOT's Link stays as it
+  is. Where two files replace the same thing, the one whose name sorts first wins. Files added mid-session are picked
+  up on the next launch.
+- **What's used, as Ship of Harkinian uses it:**
+  - *Body:* a replaced adult skeleton (`objects/object_link_boy/gLinkAdultSkel`) gives each body limb its list
+    (skeleton limb i is MM's limb i + 1; the limbs' joint offsets in these mods are OOT's within a few units). The
+    hands and the sheath are left out, as in OOT, which draws them from its own hand and sheath lists rather than the
+    skeleton. Each limb list is copied between a `G_COMBO_RM_PUSH("mmadult")`/`POP` bracket, since the skeleton draw
+    submits limbs as raw pointers. A call to a material no file has becomes a no-op (logged once): Skilar's MM Adult
+    Link leaves out the materials of its hand and sheath limbs, which Ship of Harkinian never draws, and one head
+    triangle uses one of them.
+  - *Lists and textures by name:* any OOT adult list or texture ComboShip draws for adult Link (fists, item hands,
+    first-person arms, eyes and mouths, bottle, bow string, gauntlet plates) is taken from the mods when one replaces
+    it (`Combo::AdultLinkModel::Path`).
+  - *Custom equipment (`objects/object_custom_equip`):* the Hylian Shield model stands in for MM's Hero's Shield and
+    the Mirror Shield model for MM's, in his closed fist (Ship of Harkinian's `gCustom*ShieldDL`) and on his back
+    (`gCustom*ShieldOnBackDL`, drawn in sheath-limb space at its own size). OOT's Deku Shield as a cross-game item is
+    drawn as before. MM has no Master Sword, so a Master Sword mod changes nothing in Termina.
+- **Not carried over:** MM's hair, linen and boot color options recolor OOT's own lists, so they don't apply to a
+  replaced body. The tunic color still does, through the environment color, where the model shades with it.
+
 ### Cross-Games Age: MM age requirements (OoTMM `items.mmAgeRequirements`) (2026-10-12)
 
 OoTMM's "<item> requires Child Link / requires Adult Link" pairs and "Random MM Age Requirements", as one MM option per

@@ -4511,17 +4511,25 @@ void Player_PostLimbDrawGameplay(PlayState* play, s32 limbIndex, Gfx** dList1, G
             // ComboShip (cross-game items): the Deku Shield on the back is OOT's own (with its matrix). Cross-Games
             // Age: adult Link carries it bigger, like the rest of MM's gear.
             s32 comboAdultShield = Combo_AdultLink_Is(player);
+            Gfx* comboCustomShield = (Gfx*)Combo_AdultLink_CustomBackShieldDL(player);
 
+            OPEN_DISPS(play->state.gfxCtx);
             if (comboAdultShield) {
-                OPEN_DISPS(play->state.gfxCtx);
                 Matrix_Push();
-                Combo_AdultLink_GearTransform();
+                if (comboCustomShield == NULL) {
+                    Combo_AdultLink_GearTransform();
+                }
                 MATRIX_FINALIZE_AND_LOAD(POLY_OPA_DISP++, play->state.gfxCtx);
-                CLOSE_DISPS(play->state.gfxCtx);
             }
-            CosmeticEditor_DrawBackShield(play, (Combo_Tools_BackShieldDL(player) != NULL)
-                                                    ? (Gfx*)Combo_Tools_BackShieldDL(player)
-                                                    : gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);
+            if (comboCustomShield != NULL) {
+                // An installed adult Link model's own shield, made for this limb at adult size.
+                gSPDisplayList(POLY_OPA_DISP++, comboCustomShield);
+            } else {
+                CosmeticEditor_DrawBackShield(play, (Combo_Tools_BackShieldDL(player) != NULL)
+                                                        ? (Gfx*)Combo_Tools_BackShieldDL(player)
+                                                        : gPlayerShields[2 * ((player->currentShield - 1) ^ 0)]);
+            }
+            CLOSE_DISPS(play->state.gfxCtx);
             if (comboAdultShield) {
                 Matrix_Pop();
                 Combo_AdultLink_RestoreTunicColor(play); // MM's shields set their own environment color

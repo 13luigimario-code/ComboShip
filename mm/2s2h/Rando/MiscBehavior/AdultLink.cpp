@@ -10,6 +10,7 @@
 #ifdef COMBO_BUILD
 
 #include "AdultLink.h"
+#include "AdultLinkModel.h"
 #include "CrossGear.h"
 #include "2s2h/Rando/Rando.h"
 #include "2s2h/Rando/StaticData/StaticData.h"
@@ -97,8 +98,13 @@ bool IsPath(const void* dList, const char* path) {
     return (strncmp(str, "__OTR__", 7) == 0) && (strcmp(str, path) == 0);
 }
 
+// An OOT adult list (or texture) path, or the installed model's version of it (AdultLinkModel.h).
+const char* Mod(const char* path) {
+    return Combo::AdultLinkModel::Path(path);
+}
+
 const char* Pick(const LodPair& pair, int lod) {
-    return (lod == 0) ? pair.nearDL : pair.farDL;
+    return Mod((lod == 0) ? pair.nearDL : pair.farDL);
 }
 
 extern "C" Color_RGB8 CosmeticEditor_GetComboColor(const char* id, Color_RGB8 defaultColor); // CosmeticEditor.cpp
@@ -211,6 +217,45 @@ const HandMap kHands[] = {
     { gLinkHumanRightHandHoldingBowDL, nullptr, CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed },
     { gLinkHumanRightHandHoldingHookshotDL, nullptr, CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed },
 };
+
+// MM's shields drawn with an installed model's custom equipment (Ship of Harkinian's object_custom_equip, which OOT
+// adult Link holds in his closed fist): the Hylian Shield model for the Hero's Shield, the Mirror Shield's for MM's.
+struct CustomShield {
+    u8 shield;         // PLAYER_SHIELD_*
+    const char* human; // MM's hand holding it
+    const char* inHand;
+    const char* onBack;
+};
+const CustomShield kCustomShields[] = {
+    { PLAYER_SHIELD_HEROS_SHIELD, gLinkHumanRightHandHoldingHerosShieldDL, "gCustomHylianShieldDL",
+      "gCustomHylianShieldOnBackDL" },
+    { PLAYER_SHIELD_MIRROR_SHIELD, gLinkHumanRightHandHoldingMirrorShieldDL, "gCustomMirrorShieldDL",
+      "gCustomMirrorShieldOnBackDL" },
+};
+std::map<std::pair<const char*, int>, std::vector<Gfx>> sCustomShieldHands;
+
+// The fist with the installed model's shield, or nullptr when it has none for that MM shield hand.
+Gfx* CustomShieldHand(const char* human, int lod) {
+    for (const CustomShield& shield : kCustomShields) {
+        if (shield.human != human) {
+            continue;
+        }
+        const char* equip = Combo::AdultLinkModel::Equip(shield.inHand);
+        if (equip == nullptr) {
+            return nullptr;
+        }
+        std::vector<Gfx>& gfx = sCustomShieldHands[{ human, lod }];
+        if (gfx.empty()) {
+            Gfx fist = gsDma1p(G_DL_OTR_FILEPATH, Pick(kRightHandClosed, lod), 0, G_DL_PUSH);
+            Gfx item = gsDma1p(G_DL_OTR_FILEPATH, equip, 0, G_DL_PUSH);
+            Gfx tunic = gsSPDisplayList(sTunicEnvDL);
+            Gfx end = gsSPEndDisplayList();
+            gfx = { fist, item, tunic, end };
+        }
+        return gfx.data();
+    }
+    return nullptr;
+}
 
 // Masks worn on top of the head, which adult Link's long cap would poke through.
 bool MaskReplacesCap(u8 mask) {
@@ -363,6 +408,7 @@ extern "C" int Combo_AdultLink_OnPlayerInit(Player* player) {
                        (player->transformation == PLAYER_FORM_HUMAN) && Combo_AdultLink_IsAdultAge();
     if (adult) {
         sAdultPlayer = player;
+        Combo::AdultLinkModel::Init(); // a player-installed model (once a session)
     } else if (sAdultPlayer == player) {
         sAdultPlayer = nullptr;
     }
@@ -419,8 +465,8 @@ extern "C" void Combo_AdultLink_SetupDraw(PlayState* play, Player* player, int e
 
     sKeptHand = -1;
     OPEN_DISPS(play->state.gfxCtx);
-    gSPSegment(POLY_OPA_DISP++, 0x08, (uintptr_t)kEyes[eyeIndex]);
-    gSPSegment(POLY_OPA_DISP++, 0x09, (uintptr_t)kMouths[mouthIndex]);
+    gSPSegment(POLY_OPA_DISP++, 0x08, (uintptr_t)Mod(kEyes[eyeIndex]));
+    gSPSegment(POLY_OPA_DISP++, 0x09, (uintptr_t)Mod(kMouths[mouthIndex]));
     gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);
     CLOSE_DISPS(play->state.gfxCtx);
     Gfx* tunicEnv = sTunicEnvDL;
@@ -446,12 +492,13 @@ extern "C" void Combo_AdultLink_DrawGear(PlayState* play, Player* player) {
     OPEN_DISPS(play->state.gfxCtx);
     gDPPipeSync(POLY_OPA_DISP++);
     gDPSetEnvColor(POLY_OPA_DISP++, color.r, color.g, color.b, 0);
-    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kGauntletLeft1);
-    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)kGauntletRight1);
+    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)Mod(kGauntletLeft1));
+    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)Mod(kGauntletRight1));
     // The gem color (CrossGearColors.cpp) lives in the hand plates.
-    gSPDisplayList(POLY_OPA_DISP++, (Gfx*)Combo_Gear_Recolor(sLeftHandOpen ? kGauntletLeftOpen : kGauntletLeftClosed));
     gSPDisplayList(POLY_OPA_DISP++,
-                   (Gfx*)Combo_Gear_Recolor(sRightHandOpen ? kGauntletRightOpen : kGauntletRightClosed));
+                   (Gfx*)Combo_Gear_Recolor(Mod(sLeftHandOpen ? kGauntletLeftOpen : kGauntletLeftClosed)));
+    gSPDisplayList(POLY_OPA_DISP++,
+                   (Gfx*)Combo_Gear_Recolor(Mod(sRightHandOpen ? kGauntletRightOpen : kGauntletRightClosed)));
     CLOSE_DISPS(play->state.gfxCtx);
 }
 
@@ -483,11 +530,23 @@ extern "C" float Combo_AdultLink_MeleeWeaponLength(Player* player, int meleeWeap
 }
 
 extern "C" void* Combo_AdultLink_BottleDL(void) {
-    return (void*)kBottle;
+    return (void*)Mod(kBottle);
 }
 
 extern "C" void* Combo_AdultLink_BowStringDL(void) {
-    return (void*)kBowString;
+    return (void*)Mod(kBowString);
+}
+
+extern "C" void* Combo_AdultLink_CustomBackShieldDL(Player* player) {
+    if (!Combo_AdultLink_Is(player) || (Combo_Tools_BackShieldDL(player) != nullptr)) {
+        return nullptr; // a cross-game shield (OOT's Deku Shield) is drawn as it is
+    }
+    for (const CustomShield& shield : kCustomShields) {
+        if (player->currentShield == shield.shield) {
+            return (void*)Combo::AdultLinkModel::Equip(shield.onBack);
+        }
+    }
+    return nullptr;
 }
 
 extern "C" void* Combo_AdultLink_ClosedFistDL(int limbIndex, int lod) {
@@ -517,16 +576,16 @@ static void RemapLimb(PlayState* play, Player* player, int limbIndex, void** dLi
         // OOT's names are swapped relative to the limbs), including the right forearm MM leaves out.
         switch (limbIndex) {
             case PLAYER_LIMB_LEFT_FOREARM:
-                *dList = (void*)kAimLeftForearm;
+                *dList = (void*)Mod(kAimLeftForearm);
                 return;
             case PLAYER_LIMB_LEFT_HAND:
-                *dList = (void*)kAimLeftHand;
+                *dList = (void*)Mod(kAimLeftHand);
                 return;
             case PLAYER_LIMB_RIGHT_SHOULDER:
-                *dList = (void*)kAimRightShoulder;
+                *dList = (void*)Mod(kAimRightShoulder);
                 return;
             case PLAYER_LIMB_RIGHT_FOREARM:
-                *dList = (void*)kAimRightForearm;
+                *dList = (void*)Mod(kAimRightForearm);
                 return;
             case PLAYER_LIMB_RIGHT_HAND: {
                 void* slingshot = Combo_Tools_AdultFirstPersonRightHandDL(play, player);
@@ -539,7 +598,7 @@ static void RemapLimb(PlayState* play, Player* player, int limbIndex, void** dLi
                 const bool hookshot = Player_IsHoldingHookshot(player);
                 Gfx* gear = AdultGear(hookshot ? gLinkHumanRightHandHoldingHookshotDL : gLinkHumanRightHandHoldingBowDL,
                                       CHILD_FIST("gLinkHumanRightHandClosedDL"), &kRightHandClosed, 0);
-                *dList = (gear != nullptr) ? (void*)gear : hookshot ? (void*)kAimHookshot : (void*)kAimBow;
+                *dList = (gear != nullptr) ? (void*)gear : (void*)Mod(hookshot ? kAimHookshot : kAimBow);
                 return;
             }
             default:
@@ -565,7 +624,10 @@ static void RemapLimb(PlayState* play, Player* player, int limbIndex, void** dLi
                 *dList = (void*)Pick(*hand.adult, lod);
                 return;
             }
-            Gfx* gear = AdultGear(hand.human, hand.childFist, hand.adultFist, lod);
+            Gfx* gear = CustomShieldHand(hand.human, lod);
+            if (gear == nullptr) {
+                gear = AdultGear(hand.human, hand.childFist, hand.adultFist, lod);
+            }
             *dList = (gear != nullptr)
                          ? (void*)gear
                          : (void*)Pick((limbIndex == PLAYER_LIMB_LEFT_HAND) ? kLeftHandSword : kRightHandClosed, lod);
@@ -587,7 +649,10 @@ static void RemapLimb(PlayState* play, Player* player, int limbIndex, void** dLi
         *dList = nullptr; // a hat-like mask: OOT's long cap would poke through it (child Link's fits inside)
         return;
     }
-    if (kBody[limbIndex].nearDL[0] != '\0') {
+    Gfx* model = Combo::AdultLinkModel::Limb(limbIndex); // an installed model's body (hands and sheath excluded)
+    if (model != nullptr) {
+        *dList = (void*)model;
+    } else if (kBody[limbIndex].nearDL[0] != '\0') {
         *dList = (void*)Pick(kBody[limbIndex], lod);
     }
 }
