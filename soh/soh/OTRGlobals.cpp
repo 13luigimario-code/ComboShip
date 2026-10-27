@@ -5840,6 +5840,10 @@ static uint32_t sComboCrossOut = 0;
 extern "C" uint32_t gComboOracleXdIn;
 bool Combo_OoT_TakeCrossDungeonIn(const std::string& name);
 uint32_t Combo_OoT_CrossDoorsReached();
+// ComboShip (Cross-Game Boss Entrances): likewise.
+extern "C" uint32_t gComboOracleXrIn;
+bool Combo_OoT_TakeCrossBossIn(const std::string& name);
+uint32_t Combo_OoT_CrossBossDoorsReached();
 #endif
 
 extern "C" COMBO_EXPORT void Combo_SOH_Rando_Reset(void) {
@@ -5848,6 +5852,7 @@ extern "C" COMBO_EXPORT void Combo_SOH_Rando_Reset(void) {
 #ifdef COMBO_BUILD
     gComboOracleCrossIn = 0; // ComboShip (teleport songs): inputs belong to one query
     gComboOracleXdIn = 0;    // ComboShip (Cross-Game Dungeon Entrances): likewise
+    gComboOracleXrIn = 0;    // ComboShip (Cross-Game Boss Entrances): likewise
 #endif
     ctx->GetLogic()->Reset();
     Regions::AccessReset();
@@ -5877,6 +5882,10 @@ extern "C" COMBO_EXPORT void Combo_SOH_Rando_SetOwnedItems(const char* itemNames
             }
             // ComboShip (Cross-Game Dungeon Entrances): a dungeon behind an MM door Link reached (CrossDungeons.h).
             if (Combo_OoT_TakeCrossDungeonIn(name.get<std::string>())) {
+                continue;
+            }
+            // ComboShip (Cross-Game Boss Entrances): a boss room behind an MM boss door Link reached.
+            if (Combo_OoT_TakeCrossBossIn(name.get<std::string>())) {
                 continue;
             }
 #endif
@@ -5922,8 +5931,10 @@ extern "C" COMBO_EXPORT const char* Combo_SOH_Rando_GetReachableChecks(void) {
     }
     // ComboShip (Cross-Game Dungeon Entrances): the swapped dungeon doors Link reached, per age.
     sComboCrossOut |= Combo_OoT_CrossDoorsReached();
+    sComboCrossOut |= Combo_OoT_CrossBossDoorsReached(); // ... and swapped boss doors
     gComboOracleCrossIn = 0;
     gComboOracleXdIn = 0;
+    gComboOracleXrIn = 0;
 #endif
     nlohmann::json out = nlohmann::json::array();
     for (RandomizerCheck rc : reachable) {

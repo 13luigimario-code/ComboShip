@@ -27,6 +27,8 @@ enum CrossShuffleBit : uint32_t {
     // Cross-Game Dungeon Entrances (CrossDungeons.h): needs both games' own dungeon entrance shuffles, which it
     // doesn't force.
     CROSS_SHUFFLE_DUNGEON_ENTRANCES = 1u << 1,
+    // Cross-Game Boss Entrances (CrossDungeons.h): needs both games' own boss room shuffles, which it doesn't force.
+    CROSS_SHUFFLE_BOSS_ENTRANCES = 1u << 2,
 };
 
 struct CrossShuffleDef {
@@ -38,6 +40,7 @@ struct CrossShuffleDef {
 inline constexpr CrossShuffleDef kCrossShuffleDefs[] = {
     { CROSS_SHUFFLE_DUNGEON_REWARDS, "dungeonRewards", "gCombo.Rando.CrossDungeonRewards" },
     { CROSS_SHUFFLE_DUNGEON_ENTRANCES, "dungeonEntrances", "gCombo.Rando.CrossDungeonEntrances" },
+    { CROSS_SHUFFLE_BOSS_ENTRANCES, "bossEntrances", "gCombo.Rando.CrossBossEntrances" },
 };
 
 inline CrossShuffleMask CrossShuffleFromKeys(const nlohmann::json& keys) {

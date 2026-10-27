@@ -59,6 +59,15 @@ void RegionTable_Init_Root() {
         ENTRANCE(RR_BOTW_ENTRYWAY,                   logic->ComboCrossDungeon(RR_BOTW_ENTRYWAY), false),
         ENTRANCE(RR_ICE_CAVERN_ENTRYWAY,             logic->ComboCrossDungeon(RR_ICE_CAVERN_ENTRYWAY), false),
         ENTRANCE(RR_GERUDO_TRAINING_GROUND_ENTRYWAY, logic->ComboCrossDungeon(RR_GERUDO_TRAINING_GROUND_ENTRYWAY), false),
+        // ComboShip (Cross-Game Boss Entrances): a boss room behind an MM boss door is entered from Termina.
+        ENTRANCE(RR_DEKU_TREE_BOSS_ROOM,             logic->ComboCrossBoss(RR_DEKU_TREE_BOSS_ROOM), false),
+        ENTRANCE(RR_DODONGOS_CAVERN_BOSS_ROOM,       logic->ComboCrossBoss(RR_DODONGOS_CAVERN_BOSS_ROOM), false),
+        ENTRANCE(RR_JABU_JABUS_BELLY_BOSS_ROOM,      logic->ComboCrossBoss(RR_JABU_JABUS_BELLY_BOSS_ROOM), false),
+        ENTRANCE(RR_FOREST_TEMPLE_BOSS_ROOM,         logic->ComboCrossBoss(RR_FOREST_TEMPLE_BOSS_ROOM), false),
+        ENTRANCE(RR_FIRE_TEMPLE_BOSS_ROOM,           logic->ComboCrossBoss(RR_FIRE_TEMPLE_BOSS_ROOM), false),
+        ENTRANCE(RR_WATER_TEMPLE_BOSS_ROOM,          logic->ComboCrossBoss(RR_WATER_TEMPLE_BOSS_ROOM), false),
+        ENTRANCE(RR_SPIRIT_TEMPLE_BOSS_ROOM,         logic->ComboCrossBoss(RR_SPIRIT_TEMPLE_BOSS_ROOM), false),
+        ENTRANCE(RR_SHADOW_TEMPLE_BOSS_ROOM,         logic->ComboCrossBoss(RR_SHADOW_TEMPLE_BOSS_ROOM), false),
 #else
         ENTRANCE(RR_MINUET_OF_FOREST_WARP,   logic->CanUse(RG_MINUET_OF_FOREST)),
         ENTRANCE(RR_BOLERO_OF_FIRE_WARP,     logic->CanUse(RG_BOLERO_OF_FIRE)),

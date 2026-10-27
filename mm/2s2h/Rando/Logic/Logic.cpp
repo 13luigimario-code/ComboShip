@@ -10,6 +10,8 @@
 extern "C" void Combo_MM_ReportCrossDoor(int slot);
 extern "C" int gComboMmRootClosed;
 extern "C" int Combo_MM_CrossTempleEntered(int temple);
+extern "C" void Combo_MM_ReportCrossBossDoor(int slot);
+extern "C" int Combo_MM_CrossLairEntered(int lair);
 #endif
 #endif
 
@@ -222,14 +224,20 @@ void FindReachableRegions(RandoRegionId currentRegion, std::set<RandoRegionId>& 
         const u8* dungeonLayout = gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances;
         const u8* bossLayout = gSaveContext.save.shipSaveInfo.rando.comboBossEntrances;
         const u8* cross = gSaveContext.save.shipSaveInfo.rando.comboCrossDungeons;
-        const s32 exitTo =
-            Rando::DungeonEntrances::Remap(exitId, sourceRegion.sceneId, dungeonLayout, bossLayout, cross);
+        const u8* crossBoss = gSaveContext.save.shipSaveInfo.rando.comboCrossBosses;
+        const u8* crossBossWarp = gSaveContext.save.shipSaveInfo.rando.comboCrossBossWarps;
+        const s32 exitTo = Rando::DungeonEntrances::Remap(exitId, sourceRegion.sceneId, dungeonLayout, bossLayout,
+                                                          cross, nullptr, crossBoss, crossBossWarp);
         if (exitTo == Rando::DungeonEntrances::kToHyrule) {
-            // Cross-Game Dungeon Entrances: this way leads into Hyrule. A swapped temple door Link can go through is
-            // the OOT oracle's way into the dungeon behind it.
+            // Cross-Game Dungeon / Boss Entrances: this way leads into Hyrule. A swapped temple door (boss door) Link
+            // can go through is the OOT oracle's way into the dungeon (boss room) behind it. A lair's warp into Hyrule
+            // is a dead end to the logic.
             const int slot = Rando::DungeonEntrances::DoorSlot(exitId);
+            const int bossSlot = Rando::DungeonEntrances::BossDoorSlot(exitId, sourceRegion.sceneId);
             if ((slot >= 0) && regionExit.condition()) {
                 Combo_MM_ReportCrossDoor(slot);
+            } else if ((bossSlot >= 0) && regionExit.condition()) {
+                Combo_MM_ReportCrossBossDoor(bossSlot);
             }
             continue;
         }
@@ -289,6 +297,11 @@ static RegisterShipInitFunc initFunc([]() {
             EXIT(ENTRANCE(SNOWHEAD_TEMPLE, 0),                       ONE_WAY_EXIT, Combo_MM_CrossTempleEntered(1)),
             EXIT(ENTRANCE(GREAT_BAY_TEMPLE, 0),                      ONE_WAY_EXIT, Combo_MM_CrossTempleEntered(2)),
             EXIT(ENTRANCE(STONE_TOWER_TEMPLE, 0),                    ONE_WAY_EXIT, Combo_MM_CrossTempleEntered(3)),
+            // ComboShip (Cross-Game Boss Entrances): a lair behind an OOT boss door Link reached, entered from Hyrule.
+            EXIT(ENTRANCE(ODOLWAS_LAIR, 0),                          ONE_WAY_EXIT, Combo_MM_CrossLairEntered(0)),
+            EXIT(ENTRANCE(GOHTS_LAIR, 0),                            ONE_WAY_EXIT, Combo_MM_CrossLairEntered(1)),
+            EXIT(ENTRANCE(GYORGS_LAIR, 0),                           ONE_WAY_EXIT, Combo_MM_CrossLairEntered(2)),
+            EXIT(ENTRANCE(TWINMOLDS_LAIR, 0),                        ONE_WAY_EXIT, Combo_MM_CrossLairEntered(3)),
 #else
             EXIT(ENTRANCE(SOUTH_CLOCK_TOWN, 0),                      ONE_WAY_EXIT, true), // Save warp
             EXIT(ENTRANCE(SOUTH_CLOCK_TOWN, 9),                      ONE_WAY_EXIT, CAN_PLAY_SONG(SOARING) && CAN_OWL_WARP(OWL_WARP_CLOCK_TOWN)),

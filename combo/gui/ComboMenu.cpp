@@ -1832,12 +1832,26 @@ void ComboMenu::DrawComboPanel() {
                               "Woodfall Temple, and Snowhead Temple's door into the Fire Temple. Leaving a dungeon\n"
                               "comes back out of the door it was behind, in that door's game.");
     }
+    {
+        const ComboRando::CrossShuffleDef& def = ComboRando::kCrossShuffleDefs[2]; // boss entrances
+        bool on = CVarGetInteger(def.cvar, 0) != 0;
+        ComboRando::ComboMenu_PushCheckbox(goalTheme);
+        if (ImGui::Checkbox("Cross-Game Boss Entrances", &on)) {
+            CVarSetInteger(def.cvar, on ? 1 : 0);
+        }
+        ComboRando::ComboMenu_PopCheckbox();
+        ImGui::SetItemTooltip("The boss rooms of both games are shuffled together: the Deku Tree's boss door can\n"
+                              "lead into Odolwa's lair, and Woodfall Temple's into Volvagia's room. A boss's warp\n"
+                              "lands outside the dungeon whose boss door led there, in that dungeon's game.");
+    }
     ImGui::TextDisabled("Dungeon Rewards: every boss of both games (8 + 4) holds a reward of either game, and Link\n"
                         "starts with one Ocarina of Time reward in his pocket. Overrides Ocarina of Time's Dungeon\n"
                         "Rewards and Link's Pocket and Majora's Mask's Boss Remains.\n"
                         "Dungeon Entrances: needs Ocarina of Time's Dungeon Entrances shuffle (not decoupled) and\n"
                         "Majora's Mask's Shuffle Dungeon Entrances; without both, each game shuffles on its own.\n"
-                        "Ganon's Castle stays in Ocarina of Time.");
+                        "Ganon's Castle stays in Ocarina of Time.\n"
+                        "Boss Entrances: needs Ocarina of Time's Boss Entrances shuffle (not decoupled) and\n"
+                        "Majora's Mask's Shuffle Boss Rooms; without both, each game shuffles on its own.");
     ImGui::EndDisabled();
     if (solo)
         ImGui::TextDisabled("Off in a one-game seed.");

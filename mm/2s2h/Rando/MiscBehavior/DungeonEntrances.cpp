@@ -92,6 +92,12 @@ const uint8_t* SaveBossLayout() {
 const uint8_t* SaveCross() {
     return gSaveContext.save.shipSaveInfo.rando.comboCrossDungeons;
 }
+const uint8_t* SaveCrossBosses() {
+    return gSaveContext.save.shipSaveInfo.rando.comboCrossBosses;
+}
+const uint8_t* SaveCrossBossWarps() {
+    return gSaveContext.save.shipSaveInfo.rando.comboCrossBossWarps;
+}
 
 // The OOT door slot `slot` swapped with, or -1.
 int CrossDoor(const uint8_t cross[kSlots], int slot) {
@@ -124,19 +130,30 @@ int DoorSlot(int32_t entrance) {
     return -1;
 }
 
+int BossDoorSlot(int32_t entrance, int32_t fromScene) {
+    const s32 base = entrance & ~0xF;
+    for (int t = 0; t < kSlots; t++) {
+        if ((base == kTemples[t].bossDoor) &&
+            ((fromScene == kTemples[t].mainScene) || (fromScene == kTemples[t].bossDoorScene)))
+            return t;
+    }
+    return -1;
+}
+
 int32_t SlotDoor(int slot) {
     return ((slot >= 0) && (slot < kSlots)) ? kTemples[slot].door : -1;
 }
 
 int32_t Remap(int32_t entrance, int32_t fromScene, const uint8_t layout[kSlots], const uint8_t bossLayout[kSlots],
-              const uint8_t cross[kSlots], int* hyruleTarget) {
+              const uint8_t cross[kSlots], int* hyruleTarget, const uint8_t crossBoss[kSlots],
+              const uint8_t crossBossWarp[kSlots]) {
     if (fromScene == SCENE_MAX)
         return entrance; // the logic's root: its temple entries are cross-game arrivals, already where they lead
     int templeAt[kSlots];
     int lairAt[kSlots]; // lairAt[t]: the temple whose boss's lair is behind temple t's boss door
     const bool templesShuffled = Decode(layout, templeAt);
     const bool lairsShuffled = (bossLayout != nullptr) && Decode(bossLayout, lairAt);
-    if (!templesShuffled && !lairsShuffled && !AnyCross(cross))
+    if (!templesShuffled && !lairsShuffled && !AnyCross(cross) && !AnyCross(crossBoss))
         return entrance;
     auto toHyrule = [&](int kind, int oot) {
         if (hyruleTarget != nullptr)
@@ -150,8 +167,10 @@ int32_t Remap(int32_t entrance, int32_t fromScene, const uint8_t layout[kSlots],
     const s32 base = entrance & ~0xF; // without the scene layer
     for (int t = 0; t < kSlots; t++) {
         const Temple& temple = kTemples[t];
-        // A boss door, from inside its temple: the lair behind it.
+        // A boss door, from inside its temple: the lair behind it (or, swapped, the OOT boss room behind it).
         if ((base == temple.bossDoor) && ((fromScene == temple.mainScene) || (fromScene == temple.bossDoorScene))) {
+            if (CrossDoor(crossBoss, t) >= 0)
+                return toHyrule(ComboRando::kCrossTargetBossRoom, CrossDoor(crossBoss, t));
             return kTemples[lairAt[t]].bossDoor;
         }
         // A door, from outside its own temple: the temple behind it (or, swapped, the OOT dungeon behind it).
@@ -171,6 +190,18 @@ int32_t Remap(int32_t entrance, int32_t fromScene, const uint8_t layout[kSlots],
         // temple is behind (vanilla when both are its own).
         if ((fromScene == temple.bossScene) && ((base == temple.warps[0]) || (base == temple.warps[1]))) {
             const int via = SlotOf(lairAt, t);
+            if (CrossDoor(crossBoss, via) >= 0) {
+                // Entered from an OOT boss door: outside the door holding that boss door's dungeon (a temple door
+                // when that OOT door swapped with one).
+                int door = CrossDoor(crossBossWarp, via);
+                if (door < 0)
+                    door = CrossDoor(crossBoss, via);
+                for (int m = 0; m < kSlots; m++) {
+                    if (CrossDoor(cross, m) == door)
+                        return kTemples[m].exterior;
+                }
+                return toHyrule(ComboRando::kCrossTargetWarp, door);
+            }
             const int slot = SlotOf(templeAt, via);
             if (CrossDoor(cross, slot) >= 0)
                 return toHyrule(ComboRando::kCrossTargetOutside, CrossDoor(cross, slot));
@@ -200,7 +231,8 @@ extern "C" u16 Combo_MM_DungeonEntranceOverride(u16 entrance, s16 sceneId) {
     if (!IS_RANDO)
         return entrance;
     int hyrule = -1;
-    const s32 out = Remap(entrance, sceneId, SaveLayout(), SaveBossLayout(), SaveCross(), &hyrule);
+    const s32 out = Remap(entrance, sceneId, SaveLayout(), SaveBossLayout(), SaveCross(), &hyrule, SaveCrossBosses(),
+                          SaveCrossBossWarps());
     if (out == kToHyrule) {
         // Cross-Game Dungeon Entrances: into Hyrule. The transition carries on meanwhile; the switch takes over.
         SPDLOG_INFO("[ComboShip] dungeon entrance 0x{:04X} from scene {} -> Hyrule (0x{:X})", entrance, sceneId,
@@ -219,7 +251,8 @@ extern "C" void Combo_MM_DungeonEntranceBossWarp(s16 bossScene, u16* entrance, u
     if (!IS_RANDO)
         return;
     int hyrule = -1;
-    const s32 out = Remap(*entrance, bossScene, SaveLayout(), SaveBossLayout(), SaveCross(), &hyrule);
+    const s32 out = Remap(*entrance, bossScene, SaveLayout(), SaveBossLayout(), SaveCross(), &hyrule, SaveCrossBosses(),
+                          SaveCrossBossWarps());
     if (out == kToHyrule) {
         Combo_RequestCrossSwitch(hyrule);
         return;
@@ -236,8 +269,19 @@ extern "C" s32 Combo_MM_ResolveCrossTarget(s32 target) {
     const int slot = target & 0xFF;
     if ((slot < 0) || (slot >= kSlots))
         return -1;
-    if ((target & 0xF00) == ComboRando::kCrossTargetOutside)
-        return kTemples[slot].exterior;
+    switch (target & 0xF00) {
+        case ComboRando::kCrossTargetOutside:
+            return kTemples[slot].exterior;
+        case ComboRando::kCrossTargetBossRoom: { // the lair MM put behind boss door `slot`
+            int lairAt[kSlots];
+            Decode(SaveBossLayout(), lairAt);
+            return kTemples[lairAt[slot]].bossDoor;
+        }
+        case ComboRando::kCrossTargetTemple: // out of an OOT boss room entered from boss door `slot`
+            return kTemples[slot].door;
+        default:
+            break;
+    }
     int templeAt[kSlots];
     Decode(SaveLayout(), templeAt);
     return kTemples[templeAt[slot]].door; // the temple MM put behind door `slot`
@@ -247,7 +291,9 @@ extern "C" s32 Combo_MM_ResolveCrossTarget(s32 target) {
 
 static uint8_t sComboLayout[kSlots] = {};
 static uint8_t sComboBossLayout[kSlots] = {};
-static uint8_t sComboCross[kSlots] = {}; // Cross-Game Dungeon Entrances: the OOT door each slot swapped with, + 1
+static uint8_t sComboCross[kSlots] = {};     // Cross-Game Dungeon Entrances: the OOT door each slot swapped with, + 1
+static uint8_t sComboCrossBoss[kSlots] = {}; // Cross-Game Boss Entrances: the OOT boss door, + 1
+static uint8_t sComboCrossBossWarp[kSlots] = {}; // and the OOT door holding its dungeon, + 1
 
 // The current generation's (or reloaded seed's) layouts, for the oracle's save context (BenPort.cpp).
 extern "C" const uint8_t* Combo_MM_DungeonEntranceLayout(void) {
@@ -258,6 +304,12 @@ extern "C" const uint8_t* Combo_MM_BossEntranceLayout(void) {
 }
 extern "C" const uint8_t* Combo_MM_CrossDungeons(void) {
     return sComboCross;
+}
+extern "C" const uint8_t* Combo_MM_CrossBosses(void) {
+    return sComboCrossBoss;
+}
+extern "C" const uint8_t* Combo_MM_CrossBossWarps(void) {
+    return sComboCrossBossWarp;
 }
 
 // The temple doors that may swap with an OOT door this seed: all four with the temple shuffle on.
@@ -277,6 +329,37 @@ extern "C" COMBO_EXPORT void MM_SetCrossDungeons(const char* json) {
     memset(sComboCross, 0, sizeof(sComboCross));
     for (const auto& p : ComboRando::CrossDungeonsFromString(json))
         sComboCross[p.mm] = (uint8_t)(p.oot + 1);
+}
+
+// The boss doors that may swap with an OOT boss door this seed: all four with the boss room shuffle on.
+extern "C" COMBO_EXPORT const char* MM_CrossBossDoors(void) {
+    static std::string buf;
+    nlohmann::json out = nlohmann::json::array();
+    if (CVarGetInteger(Rando::StaticData::Options[RO_SHUFFLE_BOSS_ENTRANCES].cvar, RO_GENERIC_OFF)) {
+        for (int s = 0; s < kSlots; s++)
+            out.push_back(kTemples[s].name);
+    }
+    buf = out.dump();
+    return buf.c_str();
+}
+
+// The door holding temple `temple` under this generation's layout (CrossBossPair::mmWarp).
+extern "C" COMBO_EXPORT int MM_CrossTempleDoorOf(int temple) {
+    if ((temple < 0) || (temple >= kSlots))
+        return -1;
+    int templeAt[kSlots];
+    Decode(sComboLayout, templeAt);
+    return SlotOf(templeAt, temple);
+}
+
+// The seed's boss swaps (CrossDungeons.h; generation, slot bind, validation). The oracle and the save take them here.
+extern "C" COMBO_EXPORT void MM_SetCrossBosses(const char* json) {
+    memset(sComboCrossBoss, 0, sizeof(sComboCrossBoss));
+    memset(sComboCrossBossWarp, 0, sizeof(sComboCrossBossWarp));
+    for (const auto& p : ComboRando::CrossBossesFromString(json)) {
+        sComboCrossBoss[p.mm] = (uint8_t)(p.oot + 1);
+        sComboCrossBossWarp[p.mm] = (uint8_t)(ComboRando::CrossBossOotWarp(p) + 1);
+    }
 }
 
 // Per generation attempt, after the dump: new layouts for the options that are on, vanilla for the others.

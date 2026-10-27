@@ -2985,6 +2985,8 @@ static void Combo_MM_ApplyCheckPrices();
 extern "C" const uint8_t* Combo_MM_DungeonEntranceLayout(void); // DungeonEntrances.cpp
 extern "C" const uint8_t* Combo_MM_BossEntranceLayout(void);    // DungeonEntrances.cpp
 extern "C" const uint8_t* Combo_MM_CrossDungeons(void);         // DungeonEntrances.cpp
+extern "C" const uint8_t* Combo_MM_CrossBosses(void);           // DungeonEntrances.cpp
+extern "C" const uint8_t* Combo_MM_CrossBossWarps(void);        // DungeonEntrances.cpp
 #include "2s2h/Rando/MiscBehavior/DungeonEntrances.h"
 
 // ComboShip (#136): defined further down (MM_SetComboGoal). The save-building paths below force MM's
@@ -3144,6 +3146,10 @@ extern "C" COMBO_EXPORT int MM_InitRandoSaveFile(int fileNum, const char* placem
         u8* bossLayout = gSaveContext.save.shipSaveInfo.rando.comboBossEntrances;
         memcpy(bossLayout, Combo_MM_BossEntranceLayout(), Rando::DungeonEntrances::kSlots);
         memcpy(gSaveContext.save.shipSaveInfo.rando.comboCrossDungeons, Combo_MM_CrossDungeons(),
+               Rando::DungeonEntrances::kSlots);
+        memcpy(gSaveContext.save.shipSaveInfo.rando.comboCrossBosses, Combo_MM_CrossBosses(),
+               Rando::DungeonEntrances::kSlots);
+        memcpy(gSaveContext.save.shipSaveInfo.rando.comboCrossBossWarps, Combo_MM_CrossBossWarps(),
                Rando::DungeonEntrances::kSlots);
 
         // ComboShip: the apply stamps shuffled=true on every payload check incl. non-shuffled Remains;
@@ -3733,6 +3739,9 @@ static bool sMMComboOracleAdultIn = false;
 static uint32_t sMMComboXtIn = 0;
 static bool sMMComboOracleClosed = false;
 static uint32_t sMMComboCrossDoorOut = 0;
+// ComboShip (Cross-Game Boss Entrances): "@combo:xb:s:age" inputs (bit 2s + age) and the swapped boss doors reached.
+static uint32_t sMMComboXbIn = 0;
+static uint32_t sMMComboCrossBossOut = 0;
 extern "C" int gComboMmRootClosed = 0;
 static uint64_t sMM_OracleSavedRegionTime;
 // ComboShip: Reset runs once PER REACHABILITY QUERY (dozens per fill) but Restore only once at the
@@ -4220,6 +4229,7 @@ extern "C" COMBO_EXPORT void Combo_MM_Rando_Reset(void) {
     gMMComboOracleOotSoaring = 0;  // ComboShip (teleport songs): the input belongs to one query
     sMMComboOracleAdultIn = false; // ComboShip (Cross-Games Age): likewise
     sMMComboXtIn = 0;              // ComboShip (Cross-Game Dungeon Entrances): likewise
+    sMMComboXbIn = 0;              // ComboShip (Cross-Game Boss Entrances): likewise
     sMMComboOracleClosed = false;
     if (!sMM_OracleActive) { // snapshot the REAL live context only on the first Reset of a fill
         memcpy(&sMM_OracleSavedContext, &gSaveContext, sizeof(SaveContext));
@@ -4263,6 +4273,10 @@ extern "C" COMBO_EXPORT void Combo_MM_Rando_Reset(void) {
     u8* bossLayout = gSaveContext.save.shipSaveInfo.rando.comboBossEntrances;
     memcpy(bossLayout, Combo_MM_BossEntranceLayout(), Rando::DungeonEntrances::kSlots);
     memcpy(gSaveContext.save.shipSaveInfo.rando.comboCrossDungeons, Combo_MM_CrossDungeons(),
+           Rando::DungeonEntrances::kSlots);
+    memcpy(gSaveContext.save.shipSaveInfo.rando.comboCrossBosses, Combo_MM_CrossBosses(),
+           Rando::DungeonEntrances::kSlots);
+    memcpy(gSaveContext.save.shipSaveInfo.rando.comboCrossBossWarps, Combo_MM_CrossBossWarps(),
            Rando::DungeonEntrances::kSlots);
     // ComboShip (#136): combo owns the goal, so the hidden CVars above must not decide it here either.
     gSaveContext.save.shipSaveInfo.rando.randoSaveOptions[RO_SHUFFLE_TRIFORCE_PIECES] =
@@ -4372,6 +4386,12 @@ extern "C" COMBO_EXPORT void Combo_MM_Rando_SetOwnedItems(const char* itemNamesJ
             if (ComboRando::ParseCrossInName(name.get<std::string>(), ComboRando::kCwXtPrefix, xtDoor, xtAge)) {
                 if (xtDoor < Rando::DungeonEntrances::kSlots)
                     sMMComboXtIn |= 1u << ((2 * xtDoor) + xtAge);
+                continue;
+            }
+            // Cross-Game Boss Entrances: a lair entered from Hyrule.
+            if (ComboRando::ParseCrossInName(name.get<std::string>(), ComboRando::kCwXbPrefix, xtDoor, xtAge)) {
+                if (xtDoor < Rando::DungeonEntrances::kSlots)
+                    sMMComboXbIn |= 1u << ((2 * xtDoor) + xtAge);
                 continue;
             }
             auto it = nameToId.find(name.get<std::string>());
@@ -4980,6 +5000,31 @@ extern "C" int Combo_MM_CrossTempleEntered(int temple) {
     return 0;
 }
 
+// Logic.cpp (Cross-Game Boss Entrances): the search reached swapped boss door `slot` (inside temple `slot`).
+extern "C" void Combo_MM_ReportCrossBossDoor(int slot) {
+    if ((gComboLogicAge < 0) || (slot < 0) || (slot >= Rando::DungeonEntrances::kSlots))
+        return;
+    sMMComboCrossBossOut |= ComboRando::CrossBossOutBit(slot, gComboLogicAge == 1 ? 1 : 0);
+}
+
+// Logic.cpp's root: lair `lair` sits behind a swapped boss door (the oracle's input names that door) and Link came
+// through it from Hyrule at the age being searched (any OOT age without Cross-Games Age).
+extern "C" int Combo_MM_CrossLairEntered(int lair) {
+    if ((gComboLogicAge < 0) || (sMMComboXbIn == 0))
+        return 0;
+    const bool ageSystem = Combo_AdultLink_AgeSystemOn() != 0;
+    const uint8_t* bossLayout = gSaveContext.save.shipSaveInfo.rando.comboBossEntrances;
+    for (int s = 0; s < Rando::DungeonEntrances::kSlots; s++) {
+        if (Rando::DungeonEntrances::TempleBehind(bossLayout, s) != lair)
+            continue;
+        const uint32_t child = 1u << (2 * s), adult = 1u << ((2 * s) + 1);
+        const uint32_t want = !ageSystem ? (child | adult) : (gComboLogicAge == 1 ? adult : child);
+        if (sMMComboXbIn & want)
+            return 1;
+    }
+    return 0;
+}
+
 extern "C" COMBO_EXPORT const char* Combo_MM_Rando_GetReachableChecks(void) {
     static std::string buf;
 
@@ -5018,7 +5063,7 @@ extern "C" COMBO_EXPORT const char* Combo_MM_Rando_GetReachableChecks(void) {
         uint32_t adultBits = 0;
         for (int d = 0; d < Rando::DungeonEntrances::kSlots; d++)
             adultBits |= 1u << ((2 * d) + 1);
-        return (sMMComboXtIn & adultBits) != 0;
+        return ((sMMComboXtIn | sMMComboXbIn) & adultBits) != 0; // a temple or lair entered as adult
     };
     if ((passes.size() == 1) && ageSystem && crossAdultIn()) {
         passes.push_back(AgePass{ 1 });
@@ -5029,6 +5074,7 @@ extern "C" COMBO_EXPORT const char* Combo_MM_Rando_GetReachableChecks(void) {
         return (pass.age == 1) && !(sMMComboOracleAdultIn && anyOwlActive());
     };
     sMMComboCrossDoorOut = 0;
+    sMMComboCrossBossOut = 0;
     // Cross-Games Age: unshuffled owl statues aren't items, so the oracle never owns one. Like hitting it in game,
     // an owl is active once its statue's check is reachable (at either age), which gives adult Link somewhere to land.
     const bool owlsByStatue = ageSystem && (RANDO_SAVE_OPTIONS[RO_SHUFFLE_OWL_STATUES] == RO_GENERIC_NO);
@@ -5131,6 +5177,7 @@ extern "C" COMBO_EXPORT const char* Combo_MM_Rando_GetReachableChecks(void) {
         if (Combo_AdultLink_AgeSystemOn()) // Cross-Games Age: ask the OOT side for adult access
             sMMComboCrossOut |= ComboRando::CW_MM_OUT_AGE;
         sMMComboCrossOut |= sMMComboCrossDoorOut; // Cross-Game Dungeon Entrances: swapped temple doors reached
+        sMMComboCrossOut |= sMMComboCrossBossOut; // Cross-Game Boss Entrances: swapped boss doors reached
     }
     gMMComboOracleOotSoaring = 0;
 

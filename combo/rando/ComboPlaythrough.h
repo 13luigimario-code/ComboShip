@@ -183,6 +183,18 @@ inline CrossDungeonPairs CrossDungeonsFromSpoiler(const std::string& spoilerJson
     return {};
 }
 
+// Likewise the swapped boss doors (Cross-Game Boss Entrances): "crossBosses" / "entrances.crossBosses".
+inline CrossBossPairs CrossBossesFromSpoiler(const std::string& spoilerJson) {
+    try {
+        auto j = nlohmann::json::parse(spoilerJson);
+        if (j.contains("crossBosses"))
+            return CrossBossesFromJson(j["crossBosses"]);
+        return CrossBossesFromJson(
+            j.value("entrances", nlohmann::json::object()).value("crossBosses", nlohmann::json::array()));
+    } catch (...) {}
+    return {};
+}
+
 using ReachSet = std::shared_ptr<const std::unordered_set<std::string>>;
 
 // A memoized query result: the reachable set plus the portal bit that belonged to the same search.
@@ -322,6 +334,7 @@ inline RequirednessResult PareDownPlaythrough(const std::string& spoilerJson, co
     // ended (at a win: exactly what was collected strictly before the goal first held).
     const std::vector<std::string> sharedStartingMm = SharedStartingMmFromSpoiler(spoilerJson);
     const CrossDungeonPairs crossDungeons = CrossDungeonsFromSpoiler(spoilerJson);
+    const CrossBossPairs crossBosses = CrossBossesFromSpoiler(spoilerJson);
     auto winsWithout = [&](const std::unordered_set<size_t>& excludeIdx, std::vector<char>* creditedOut) {
         std::vector<std::string> ootOwned, mmOwned = sharedStartingMm;
         std::vector<char> credited(placements.size(), 0);
@@ -350,9 +363,13 @@ inline RequirednessResult PareDownPlaythrough(const std::string& spoilerJson, co
             }
             // A new cross ability changes what is reachable: re-query before testing the goal.
             bool again = ApplyCrossWarps(ootQ.crossOut, portalOpen ? mmCrossOut : 0u, portalOpen, mmStart, ootOwned,
-                                         mmOwned, crossLatch, !crossDungeons.empty());
+                                         mmOwned, crossLatch, !crossDungeons.empty() || !crossBosses.empty());
             if (ApplyCrossDungeons(crossDungeons, ootQ.crossOut, portalOpen ? mmCrossOut : 0u,
                                    (mmCrossOut & CW_MM_OUT_AGE) != 0, ootOwned, mmOwned, dungeonLatch)) {
+                again = true;
+            }
+            if (ApplyCrossBosses(crossBosses, ootQ.crossOut, mmCrossOut, (mmCrossOut & CW_MM_OUT_AGE) != 0, ootOwned,
+                                 mmOwned, dungeonLatch)) {
                 again = true;
             }
             if (again)
@@ -515,6 +532,7 @@ inline PlaythroughResult RunPlaythrough(const std::string& spoilerJson, const Or
     CrossWarpLatch crossLatch;      // cross-game teleport
     CrossDungeonLatch dungeonLatch; // swapped dungeon doors
     const CrossDungeonPairs crossDungeons = CrossDungeonsFromSpoiler(spoilerJson);
+    const CrossBossPairs crossBosses = CrossBossesFromSpoiler(spoilerJson);
     // MM's reach for these owned lists (asked shut when only a swapped temple lets Link in), and its cross bits.
     auto queryMm = [&](const std::vector<std::string>& mmOwned, bool open, const CrossDungeonLatch& latch,
                        uint32_t& crossOut) {
@@ -526,14 +544,17 @@ inline PlaythroughResult RunPlaythrough(const std::string& spoilerJson, const Or
         crossOut = OracleCrossOut(mmOracle);
         return r;
     };
-    // Settle what each side now does for the other (teleport songs, swapped dungeon doors). True: query again.
+    // Settle what each side now does for the other (teleport songs, swapped dungeon and boss doors). True: query again.
     auto exchange = [&](uint32_t ootOut, uint32_t mmOut, bool open, std::vector<std::string>& oot,
                         std::vector<std::string>& mm, CrossWarpLatch& warps, CrossDungeonLatch& doors) {
-        bool again = ApplyCrossWarps(ootOut, open ? mmOut : 0u, open, mmStart, oot, mm, warps, !crossDungeons.empty());
+        bool again = ApplyCrossWarps(ootOut, open ? mmOut : 0u, open, mmStart, oot, mm, warps,
+                                     !crossDungeons.empty() || !crossBosses.empty());
         if (ApplyCrossDungeons(crossDungeons, ootOut, open ? mmOut : 0u, (mmOut & CW_MM_OUT_AGE) != 0, oot, mm,
                                doors)) {
             again = true;
         }
+        if (ApplyCrossBosses(crossBosses, ootOut, mmOut, (mmOut & CW_MM_OUT_AGE) != 0, oot, mm, doors))
+            again = true;
         return again;
     };
     for (int sphere = 0; sphere < kMaxSpheres; ++sphere) {
