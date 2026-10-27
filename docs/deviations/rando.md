@@ -2800,8 +2800,14 @@ key ring replaces all of its small keys in the pool (`ApplyKeyrings`, `GenerateP
 found count logic reads (`foundDungeonKeys`) goes to the temple's total and the keys in hand grow by the difference,
 so the Song of Time keeps restoring them. Random/Count pick temples with the seeded RNG and write them back into
 `RO_KEYRINGS_*`. Vanilla or Start With small keys ignore it (no keys to replace). Own Dungeon confines a ring to its
-temple (`PlacementConstraints.cpp`). Drawn as the temple's small key, fanned out three times.
-`mm/2s2h/Rando/MiscBehavior/Keyrings.cpp`.
+temple (`PlacementConstraints.cpp`). `mm/2s2h/Rando/MiscBehavior/Keyrings.cpp`.
+
+Drawn like OoTMM's key rings (2026-10-27, `DrawKeyring` in `DrawItem.cpp`): OoTMM gives every key ring the plain silver
+small key, with no temple emblem. Its `gi.yml` `MM_KEY_RING_*` entries draw `[SMALL_KEY, 0]` from MM's
+`object_gi_key`, and `drawgi.c`'s `DrawGi_CustomSmallKey` colors it prim 255,255,255 / env 60,80,90, which are the
+colors MM's `gGiSmallKeyDL` already sets. So the key ring is MM's own generic small key get-item model
+(`GetItem_Draw(GID_KEY_SMALL)`). Before, it was the temple's emblem key fanned out three times. Checked in game: the
+Woodfall key ring draws the silver key, next to the Woodfall small key's pink emblem key.
 
 ### Stick / nut capacity kept on the first pickup
 
