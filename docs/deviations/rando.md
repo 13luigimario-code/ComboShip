@@ -3245,4 +3245,14 @@ the teleport songs. The fill, the playthrough and the pare-down use `ApplyCrossD
 - Before the child-dungeon rule and `PickCrossDungeons`, swaps put adult-only dungeons behind MM doors in seeds with no
   way for adult Link into Termina, and most seeds failed.
 
+**Tested (Linux build, 2026-10-27), in game** on `xd1` (MM put Woodfall Temple behind the Stone Tower Temple door and
+Snowhead Temple's door is swapped with OOT's Ice Cavern door, behind which OOT put the Shadow Temple):
+- OOT's Spirit Temple door switches to MM inside Woodfall Temple; Woodfall Temple's exit and Odolwa's warp switch back to
+  OOT outside the Spirit Temple door (Desert Colossus).
+- MM's Snowhead Temple door switches to OOT inside the Shadow Temple; the Shadow Temple's exit and Bongo Bongo's blue
+  warp switch back to MM outside the Snowhead Temple door.
+- A second switch through the Spirit Temple door after coming back from MM first stayed in OOT: the switch stopped
+  OOT's loop, but a transition that set its next game state in the same frame kept it going. The switch now also
+  clears the next game state (`OTRGlobals.cpp`, the switch's frame hook), which ends OOT's loop either way.
+
 **Not done:** cross-game boss room shuffle. Hints and the entrance tracker don't name the other game's door.

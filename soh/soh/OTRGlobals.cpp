@@ -1854,6 +1854,9 @@ static void Combo_FinishInit() {
             gComboSceneSwitchCallback(sComboSwitchFileNum);
         }
         if (gGameState) {
+            // No next game state either: a transition already under way in this frame (an instant one through a
+            // swapped dungeon door, say) would otherwise set Play as the next state and keep OOT's loop going.
+            gGameState->init = nullptr;
             gGameState->running = false;
         }
     });
