@@ -3216,7 +3216,8 @@ needs.
 the teleport songs. The fill, the playthrough and the pare-down use `ApplyCrossDungeons` and `CrossMmQueryOwned`.
 - The OOT oracle disconnects each swapped door, the exit of the dungeon behind it, and the blue warps that land outside
   it (`SOH_ApplyCrossDungeonsToLogic`). It reports the swapped doors Link can reach and use, per age, as `GetCrossOut`
-  bits: the door's region at that age, and the door's own condition at that age and time.
+  bits (keyed by the MM door each swapped with, as MM's are): the door's region at that age, and the door's own
+  condition at that age and time.
 - The MM oracle routes a swapped door, and the way out of the temple behind it, to `kToHyrule` (not followed). It
   reports the swapped temple doors it reaches, per age pass (`Combo_MM_ReportCrossDoor`).
 - The fill hands each oracle the other's doors as pseudo-owned names:
@@ -3255,4 +3256,89 @@ Snowhead Temple's door is swapped with OOT's Ice Cavern door, behind which OOT p
   OOT's loop, but a transition that set its next game state in the same frame kept it going. The switch now also
   clears the next game state (`OTRGlobals.cpp`, the switch's frame hook), which ends OOT's loop either way.
 
-**Not done:** cross-game boss room shuffle. Hints and the entrance tracker don't name the other game's door.
+**Not done:** hints and the entrance tracker don't name the other game's door. Cross-game boss rooms: see Cross-Game
+Boss Entrances below.
+
+## Cross-Game Boss Entrances (OoTMM cross-game boss ER) (2026-10-27)
+
+Combo menu, Cross-Game Shuffles: "Cross-Game Boss Entrances" (`gCombo.Rando.CrossBossEntrances`, crossShuffle key
+`bossEntrances`, seed-bound). It needs both games' own boss room shuffles and doesn't force them: Ocarina of Time's Boss
+Entrances (any mode, not decoupled) and Majora's Mask's Shuffle Boss Rooms. Without both, each game shuffles on its
+own. It works with or without Cross-Game Dungeon Entrances. Shared code: `combo/rando/CrossDungeons.h`.
+
+**Layout.** Each game shuffles its own boss rooms first. The cross-game part is a set of swaps, each between an OOT boss
+door b (the boss door inside dungeon b: Deku Tree to Shadow Temple) and an MM boss door s (inside temple s), which trade
+the boss rooms behind them:
+- OOT boss door b leads into the lair MM put behind boss door s. That boss's warp lands outside the door holding
+  dungeon b: outside OOT's door, or outside the MM door it swapped with under Cross-Game Dungeon Entrances.
+- MM boss door s leads into the room OOT put behind boss door b. That boss's blue warp lands outside the door holding
+  temple s: outside MM's door, or outside the OOT door it swapped with.
+- MM's lairs have no way back out. The OOT room's exit door, entered from Termina, leads back to the start of temple s
+  (MM has no spawn at a boss door).
+
+The number of swaps follows a pooled shuffle of the 8 + 4 boss rooms (`ShuffleCrossBosses`). Without Ocarina of Time's
+Song of Soaring setting (or starting with it), only an OOT boss door holding a room Link can do as child (Queen Gohma,
+King Dodongo, Barinade) may swap, as for the dungeon doors (`SOH_CrossBossDoors`). `PickCrossBosses` keeps a set of
+swaps only if, with every item, both games still reach every check they reach without boss swaps (the dungeon swaps
+kept). Up to 16 sets are tried per attempt, then none. Each swap also records the two warp doors (`ootWarp`: the OOT door
+holding dungeon b, from `SOH_CrossDungeonDoorOf`; `mmWarp`: the MM door holding temple s, from `MM_CrossTempleDoorOf`),
+so neither game needs the other's layout. The spoiler records the swaps as `entrances.crossBosses`
+(`[{oot, mm, ootWarp, mmWarp}]`, door names; absent/empty = none) and the fill's spoiler as `crossBosses`.
+
+**Game.**
+- OOT (`ComboCrossDungeons.cpp`, checked before the dungeon doors in the same entrance hooks): a swapped boss door (its
+  vanilla entrance) switches to Termina, into the lair. The room OOT put behind it, entered from Termina: its exit (the
+  override that lands back at boss door b) switches to the start of temple s, and its boss's blue warp (its vanilla
+  blue warp entrance) lands outside the door holding temple s, switching to Termina unless that door swapped with an
+  OOT door.
+- MM (`DungeonEntrances.cpp`): `Remap` takes the swaps (`RandoSaveInfo::comboCrossBosses`, OOT boss door + 1 per temple
+  boss door, and `comboCrossBossWarps`, the OOT warp door + 1; absent on older saves). A swapped boss door returns
+  `kToHyrule` with the OOT boss room as the target. The warp out of the lair behind it lands outside the OOT warp door
+  (`kCrossTargetWarp`: where a blue warp out of that door's dungeon lands), or outside the MM door that OOT door
+  swapped with, without switching.
+- Arrivals use the same symbolic targets, resolved by the arriving game (`kCrossTargetBossRoom`, `kCrossTargetTemple`,
+  `kCrossTargetWarp`).
+- Dying or save-warping in an OOT boss room entered from Termina restarts where Ship of Harkinian restarts that room:
+  at the entrance of dungeon b, in Hyrule. This is extra access the logic never relies on.
+
+**Logic.** As for the dungeon doors, through the same latch and fixpoints (`ApplyCrossBosses`):
+- The OOT oracle disconnects each swapped boss door and the exit and blue warp of the room behind it
+  (`SOH_ApplyCrossBossesToLogic`), and reports the swapped boss doors Link can reach and open, per age
+  (`GetCrossOut` bits 16 and up, keyed by MM boss door). The room is entered from Termina through Root Exits
+  (`Logic::ComboCrossBoss`, `@combo:xr:<b>:<age>`, if Link can be in Termina at that age).
+- The MM oracle routes a swapped boss door, and the warp out of the lair behind it, to `kToHyrule` (not followed), and
+  reports the swapped boss doors it reaches (`Combo_MM_ReportCrossBossDoor`). Logic's root enters the lair behind boss
+  door s (`Combo_MM_CrossLairEntered`, `@combo:xb:<s>:<age>`), with `@combo:mmClosed` while the portal is shut, like
+  the temples.
+- A boss room entered from the other game is a dead end to the logic: its warp and its exit aren't followed.
+
+**Tested (Linux build, 2026-10-27), headless** (both games' boss room shuffles on, dungeon shuffles off, no Song of
+Soaring):
+- 10 seeds: 9/10 generate with the option on, 5/10 with it off. Every failure, either way, is the "ganon=0" validation
+  failure described under Cross-Game Dungeon Entrances; Ocarina of Time's boss room shuffle hits it too (the dungeon
+  rewards sit on the bosses and are placed before OOT's entrances are shuffled). Moving some bosses into Termina
+  happens to break more of those cycles than it makes.
+- `xb1` (OOT boss doors Dodongo's Cavern, Jabu Jabu's Belly and Fire Temple swapped with MM boss doors Snowhead,
+  Great Bay and Stone Tower) generates, and `--playthrough` beats it at sphere 19. With the swaps removed, the same
+  placements are not beatable, so the fill relied on them.
+
+**Tested (Linux build, 2026-10-27), in game** on `xb1` (MM put Twinmold's lair behind Snowhead Temple's boss door; OOT
+put Barinade's room behind Dodongo's Cavern's boss door):
+- OOT Dodongo's Cavern boss door switches to MM inside Twinmold's lair; Twinmold's warp switches back to OOT at Death
+  Mountain Trail's blue warp spot (outside Dodongo's Cavern).
+- MM Snowhead Temple's boss door switches to OOT inside Barinade's room. Its exit switches to MM at the start of
+  Snowhead Temple; Barinade's blue warp switches to MM outside the Snowhead Temple door.
+
+- With both cross options on (both games' dungeon and boss shuffles on), 8 seeds: 3/8 generate, 0/8 with both options
+  off; the failures either way are the same "ganon=0" validation failure, or Ship of Harkinian's own entrance shuffle
+  finding no layout. `xc3` (dungeon doors Woodfall <-> Bottom of the Well and Stone Tower <-> Jabu Jabu's Belly; boss
+  doors Woodfall <-> Jabu Jabu's Belly and Snowhead <-> Dodongo's Cavern) generates and `--playthrough` beats it at
+  sphere 22. In game on `xc3`: OOT Jabu Jabu's Belly's boss door switches to MM inside Gyorg's lair, and Gyorg's warp
+  lands outside MM's Stone Tower Temple door without switching (Jabu Jabu's Belly's door swapped with it). MM Woodfall
+  Temple's boss door switches to OOT inside King Dodongo's room, and its blue warp lands outside OOT's Bottom of the
+  Well without switching (Woodfall Temple's door swapped with it).
+- Found while testing: each candidate set of swaps disconnected entrances in OOT's logic graph and nothing put them
+  back, so a rejected candidate's cuts stayed for the next one (and the fill). Each logic apply now first reconnects
+  what the previous one cut (`RestoreCuts`, for both the dungeon and the boss swaps).
+
+**Not done:** hints and the entrance tracker don't name the other game's boss rooms.

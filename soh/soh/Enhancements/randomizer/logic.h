@@ -43,6 +43,9 @@ class Logic {
     // ComboShip (Cross-Game Dungeon Entrances): the dungeon whose entryway is `entryway` sits behind an MM door that
     // Link can reach at this age (rando/CrossDungeons.h).
     bool ComboCrossDungeon(RandomizerRegion entryway);
+    // ComboShip (Cross-Game Boss Entrances): Link comes from Termina into boss room `room`, which sits behind a swapped
+    // boss door (ComboCrossBosses.cpp).
+    bool ComboCrossBoss(RandomizerRegion room);
 #endif
     bool HasProjectile(HasProjectileAge age);
     bool HasItem(RandomizerGet itemName);

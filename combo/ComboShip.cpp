@@ -484,6 +484,15 @@ static FnTakeStr SOH_ApplyCrossDungeonsToLogic = nullptr;
 static FnTakeStr SOH_SetCrossDungeons = nullptr;
 static FnDumpData MM_CrossDungeonDoors = nullptr;
 static FnTakeStr MM_SetCrossDungeons = nullptr;
+// ComboShip: Cross-Game Boss Entrances (rando/CrossDungeons.h).
+typedef int (*FnCrossDoorOf)(int);
+static FnDumpData SOH_CrossBossDoors = nullptr;
+static FnTakeStr SOH_ApplyCrossBossesToLogic = nullptr;
+static FnTakeStr SOH_SetCrossBosses = nullptr;
+static FnCrossDoorOf SOH_CrossDungeonDoorOf = nullptr;
+static FnDumpData MM_CrossBossDoors = nullptr;
+static FnTakeStr MM_SetCrossBosses = nullptr;
+static FnCrossDoorOf MM_CrossTempleDoorOf = nullptr;
 // The MM temple layout recorded in a consolidated seed (empty = vanilla), into the MM DLL.
 static void PushMmDungeonEntrances(const nlohmann::json& seed) {
     if (!MM_SetDungeonEntrances)
@@ -495,6 +504,10 @@ static void PushMmDungeonEntrances(const nlohmann::json& seed) {
     if (MM_SetCrossDungeons) {
         const std::string cross = entrances.value("cross", nlohmann::json::array()).dump();
         MM_SetCrossDungeons(cross.c_str());
+    }
+    if (MM_SetCrossBosses) { // Cross-Game Boss Entrances: likewise
+        const std::string bosses = entrances.value("crossBosses", nlohmann::json::array()).dump();
+        MM_SetCrossBosses(bosses.c_str());
     }
 }
 
@@ -540,6 +553,65 @@ static ComboRando::CrossDungeonPairs ShuffleCrossDungeonsForCombo(uint64_t seed,
         std::cout << "[ComboShip] Cross-Game Dungeon Entrances: " << ComboRando::CrossDungeonsToJson(pairs).dump()
                   << "\n";
     return pairs;
+}
+
+// Cross-Game Boss Entrances, right after ShuffleCrossDungeonsForCombo: the swapped boss doors over both games' boss
+// room layouts, the attempt's dungeon swaps kept, pushed into both oracles. Deterministic in `seed`.
+static ComboRando::CrossBossPairs ShuffleCrossBossesForCombo(uint64_t seed, ComboRando::CrossShuffleMask mask,
+                                                             const std::string& sohDump, const std::string& mmDump,
+                                                             const ComboRando::CrossDungeonPairs& dungeons) {
+    auto apply = [](const ComboRando::CrossBossPairs& pairs) {
+        const std::string json = ComboRando::CrossBossesToJson(pairs).dump();
+        if (SOH_ApplyCrossBossesToLogic)
+            SOH_ApplyCrossBossesToLogic(json.c_str());
+        if (MM_SetCrossBosses)
+            MM_SetCrossBosses(json.c_str());
+    };
+    // Where each swap's boss warps land: the doors holding the two dungeons with the swapped boss doors.
+    auto warpDoors = [](ComboRando::CrossBossPairs& pairs) {
+        for (auto& p : pairs) {
+            p.ootWarp = SOH_CrossDungeonDoorOf ? SOH_CrossDungeonDoorOf(p.oot) : -1;
+            p.mmWarp = MM_CrossTempleDoorOf ? MM_CrossTempleDoorOf(p.mm) : -1;
+        }
+    };
+    std::vector<std::string> oot, mm;
+    if ((mask & ComboRando::CROSS_SHUFFLE_BOSS_ENTRANCES) && SOH_CrossBossDoors && MM_CrossBossDoors) {
+        try {
+            oot = nlohmann::json::parse(SOH_CrossBossDoors()).get<std::vector<std::string>>();
+            mm = nlohmann::json::parse(MM_CrossBossDoors()).get<std::vector<std::string>>();
+        } catch (...) { oot.clear(); }
+        if (oot.empty() || mm.empty())
+            std::cout << "[ComboShip] Cross-Game Boss Entrances: on, but " << (oot.empty() ? "OOT" : "MM")
+                      << "'s own boss room shuffle isn't — no swaps\n";
+    }
+    if (oot.empty() || mm.empty() || !Combo_SOH_Rando_Reset || !Combo_MM_Rando_Reset) {
+        apply({});
+        return {};
+    }
+    const ComboRando::OracleFns ootOracle = {
+        Combo_SOH_Rando_Reset,     Combo_SOH_Rando_SetOwnedItems, Combo_SOH_Rando_GetReachableChecks,
+        Combo_SOH_Rando_PlaceItem, Combo_SOH_Rando_GetPortalOpen, Combo_SOH_Rando_GetCrossOut
+    };
+    const ComboRando::OracleFns mmOracle = { Combo_MM_Rando_Reset,
+                                             Combo_MM_Rando_SetOwnedItems,
+                                             Combo_MM_Rando_GetReachableChecks,
+                                             Combo_MM_Rando_PlaceItem,
+                                             nullptr,
+                                             Combo_MM_Rando_GetCrossOut };
+    const ComboRando::CrossBossPairs pairs =
+        ComboRando::PickCrossBosses(seed, oot, mm, dungeons, sohDump, mmDump, ootOracle, mmOracle, warpDoors, apply);
+    if (!pairs.empty())
+        std::cout << "[ComboShip] Cross-Game Boss Entrances: " << ComboRando::CrossBossesToJson(pairs).dump() << "\n";
+    return pairs;
+}
+
+// A loaded seed's swapped boss doors for the game (slot load), like PushCrossDungeons.
+static void PushCrossBosses(const nlohmann::json& bosses) {
+    const std::string json = (bosses.is_array() ? bosses : nlohmann::json::array()).dump();
+    if (SOH_SetCrossBosses)
+        SOH_SetCrossBosses(json.c_str());
+    if (MM_SetCrossBosses)
+        MM_SetCrossBosses(json.c_str());
 }
 
 // A loaded seed's swapped doors for the game (slot load): OOT's switch table, and MM's for the save it creates.
@@ -1065,6 +1137,7 @@ static FnReadComboCrossShuffleCVars SOH_ReadComboCrossShuffleCVars = nullptr;
 // Cross-game shuffles of the LOADED slot. Absent key = 0.
 static ComboRando::CrossShuffleMask g_crossShuffle = 0;
 static nlohmann::json g_crossDungeons = nlohmann::json::array(); // the loaded slot's swapped dungeon doors
+static nlohmann::json g_crossBosses = nlohmann::json::array();   // and boss doors
 static void PushComboCrossShuffle(ComboRando::CrossShuffleMask mask) {
     if (SOH_SetComboCrossShuffle)
         SOH_SetComboCrossShuffle(mask);
@@ -1497,6 +1570,7 @@ static void LoadComboCompletion(int slot) {
     g_sharedMask = 0;
     g_crossShuffle = 0;
     g_crossDungeons = nlohmann::json::array();
+    g_crossBosses = nlohmann::json::array();
     g_comboGames = ComboRando::COMBO_GAMES_BOTH;
     if (MM_SetComboSharedItems)
         MM_SetComboSharedItems(0); // clear before the slot read below re-pushes the loaded value (or stays 0)
@@ -1524,11 +1598,14 @@ static void LoadComboCompletion(int slot) {
         g_crossShuffle = ComboRando::CrossShuffleFromKeys(rando.value("crossShuffle", nlohmann::json::array()));
         // Cross-Game Dungeon Entrances: the swapped doors (absent = none).
         g_crossDungeons = rando.value("entrances", nlohmann::json::object()).value("cross", nlohmann::json::array());
+        g_crossBosses =
+            rando.value("entrances", nlohmann::json::object()).value("crossBosses", nlohmann::json::array());
     }
     // Push outside the container lock — the DLL setters must never re-enter the sidecar.
     PushComboGames(g_comboGames);
     PushComboCrossShuffle(g_crossShuffle);
     PushCrossDungeons(g_crossDungeons);
+    PushCrossBosses(g_crossBosses);
     if (SOH_SetComboGoal)
         SOH_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwOotPieces(g_goalTotal, g_comboGames));
     if (MM_SetComboGoal)
@@ -1551,6 +1628,7 @@ static void RestoreLoadedSlotGoal() {
     PushComboGames(g_comboGames);
     PushComboCrossShuffle(g_crossShuffle);
     PushCrossDungeons(g_crossDungeons);
+    PushCrossBosses(g_crossBosses);
     if (SOH_SetComboGoal)
         SOH_SetComboGoal(g_goalHunt ? 1 : 0, g_goalRequired, ComboRando::CwOotPieces(g_goalTotal, g_comboGames));
     if (MM_SetComboGoal)
@@ -1921,6 +1999,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
     bool pinStartOot = false; // Random: after an MM-start attempt fails, fall back silently to OOT
     bool resolvedMmStart = false;
     ComboRando::CrossDungeonPairs crossDungeons; // Cross-Game Dungeon Entrances: the attempt's swapped doors
+    ComboRando::CrossBossPairs crossBosses;      // Cross-Game Boss Entrances: and boss doors
     // Shared Items: read via soh.dll — the launcher has no CVar access.
     const ComboRando::SharedMask sharedMask = solo ? 0 : (SOH_ReadComboSharedCVars ? SOH_ReadComboSharedCVars() : 0);
     const ComboRando::CrossShuffleMask crossShuffle = MenuCrossShuffle(games);
@@ -2051,6 +2130,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
             MM_ShuffleDungeonEntrancesForCombo(masterSeed);
         // Cross-Game Dungeon Entrances: doors of the two games swapped over those layouts (both oracles follow).
         crossDungeons = ShuffleCrossDungeonsForCombo(masterSeed, crossShuffle, sohDump, mmDump);
+        crossBosses = ShuffleCrossBossesForCombo(masterSeed, crossShuffle, sohDump, mmDump, crossDungeons);
         if (cancelled())
             return;
         if (!haveOracles)
@@ -2070,9 +2150,10 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         // ComboShip: honor OOT's logic/ALR settings per-game (MM stays all-reachable). The fill gates MM
         // on the portal region via ootOracle.GetPortalOpen; NO_LOGIC bypasses it.
         ComboRando::OotAccess ootAccess = ComboRando::OotAccessFromDump(sohDump);
-        auto result = ComboRando::CrossWorldCombinedFill(
-            sohDump, mmDump, masterSeed, ootOracle, mmOracle, progress, forcedOot, ootAccess, goal,
-            mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, sharedMask, games, crossShuffle, crossDungeons);
+        auto result =
+            ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, ootOracle, mmOracle, progress, forcedOot,
+                                               ootAccess, goal, mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT,
+                                               sharedMask, games, crossShuffle, crossDungeons, crossBosses);
         if (cancelled()) // before the success/retry branch, so a cancel never retries
             return;
 
@@ -2333,7 +2414,8 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
             }
             consolidated["entrances"] = { { "oot", std::move(ootEnt) },
                                           { "mm", std::move(mmEnt) },
-                                          { "cross", ComboRando::CrossDungeonsToJson(crossDungeons) } };
+                                          { "cross", ComboRando::CrossDungeonsToJson(crossDungeons) },
+                                          { "crossBosses", ComboRando::CrossBossesToJson(crossBosses) } };
         }
         // ComboShip: cross-game hint generation (Phase 3) — real per-seed hint assignments, from the
         // pare-down computed above. usedCombinedFill guards the no-logic fallback path (no oracles/
@@ -2467,10 +2549,12 @@ static int RunComboGenTest(int numSeeds, uint32_t seedBase) {
                 MM_ShuffleDungeonEntrancesForCombo(seed);
             const ComboRando::CrossDungeonPairs crossDungeons =
                 ShuffleCrossDungeonsForCombo(seed, crossShuffle, sohDump, mmDump);
-            result = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, seed, ootOracle, mmOracle, nullptr, forcedOot,
-                                                        ComboRando::OotAccessFromDump(sohDump), {},
-                                                        mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, 0,
-                                                        ComboRando::COMBO_GAMES_BOTH, crossShuffle, crossDungeons);
+            const ComboRando::CrossBossPairs crossBosses =
+                ShuffleCrossBossesForCombo(seed, crossShuffle, sohDump, mmDump, crossDungeons);
+            result = ComboRando::CrossWorldCombinedFill(
+                sohDump, mmDump, seed, ootOracle, mmOracle, nullptr, forcedOot, ComboRando::OotAccessFromDump(sohDump),
+                {}, mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, 0, ComboRando::COMBO_GAMES_BOTH, crossShuffle,
+                crossDungeons, crossBosses);
             if (!result.success && mmStart && startCfg == 2)
                 pinStartOot = true;
             Combo_MM_Rando_Restore(); // reset the MM oracle's snapshot guard for the next fill
@@ -2575,10 +2659,12 @@ static void RunComboPlaythrough(const std::string& inputSeed) {
             MM_ShuffleDungeonEntrancesForCombo(masterSeed);
         const ComboRando::CrossDungeonPairs crossDungeons =
             ShuffleCrossDungeonsForCombo(masterSeed, crossShuffle, sohDump, mmDump);
-        fill = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, ootOracle, mmOracle, nullptr, forcedOot,
-                                                  ComboRando::OotAccessFromDump(sohDump), {},
-                                                  mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, 0,
-                                                  ComboRando::COMBO_GAMES_BOTH, crossShuffle, crossDungeons);
+        const ComboRando::CrossBossPairs crossBosses =
+            ShuffleCrossBossesForCombo(masterSeed, crossShuffle, sohDump, mmDump, crossDungeons);
+        fill = ComboRando::CrossWorldCombinedFill(
+            sohDump, mmDump, masterSeed, ootOracle, mmOracle, nullptr, forcedOot,
+            ComboRando::OotAccessFromDump(sohDump), {}, mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, 0,
+            ComboRando::COMBO_GAMES_BOTH, crossShuffle, crossDungeons, crossBosses);
         if (!fill.success) {
             if (mmStart && startCfg == 2)
                 pinStartOot = true;
@@ -3583,6 +3669,13 @@ int main(int argc, char** argv) {
     SOH_SetCrossDungeons = (FnTakeStr)GetSym(sohModule, "SOH_SetCrossDungeons");
     MM_CrossDungeonDoors = (FnDumpData)GetSym(mmModule, "MM_CrossDungeonDoors");
     MM_SetCrossDungeons = (FnTakeStr)GetSym(mmModule, "MM_SetCrossDungeons");
+    SOH_CrossBossDoors = (FnDumpData)GetSym(sohModule, "SOH_CrossBossDoors");
+    SOH_ApplyCrossBossesToLogic = (FnTakeStr)GetSym(sohModule, "SOH_ApplyCrossBossesToLogic");
+    SOH_SetCrossBosses = (FnTakeStr)GetSym(sohModule, "SOH_SetCrossBosses");
+    SOH_CrossDungeonDoorOf = (FnCrossDoorOf)GetSym(sohModule, "SOH_CrossDungeonDoorOf");
+    MM_CrossBossDoors = (FnDumpData)GetSym(mmModule, "MM_CrossBossDoors");
+    MM_SetCrossBosses = (FnTakeStr)GetSym(mmModule, "MM_SetCrossBosses");
+    MM_CrossTempleDoorOf = (FnCrossDoorOf)GetSym(mmModule, "MM_CrossTempleDoorOf");
 
     // Cross-game erase seam (issue #1)
     SOH_SetComboSaveIO = (FnSetComboSaveIO)GetSym(sohModule, "SOH_SetComboSaveIO");

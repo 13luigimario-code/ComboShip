@@ -19,6 +19,16 @@
 // age; the OOT oracle also asks that Link can be in Termina at that age); MM gets "@combo:xt:<s>:<age>" (the temple
 // behind MM door s is entered from Hyrule by Link of that OOT age). A swapped temple counts even while the OOT->MM
 // portal is shut: the MM oracle is then asked with "@combo:mmClosed", which keeps it out of the rest of Termina.
+//
+// Cross-Game Boss Entrances works the same way one level down: with both games' own boss room shuffles on, swaps
+// between an OOT boss door b (inside OOT dungeon b, Deku Tree to Shadow Temple) and an MM boss door s (inside temple s)
+// trade the boss rooms behind them. OOT boss door b leads into the lair MM put behind boss door s, and MM boss door s
+// into the room OOT put behind boss door b. Each boss's warp then lands outside the door holding the dungeon (or
+// temple) whose boss door led there, which may be in the other game: the swap records those doors
+// (CrossBossPair::ootWarp / mmWarp) so neither game needs the other's layout. MM's lairs have no way back out; an OOT
+// boss room's exit, entered from Termina, leads back to the start of the temple whose boss door led there. Logic:
+// "@combo:xb:<s>:<age>" (MM, the lair behind boss door s entered from Hyrule) and "@combo:xr:<b>:<age>" (OOT, the room
+// behind boss door b entered from Termina). A boss room entered from the other game is a dead end to the logic.
 #pragma once
 
 #include <algorithm>
@@ -91,6 +101,67 @@ inline CrossDungeonPairs CrossDungeonsFromString(const char* s) {
     return {};
 }
 
+// ---- Cross-Game Boss Entrances (see the top of this file) ----
+
+// OOT's swappable boss doors: the boss door inside each dungeon that has one, named after the dungeon
+// (kCrossOotDoorNames[0..7]: Deku Tree to Shadow Temple). MM's: each temple's boss door (kCrossMmDoorNames).
+inline constexpr int kCrossOotBossDoors = 8;
+
+struct CrossBossPair {
+    int oot;          // OOT boss door (kCrossOotDoorNames index, < kCrossOotBossDoors)
+    int mm;           // MM boss door (kCrossMmDoorNames index)
+    int ootWarp = -1; // the OOT door holding dungeon `oot` (kCrossOotDoorNames): the warp out of the lair behind it
+                      // lands outside it (or outside the MM door it swapped with). -1 = dungeon `oot`'s own door.
+    int mmWarp = -1;  // the MM door holding temple `mm`: the blue warp out of the OOT room behind it lands outside it
+                      // (or outside the OOT door it swapped with). -1 = temple `mm`'s own door.
+};
+using CrossBossPairs = std::vector<CrossBossPair>;
+
+inline int CrossBossOotWarp(const CrossBossPair& p) {
+    return (p.ootWarp >= 0) ? p.ootWarp : p.oot;
+}
+inline int CrossBossMmWarp(const CrossBossPair& p) {
+    return (p.mmWarp >= 0) ? p.mmWarp : p.mm;
+}
+
+// Spoiler form ("entrances.crossBosses"): [{"oot", "mm", "ootWarp", "mmWarp"}, ...] by door names.
+inline nlohmann::json CrossBossesToJson(const CrossBossPairs& pairs) {
+    nlohmann::json out = nlohmann::json::array();
+    for (const auto& p : pairs) {
+        out.push_back({ { "oot", kCrossOotDoorNames[p.oot] },
+                        { "mm", kCrossMmDoorNames[p.mm] },
+                        { "ootWarp", kCrossOotDoorNames[CrossBossOotWarp(p)] },
+                        { "mmWarp", kCrossMmDoorNames[CrossBossMmWarp(p)] } });
+    }
+    return out;
+}
+inline CrossBossPairs CrossBossesFromJson(const nlohmann::json& j) {
+    CrossBossPairs out;
+    if (!j.is_array())
+        return out;
+    bool ootUsed[kCrossOotBossDoors] = {}, mmUsed[kCrossMmDoors] = {};
+    for (const auto& e : j) {
+        if (!e.is_object())
+            continue;
+        const int oot = CrossOotDoorIndex(e.value("oot", std::string()));
+        const int mm = CrossMmDoorIndex(e.value("mm", std::string()));
+        if ((oot < 0) || (oot >= kCrossOotBossDoors) || (mm < 0) || ootUsed[oot] || mmUsed[mm])
+            continue;
+        ootUsed[oot] = mmUsed[mm] = true;
+        CrossBossPair p{ oot, mm };
+        p.ootWarp = CrossOotDoorIndex(e.value("ootWarp", std::string()));
+        p.mmWarp = CrossMmDoorIndex(e.value("mmWarp", std::string()));
+        out.push_back(p);
+    }
+    return out;
+}
+inline CrossBossPairs CrossBossesFromString(const char* s) {
+    try {
+        return CrossBossesFromJson(nlohmann::json::parse(s ? s : "[]"));
+    } catch (...) {}
+    return {};
+}
+
 // The swaps for a seed. ootDoors / mmDoors: the doors each game lets swap (names; empty when its shuffle is off).
 // Deterministic in `seed`.
 inline CrossDungeonPairs ShuffleCrossDungeons(uint64_t seed, const std::vector<std::string>& ootDoors,
@@ -132,16 +203,39 @@ inline CrossDungeonPairs ShuffleCrossDungeons(uint64_t seed, const std::vector<s
     return out;
 }
 
+// The boss door swaps for a seed, like ShuffleCrossDungeons over the boss doors each game lets swap (names). The warp
+// doors are left for the caller (each game's layout).
+inline CrossBossPairs ShuffleCrossBosses(uint64_t seed, const std::vector<std::string>& ootBossDoors,
+                                         const std::vector<std::string>& mmBossDoors) {
+    std::vector<std::string> oot;
+    for (const auto& n : ootBossDoors) {
+        const int i = CrossOotDoorIndex(n);
+        if ((i >= 0) && (i < kCrossOotBossDoors))
+            oot.push_back(n);
+    }
+    CrossBossPairs out;
+    for (const auto& p : ShuffleCrossDungeons(seed ^ 0xB055D0025EEDULL, oot, mmBossDoors))
+        out.push_back({ p.oot, p.mm });
+    return out;
+}
+
 // ---- Logic exchange (see the top of this file) ----
 
 inline constexpr const char* kCwXdPrefix = "@combo:xd:";      // + "<k>:<age>" -> OOT oracle
 inline constexpr const char* kCwXtPrefix = "@combo:xt:";      // + "<s>:<age>" -> MM oracle
 inline constexpr const char* kCwMmClosed = "@combo:mmClosed"; // MM oracle: Termina itself isn't open
-inline constexpr int kCwXdOutShift = 8;                       // GetCrossOut: door bits from here up
+inline constexpr const char* kCwXbPrefix = "@combo:xb:";      // + "<s>:<age>" -> MM oracle (a lair from Hyrule)
+inline constexpr const char* kCwXrPrefix = "@combo:xr:";      // + "<b>:<age>" -> OOT oracle (a room from Termina)
+inline constexpr int kCwXdOutShift = 8;                       // GetCrossOut: swapped dungeon door bits
+inline constexpr int kCwXbOutShift = 16;                      // GetCrossOut: swapped boss door bits
 
-// GetCrossOut bit for "swapped door `door` of this game is reached at `age`" (0 child, 1 adult).
-inline constexpr uint32_t CrossDoorOutBit(int door, int age) {
-    return 1u << (kCwXdOutShift + (2 * door) + age);
+// GetCrossOut bits, both games keyed by the MM door of the swap (at most four of each): "this game's swapped dungeon
+// door paired with MM door `mmDoor` is reached at `age`" (0 child, 1 adult), and the same for a swapped boss door.
+inline constexpr uint32_t CrossDoorOutBit(int mmDoor, int age) {
+    return 1u << (kCwXdOutShift + (2 * mmDoor) + age);
+}
+inline constexpr uint32_t CrossBossOutBit(int mmBossDoor, int age) {
+    return 1u << (kCwXbOutShift + (2 * mmBossDoor) + age);
 }
 
 inline std::string CrossInName(const char* prefix, int door, int age) {
@@ -163,8 +257,10 @@ inline bool ParseCrossInName(const std::string& name, const char* prefix, int& d
 }
 
 struct CrossDungeonLatch {
-    uint32_t ootIn = 0; // bit 2k+age: "@combo:xd:k:age" handed to OOT
-    uint32_t mmIn = 0;  // bit 2s+age: "@combo:xt:s:age" handed to MM
+    uint32_t ootIn = 0;     // bit 2k+age: "@combo:xd:k:age" handed to OOT
+    uint32_t mmIn = 0;      // bit 2s+age: "@combo:xt:s:age" handed to MM
+    uint32_t ootBossIn = 0; // bit 2b+age: "@combo:xr:b:age" handed to OOT
+    uint32_t mmBossIn = 0;  // bit 2s+age: "@combo:xb:s:age" handed to MM
 };
 
 // Hand each oracle the other's newly reached swapped doors. ootOut: the OOT oracle's GetCrossOut. mmOut: the MM
@@ -178,7 +274,7 @@ inline bool ApplyCrossDungeons(const CrossDungeonPairs& pairs, uint32_t ootOut, 
     for (const auto& p : pairs) {
         for (int age = 0; age < 2; age++) {
             const uint32_t mmBit = 1u << ((2 * p.mm) + age);
-            if ((ootOut & CrossDoorOutBit(p.oot, age)) && !(latch.mmIn & mmBit)) {
+            if ((ootOut & CrossDoorOutBit(p.mm, age)) && !(latch.mmIn & mmBit)) {
                 mmOwned.push_back(CrossInName(kCwXtPrefix, p.mm, age));
                 latch.mmIn |= mmBit;
                 changed = true;
@@ -196,15 +292,42 @@ inline bool ApplyCrossDungeons(const CrossDungeonPairs& pairs, uint32_t ootOut, 
     return changed;
 }
 
-// Whether to ask the MM oracle, and with what: Termina is open (the portal, an MM start), or a swapped temple can be
-// entered from Hyrule, in which case MM is asked "closed" (only those temples). Empty `owned` result = don't ask.
+// ApplyCrossDungeons for the swapped boss doors: OOT boss door b reached -> the lair behind MM boss door s entered from
+// Hyrule; MM boss door s reached -> the room behind OOT boss door b entered from Termina.
+inline bool ApplyCrossBosses(const CrossBossPairs& pairs, uint32_t ootOut, uint32_t mmOut, bool ageSystem,
+                             std::vector<std::string>& ootOwned, std::vector<std::string>& mmOwned,
+                             CrossDungeonLatch& latch) {
+    bool changed = false;
+    for (const auto& p : pairs) {
+        for (int age = 0; age < 2; age++) {
+            const uint32_t mmBit = 1u << ((2 * p.mm) + age);
+            if ((ootOut & CrossBossOutBit(p.mm, age)) && !(latch.mmBossIn & mmBit)) {
+                mmOwned.push_back(CrossInName(kCwXbPrefix, p.mm, age));
+                latch.mmBossIn |= mmBit;
+                changed = true;
+            }
+            const bool reached = ageSystem ? (mmOut & CrossBossOutBit(p.mm, age)) != 0
+                                           : (mmOut & (CrossBossOutBit(p.mm, 0) | CrossBossOutBit(p.mm, 1))) != 0;
+            const uint32_t ootBit = 1u << ((2 * p.oot) + age);
+            if (reached && !(latch.ootBossIn & ootBit)) {
+                ootOwned.push_back(CrossInName(kCwXrPrefix, p.oot, age));
+                latch.ootBossIn |= ootBit;
+                changed = true;
+            }
+        }
+    }
+    return changed;
+}
+
+// Whether to ask the MM oracle, and with what: Termina is open (the portal, an MM start), or a swapped temple or lair
+// can be entered from Hyrule, in which case MM is asked "closed" (only those). False = don't ask.
 inline bool CrossMmQueryOwned(bool portalOpen, const CrossDungeonLatch& latch, const std::vector<std::string>& mmOwned,
                               std::vector<std::string>& out) {
     if (portalOpen) {
         out = mmOwned;
         return true;
     }
-    if (latch.mmIn == 0)
+    if ((latch.mmIn == 0) && (latch.mmBossIn == 0))
         return false;
     out = mmOwned;
     out.push_back(kCwMmClosed);
@@ -214,8 +337,11 @@ inline bool CrossMmQueryOwned(bool portalOpen, const CrossDungeonLatch& latch, c
 // Symbolic arrival targets for a swapped door's cross-game switch (Combo_RequestCrossSwitch). The arriving game
 // resolves them from its own layout, then arrives exactly there (no entrance override on top).
 inline constexpr int kCrossTargetFlag = 0x100000;
-inline constexpr int kCrossTargetDungeon = 0x000; // the dungeon behind this game's door `n`
-inline constexpr int kCrossTargetOutside = 0x100; // outside this game's door `n`
+inline constexpr int kCrossTargetDungeon = 0x000;  // the dungeon behind this game's door `n`
+inline constexpr int kCrossTargetOutside = 0x100;  // outside this game's door `n`
+inline constexpr int kCrossTargetBossRoom = 0x200; // the boss room behind this game's boss door `n`
+inline constexpr int kCrossTargetTemple = 0x300;   // MM: the start of temple `n` (an OOT boss room's exit)
+inline constexpr int kCrossTargetWarp = 0x400;     // OOT: where a blue warp lands outside door `n`
 inline constexpr int CrossTarget(int kind, int door) {
     return kCrossTargetFlag | kind | door;
 }

@@ -816,6 +816,18 @@ bool Logic::ComboCrossDungeon(RandomizerRegion entryway) {
     // Link comes back into Hyrule at the age he left it with, so he must be able to be in Termina at this age too.
     return (gComboOracleXdIn & bit) && ComboInTermina();
 }
+
+extern "C" uint32_t gComboOracleXrIn;                    // ComboCrossBosses.cpp: "@combo:xr:b:age" bits (2b + age)
+extern "C" int Combo_OoT_CrossBossDoorForRoom(int room); // ComboCrossBosses.cpp: its swapped boss door, or -1
+
+bool Logic::ComboCrossBoss(RandomizerRegion room) {
+    const int door = Combo_OoT_CrossBossDoorForRoom((int)room);
+    if ((door < 0) || (!IsChild && !IsAdult)) {
+        return false;
+    }
+    const uint32_t bit = 1u << ((2 * door) + (IsAdult ? 1 : 0));
+    return (gComboOracleXrIn & bit) && ComboInTermina();
+}
 #endif
 
 bool Logic::HasProjectile(HasProjectileAge age) {

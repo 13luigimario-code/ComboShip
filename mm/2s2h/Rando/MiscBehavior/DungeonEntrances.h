@@ -47,13 +47,20 @@ constexpr uint32_t kBossSeedSalt = 0xB055E5u;
 // swapped with, as door + 1 per slot (0 = none). A transition that leads into Hyrule returns kToHyrule and, when
 // `hyruleTarget` isn't null, sets it to the symbolic OOT arrival (CrossTarget). Remap never moves an entrance taken
 // from the logic's root (SCENE_MAX): those are the oracle's own ways in.
+//
+// Cross-Game Boss Entrances: `crossBoss` (may be null) is the OOT boss door each temple's boss door swapped with, and
+// `crossBossWarp` the OOT door holding that boss door's dungeon, both as door + 1 per slot. A swapped boss door leads
+// into Hyrule, and so does the warp out of the lair behind it unless that OOT door swapped with a temple door.
 constexpr int32_t kToHyrule = -1;
 int32_t Remap(int32_t entrance, int32_t fromScene, const uint8_t layout[kSlots], const uint8_t bossLayout[kSlots],
-              const uint8_t cross[kSlots] = nullptr, int* hyruleTarget = nullptr);
+              const uint8_t cross[kSlots] = nullptr, int* hyruleTarget = nullptr,
+              const uint8_t crossBoss[kSlots] = nullptr, const uint8_t crossBossWarp[kSlots] = nullptr);
 // The temple behind slot `slot`'s door under `layout` (its own when vanilla).
 int TempleBehind(const uint8_t layout[kSlots], int slot);
 // The temple door slot `entrance` is (a temple's door, entered from outside), or -1.
 int DoorSlot(int32_t entrance);
+// The temple whose boss door `entrance` is, taken from scene `fromScene` (inside that temple), or -1.
+int BossDoorSlot(int32_t entrance, int32_t fromScene);
 // The vanilla temple door entrance of slot `slot` (Woodfall, Snowhead, Great Bay, Stone Tower).
 int32_t SlotDoor(int slot);
 // A random permutation from `seed` (every temple behind some door).
