@@ -4,6 +4,13 @@
 #include "Logic.h"
 #ifdef COMBO_BUILD
 #include "2s2h/Rando/MiscBehavior/DungeonEntrances.h"
+#ifdef COMBO_BUILD
+// ComboShip (Cross-Game Dungeon Entrances, BenPort.cpp's oracle): a swapped temple door reached; whether the logic's
+// root is shut (Termina itself isn't open to this search); a temple entered from Hyrule.
+extern "C" void Combo_MM_ReportCrossDoor(int slot);
+extern "C" int gComboMmRootClosed;
+extern "C" int Combo_MM_CrossTempleEntered(int temple);
+#endif
 #endif
 
 namespace Rando {
@@ -214,7 +221,18 @@ void FindReachableRegions(RandoRegionId currentRegion, std::set<RandoRegionId>& 
         // ComboShip: dungeon entrance shuffle — a temple door / exit / boss warp leads where the seed's layout says.
         const u8* dungeonLayout = gSaveContext.save.shipSaveInfo.rando.comboDungeonEntrances;
         const u8* bossLayout = gSaveContext.save.shipSaveInfo.rando.comboBossEntrances;
-        const s32 exitTo = Rando::DungeonEntrances::Remap(exitId, sourceRegion.sceneId, dungeonLayout, bossLayout);
+        const u8* cross = gSaveContext.save.shipSaveInfo.rando.comboCrossDungeons;
+        const s32 exitTo =
+            Rando::DungeonEntrances::Remap(exitId, sourceRegion.sceneId, dungeonLayout, bossLayout, cross);
+        if (exitTo == Rando::DungeonEntrances::kToHyrule) {
+            // Cross-Game Dungeon Entrances: this way leads into Hyrule. A swapped temple door Link can go through is
+            // the OOT oracle's way into the dungeon behind it.
+            const int slot = Rando::DungeonEntrances::DoorSlot(exitId);
+            if ((slot >= 0) && regionExit.condition()) {
+                Combo_MM_ReportCrossDoor(slot);
+            }
+            continue;
+        }
         RandoRegionId connectedRegionId = GetRegionIdFromEntrance(exitTo);
 #else
         RandoRegionId connectedRegionId = GetRegionIdFromEntrance(exitId);
@@ -251,20 +269,28 @@ static RegisterShipInitFunc initFunc([]() {
             CHECK(RC_STARTING_ITEM_SONG_OF_HEALING, true),
         },
         .exits = { //     TO                                         FROM
-            EXIT(ENTRANCE(SOUTH_CLOCK_TOWN, 0),                      ONE_WAY_EXIT, true), // Save warp
 #ifdef COMBO_BUILD
+            // ComboShip (Cross-Game Dungeon Entrances): Termina itself is shut to a search that only enters it through
+            // a temple behind an OOT door (gComboMmRootClosed).
+            EXIT(ENTRANCE(SOUTH_CLOCK_TOWN, 0),                      ONE_WAY_EXIT, !gComboMmRootClosed), // Save warp
             // ComboShip (teleport songs): OOT's Song of Soaring reaches the same owls (CAN_SOAR_TO_OWL, Logic.h).
-            EXIT(ENTRANCE(SOUTH_CLOCK_TOWN, 9),                      ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_CLOCK_TOWN)),
-            EXIT(ENTRANCE(SOUTHERN_SWAMP_POISONED, 10),              ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_SOUTHERN_SWAMP)),
-            EXIT(ENTRANCE(WOODFALL, 4),                              ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_WOODFALL)),
-            EXIT(ENTRANCE(MILK_ROAD, 4),                             ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_MILK_ROAD)),
-            EXIT(ENTRANCE(MOUNTAIN_VILLAGE_WINTER, 8),               ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_MOUNTAIN_VILLAGE)),
-            EXIT(ENTRANCE(SNOWHEAD, 3),                              ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_SNOWHEAD)),
-            EXIT(ENTRANCE(GREAT_BAY_COAST, 11),                      ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_GREAT_BAY_COAST)),
-            EXIT(ENTRANCE(ZORA_CAPE, 6),                             ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_ZORA_CAPE)),
-            EXIT(ENTRANCE(IKANA_CANYON, 4),                          ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_IKANA_CANYON)),
-            EXIT(ENTRANCE(STONE_TOWER, 3),                           ONE_WAY_EXIT, CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_STONE_TOWER)),
+            EXIT(ENTRANCE(SOUTH_CLOCK_TOWN, 9),                      ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_CLOCK_TOWN)),
+            EXIT(ENTRANCE(SOUTHERN_SWAMP_POISONED, 10),              ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_SOUTHERN_SWAMP)),
+            EXIT(ENTRANCE(WOODFALL, 4),                              ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_WOODFALL)),
+            EXIT(ENTRANCE(MILK_ROAD, 4),                             ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_MILK_ROAD)),
+            EXIT(ENTRANCE(MOUNTAIN_VILLAGE_WINTER, 8),               ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_MOUNTAIN_VILLAGE)),
+            EXIT(ENTRANCE(SNOWHEAD, 3),                              ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_SNOWHEAD)),
+            EXIT(ENTRANCE(GREAT_BAY_COAST, 11),                      ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_GREAT_BAY_COAST)),
+            EXIT(ENTRANCE(ZORA_CAPE, 6),                             ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_ZORA_CAPE)),
+            EXIT(ENTRANCE(IKANA_CANYON, 4),                          ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_IKANA_CANYON)),
+            EXIT(ENTRANCE(STONE_TOWER, 3),                           ONE_WAY_EXIT, !gComboMmRootClosed && CAN_SOAR_TO_OWL && CAN_OWL_WARP(OWL_WARP_STONE_TOWER)),
+            // ComboShip (Cross-Game Dungeon Entrances): a temple behind an OOT door Link reached, entered from Hyrule.
+            EXIT(ENTRANCE(WOODFALL_TEMPLE, 0),                       ONE_WAY_EXIT, Combo_MM_CrossTempleEntered(0)),
+            EXIT(ENTRANCE(SNOWHEAD_TEMPLE, 0),                       ONE_WAY_EXIT, Combo_MM_CrossTempleEntered(1)),
+            EXIT(ENTRANCE(GREAT_BAY_TEMPLE, 0),                      ONE_WAY_EXIT, Combo_MM_CrossTempleEntered(2)),
+            EXIT(ENTRANCE(STONE_TOWER_TEMPLE, 0),                    ONE_WAY_EXIT, Combo_MM_CrossTempleEntered(3)),
 #else
+            EXIT(ENTRANCE(SOUTH_CLOCK_TOWN, 0),                      ONE_WAY_EXIT, true), // Save warp
             EXIT(ENTRANCE(SOUTH_CLOCK_TOWN, 9),                      ONE_WAY_EXIT, CAN_PLAY_SONG(SOARING) && CAN_OWL_WARP(OWL_WARP_CLOCK_TOWN)),
             EXIT(ENTRANCE(SOUTHERN_SWAMP_POISONED, 10),              ONE_WAY_EXIT, CAN_PLAY_SONG(SOARING) && CAN_OWL_WARP(OWL_WARP_SOUTHERN_SWAMP)),
             EXIT(ENTRANCE(WOODFALL, 4),                              ONE_WAY_EXIT, CAN_PLAY_SONG(SOARING) && CAN_OWL_WARP(OWL_WARP_WOODFALL)),

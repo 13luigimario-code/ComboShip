@@ -24,6 +24,7 @@
 #include "CrossWarpLogic.h"
 #include "ComboGames.h"
 #include "CrossShuffle.h"
+#include "CrossDungeons.h"
 
 namespace ComboRando {
 
@@ -256,13 +257,17 @@ constexpr int kMaxRewardTries = 8; // Phase R orders tried per pass (Cross-Game 
 // games (ComboGames.h): a solo seed keeps every item in its own game (both phases pick only checks of the item's
 // game), uses no cross-game teleports in logic, and skips the portal prerequisites / re-entry guarantee, since
 // nothing crosses between the games at runtime.
+// crossDungeons (CrossDungeons.h): the seed's swapped dungeon doors (Cross-Game Dungeon Entrances), already pushed into
+// both oracles; each oracle reports the swapped doors it reaches and gets the other's (see that header).
 // crossShuffle (CrossShuffle.h): Cross-Game Dungeon Rewards puts every dungeon reward of both games on the bosses of
 // both games (Phase R below); ignored in a solo seed.
-inline CombinedFillResult CrossWorldCombinedFill(
-    const std::string& sohDumpJson, const std::string& mmDumpJson, uint32_t masterSeed, const OracleFns& ootOracle,
-    const OracleFns& mmOracle, ComboRando::ComboGenProgress* progress = nullptr, const std::string& forcedOotJson = "",
-    OotAccess ootAccess = OotAccess::ALL_REACHABLE, CwGoal goal = {}, GameId startingGame = GAME_OOT,
-    SharedMask sharedMask = 0, ComboGames games = COMBO_GAMES_BOTH, CrossShuffleMask crossShuffle = 0) {
+inline CombinedFillResult
+CrossWorldCombinedFill(const std::string& sohDumpJson, const std::string& mmDumpJson, uint32_t masterSeed,
+                       const OracleFns& ootOracle, const OracleFns& mmOracle,
+                       ComboRando::ComboGenProgress* progress = nullptr, const std::string& forcedOotJson = "",
+                       OotAccess ootAccess = OotAccess::ALL_REACHABLE, CwGoal goal = {}, GameId startingGame = GAME_OOT,
+                       SharedMask sharedMask = 0, ComboGames games = COMBO_GAMES_BOTH,
+                       CrossShuffleMask crossShuffle = 0, const CrossDungeonPairs& crossDungeons = {}) {
     CombinedFillResult result;
     result.success = false;
     const bool solo = ComboGamesSolo(games);
@@ -826,8 +831,9 @@ inline CombinedFillResult CrossWorldCombinedFill(
         // Shared Items mirror: how many copies of each effective family have already been pushed onto
         // mmOwned this call, so re-querying doesn't duplicate them as ootOwned grows.
         size_t sharedGiven[SF_COUNT] = { 0 };
-        // Cross-game teleport songs: what each side can do for the other, latched.
+        // Cross-game teleport songs: what each side can do for the other, latched. Likewise the swapped dungeon doors.
         CrossWarpLatch crossLatch;
+        CrossDungeonLatch dungeonLatch;
         for (;;) {
             ootReachable = queryReachable(ootOracle, ootOwned);
             const uint32_t ootCrossOut = OracleCrossOut(ootOracle);
@@ -849,11 +855,19 @@ inline CombinedFillResult CrossWorldCombinedFill(
                     sharedGiven[i] = target;
                 }
             }
-            mmReachable = portalOpen ? queryReachable(mmOracle, mmOwned) : std::unordered_set<std::string>{};
+            // MM is asked once Termina is open, or (shut) once a temple behind an OOT door can be entered from Hyrule.
+            std::vector<std::string> mmAskOwned;
+            const bool mmAsked = CrossMmQueryOwned(portalOpen, dungeonLatch, mmOwned, mmAskOwned);
+            mmReachable = mmAsked ? queryReachable(mmOracle, mmAskOwned) : std::unordered_set<std::string>{};
+            const uint32_t mmCrossOut = mmAsked ? OracleCrossOut(mmOracle) : 0u;
             // Push each side's new warp abilities onto the other's owned list and repeat.
             // A solo seed never crosses between the games: no teleport songs into the other one.
-            bool changed = !solo && ApplyCrossWarps(ootCrossOut, portalOpen ? OracleCrossOut(mmOracle) : 0u, portalOpen,
-                                                    mmStart, ootOwned, mmOwned, crossLatch);
+            bool changed = !solo && ApplyCrossWarps(ootCrossOut, portalOpen ? mmCrossOut : 0u, portalOpen, mmStart,
+                                                    ootOwned, mmOwned, crossLatch, !crossDungeons.empty());
+            if (!solo && ApplyCrossDungeons(crossDungeons, ootCrossOut, portalOpen ? mmCrossOut : 0u,
+                                            (mmCrossOut & CW_MM_OUT_AGE) != 0, ootOwned, mmOwned, dungeonLatch)) {
+                changed = true;
+            }
             for (size_t i = 0; i < placements.size(); ++i) {
                 if (credited[i])
                     continue;
@@ -1481,6 +1495,8 @@ inline CombinedFillResult CrossWorldCombinedFill(
                              { "checks", static_cast<uint32_t>(allChecks.size()) },
                              { "passes", passesUsed } };
     spoiler["sharedItems"] = SharedKeysFromMask(effectiveSharedMask);
+    if (!crossDungeons.empty())
+        spoiler["crossDungeons"] = CrossDungeonsToJson(crossDungeons); // the playthrough's swapped doors
     if (!sharedStartingMm.empty())
         spoiler["sharedStartingMm"] = sharedStartingMm;
 

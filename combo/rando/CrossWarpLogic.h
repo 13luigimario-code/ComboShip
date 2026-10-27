@@ -44,10 +44,12 @@ struct CrossWarpLatch {
     bool mmAdultIn = false; // Cross-Games Age
 };
 
-// Give each game the other's new teleport-song abilities. True if anything changed: query again.
+// Give each game the other's new teleport-song abilities. True if anything changed: query again. terminaBits: OOT
+// needs to know how Link can be in Termina even without a warp song (Cross-Game Dungeon Entrances: coming back into
+// Hyrule through an MM door).
 inline bool ApplyCrossWarps(uint32_t ootOut, uint32_t mmOut, bool mmOpen, bool mmStart,
                             std::vector<std::string>& ootOwned, std::vector<std::string>& mmOwned,
-                            CrossWarpLatch& latch) {
+                            CrossWarpLatch& latch, bool terminaBits = false) {
     bool changed = false;
     if ((ootOut & CW_OOT_OUT_CAN_SOAR) && !latch.mmIn) {
         mmOwned.push_back(kCwOotSoaring);
@@ -69,7 +71,7 @@ inline bool ApplyCrossWarps(uint32_t ootOut, uint32_t mmOut, bool mmOpen, bool m
         want |= CW_OOT_IN_MM_START;
     // The owl / MM-start bits only matter alongside a warp song; hold them back until one exists so a
     // seed without MM warp songs keeps byte-identical owned lists and memo keys.
-    if (!((want | latch.ootIn) & CW_OOT_IN_WARP_MASK))
+    if (!terminaBits && !((want | latch.ootIn) & CW_OOT_IN_WARP_MASK))
         return changed;
     const uint32_t fresh = want & ~latch.ootIn;
     for (int n = 0; n < 6; ++n)

@@ -21,6 +21,7 @@ extern "C" PlayState* gPlayState;
 
 #ifdef COMBO_BUILD
 #include "rando/CrossWarpLogic.h" // ComboShip (teleport songs): cross-game warp input bits
+#include "rando/CrossDungeons.h"  // ComboShip: Cross-Game Dungeon Entrances
 // Set by Combo_SOH_Rando_SetOwnedItems for the combined fill's oracle queries; 0 everywhere else.
 extern "C" int gComboOracleCrossIn;
 #endif
@@ -790,12 +791,30 @@ bool Logic::ComboCrossWarp(int warpIndex) {
     const uint32_t in = static_cast<uint32_t>(gComboOracleCrossIn);
     if (warpIndex < 0 || warpIndex > 5 || !((in >> warpIndex) & 1u))
         return false;
+    return ComboInTermina();
+}
+
+bool Logic::ComboInTermina() {
+    const uint32_t in = static_cast<uint32_t>(gComboOracleCrossIn);
     if (IsChild && (in & ComboRando::CW_OOT_IN_MM_START))
         return true;
     Region* portal = RegionTable(RR_MARKET_MASK_SHOP);
     if ((IsChild && portal->Child()) || (IsAdult && portal->Adult()))
         return true;
     return (in & ComboRando::CW_OOT_IN_MM_OWL) && CanUse(RG_SONG_OF_SOARING);
+}
+
+extern "C" uint32_t gComboOracleXdIn; // ComboCrossDungeons.cpp: "@combo:xd:k:age" bits (2k + age)
+extern "C" int Combo_OoT_CrossDoorForEntryway(int entryway); // ComboCrossDungeons.cpp: its swapped door, or -1
+
+bool Logic::ComboCrossDungeon(RandomizerRegion entryway) {
+    const int door = Combo_OoT_CrossDoorForEntryway((int)entryway);
+    if ((door < 0) || (!IsChild && !IsAdult)) {
+        return false;
+    }
+    const uint32_t bit = 1u << ((2 * door) + (IsAdult ? 1 : 0));
+    // Link comes back into Hyrule at the age he left it with, so he must be able to be in Termina at this age too.
+    return (gComboOracleXdIn & bit) && ComboInTermina();
 }
 #endif
 

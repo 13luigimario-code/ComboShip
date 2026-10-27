@@ -411,6 +411,8 @@ typedef struct RandoSaveInfo {
     u8 comboDungeonEntrances[4];
     // ComboShip (boss room shuffle): the temple whose boss's lair is behind each temple's boss door, as temple + 1.
     u8 comboBossEntrances[4];
+    // ComboShip (Cross-Game Dungeon Entrances): the OOT dungeon door each temple door swapped with, as door + 1.
+    u8 comboCrossDungeons[4];
 #endif
 } RandoSaveInfo;
 

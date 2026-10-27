@@ -39,6 +39,10 @@ class Logic {
     bool CanUse(RandomizerGet itemName);
 #ifdef COMBO_BUILD
     bool ComboCrossWarp(int warpIndex); // ComboShip (teleport songs): MM's warp-song copy reaches the pad
+    bool ComboInTermina(); // ComboShip: Link can be in Termina at this age (portal, MM start, Soaring to an owl)
+    // ComboShip (Cross-Game Dungeon Entrances): the dungeon whose entryway is `entryway` sits behind an MM door that
+    // Link can reach at this age (rando/CrossDungeons.h).
+    bool ComboCrossDungeon(RandomizerRegion entryway);
 #endif
     bool HasProjectile(HasProjectileAge age);
     bool HasItem(RandomizerGet itemName);

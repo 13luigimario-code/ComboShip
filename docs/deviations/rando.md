@@ -3166,3 +3166,60 @@ Tower's boss door → Goht; test hook warps, which take the same transition path
 Arriving at that spawn puts Link at the bottom of the Snowhead path. A plain warp there does the same, and so does
 leaving Snowhead Temple in an unshuffled seed, so that's MM's own behavior, not the shuffle's. Not checked in game: the
 real boss door actors, the warp pads, and a first boss warp through the Giants' Chamber skip.
+
+## Cross-Game Dungeon Entrances (OoTMM cross-game dungeon ER) (2026-10-27)
+
+Combo menu, Cross-Game Shuffles: "Cross-Game Dungeon Entrances" (`gCombo.Rando.CrossDungeonEntrances`, crossShuffle key
+`dungeonEntrances`, seed-bound like Cross-Game Dungeon Rewards). It needs both games' own dungeon shuffles and doesn't
+force them: Ocarina of Time's Dungeon Entrances (On or On + Ganon, not decoupled) and Majora's Mask's Shuffle Dungeon
+Entrances. Without both, each game shuffles on its own. Shared code: `combo/rando/CrossDungeons.h`.
+
+**Layout.** Each game shuffles its own dungeons first. The cross-game part is a set of swaps, each between an OOT dungeon
+door and an MM temple door, which trade what's behind them:
+- OOT door k now leads into the temple MM put behind door s. That temple's exit and its boss's warp come back out of
+  OOT door k.
+- MM door s now leads into the dungeon OOT put behind door k. That dungeon's exit and its boss's blue warp come back out
+  of MM door s.
+
+The number of swaps follows a pooled shuffle of all 15 dungeons over all 15 doors, i.e. how many OOT dungeons land
+behind the four MM doors (`ShuffleCrossDungeons`, deterministic in the master seed). The eleven OOT doors are the
+dungeon entrance shuffle's. Ganon's Castle never swaps, neither its door nor a door holding it (`SOH_CrossDungeonDoors`).
+The spoiler records the swaps as `entrances.cross` (`[{oot, mm}]`, door names; absent/empty = none) and the fill's own
+spoiler as `crossDungeons`. Each game resolves everything else from its own layout, so the swaps are all either game
+needs.
+
+**Game.**
+- OOT (`soh/soh/Enhancements/combo/ComboCrossDungeons.cpp`): `Entrance_OverrideNextIndex` and
+  `Entrance_OverrideDynamicExit` (`randomizer_entrance.c`) check each entrance before and after Ship of Harkinian's
+  override.
+  - Going through a swapped door (its vanilla entrance) switches to Termina.
+  - So does any override that lands outside a swapped door: that is how the dungeon behind it is left, by its exit or by
+    its boss's blue warp, which Ship of Harkinian already sends outside the door the dungeon is behind.
+- MM (`DungeonEntrances.cpp`): `Remap` takes the swaps (`RandoSaveInfo::comboCrossDungeons`, OOT door + 1 per temple
+  door; absent on older saves). A swapped temple door from outside, or the exit or boss warp of the temple behind it,
+  returns `kToHyrule` with a symbolic OOT arrival, and `z_play.c` / the Giants' Chamber skip switch to Hyrule.
+- Arrivals: switches use the teleport songs' `Combo_RequestCrossSwitch` with a symbolic target (`CrossTarget`: the
+  dungeon behind this game's door n, or outside it). The arriving game's title setup resolves it from its own layout
+  and spawns there exactly, without an entrance override on top (`Combo_OoT_ResolveCrossTarget`,
+  `Combo_MM_ResolveCrossTarget`). Cross-Games Age carries Link's age into Termina as on any crossing. Coming back into
+  Hyrule, Link has the age he left it with.
+
+**Logic.** Neither oracle can see the other game, so the swapped doors are exchanged through the fill's fixpoint like
+the teleport songs. The fill, the playthrough and the pare-down use `ApplyCrossDungeons` and `CrossMmQueryOwned`.
+- The OOT oracle disconnects each swapped door, the exit of the dungeon behind it, and the blue warps that land outside
+  it (`SOH_ApplyCrossDungeonsToLogic`). It reports the swapped doors Link can reach and use, per age, as `GetCrossOut`
+  bits: the door's region at that age, and the door's own condition at that age and time.
+- The MM oracle routes a swapped door, and the way out of the temple behind it, to `kToHyrule` (not followed). It
+  reports the swapped temple doors it reaches, per age pass (`Combo_MM_ReportCrossDoor`).
+- The fill hands each oracle the other's doors as pseudo-owned names:
+  - `@combo:xt:<s>:<age>` to MM. Logic's root enters the temple behind door s (`Combo_MM_CrossTempleEntered`), at that
+    age with Cross-Games Age, else at any. With Cross-Games Age, an adult arrival adds MM's adult pass. That pass stays
+    out of the rest of Termina unless adult Link can also soar in.
+  - `@combo:xd:<k>:<age>` to OOT. Root Exits enter the dungeon behind door k (`Logic::ComboCrossDungeon`) at that age,
+    if Link can also be in Termina at that age (`Logic::ComboInTermina`: the portal, an MM start, Soaring to an active
+    owl). Without Cross-Games Age, an MM door reached at all counts for both ages. The teleport latch then also delivers
+    the owl and MM-start bits (`ApplyCrossWarps`'s `terminaBits`).
+- A swapped temple counts even while the OOT->MM portal is shut. MM is then asked with `@combo:mmClosed`, which shuts
+  logic's root (`gComboMmRootClosed`: no save warp, no owls), so only those temples are reachable.
+
+**Not done:** cross-game boss room shuffle. Hints and the entrance tracker don't name the other game's door.

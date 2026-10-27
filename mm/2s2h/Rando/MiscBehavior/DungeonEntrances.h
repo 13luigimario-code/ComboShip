@@ -25,6 +25,8 @@ u16 Combo_MM_DungeonEntranceOverride(u16 entrance, s16 sceneId);
 // SkipGiantsChamber.cpp: the first blue warp out of boss lair `bossScene` (the Giants' Chamber is skipped and this is
 // where the warp lands).
 void Combo_MM_DungeonEntranceBossWarp(s16 bossScene, u16* entrance, u16* cutsceneIndex);
+// title_setup.c: a symbolic arrival from Hyrule (Cross-Game Dungeon Entrances) as an MM entrance, or -1.
+s32 Combo_MM_ResolveCrossTarget(s32 target);
 
 #ifdef __cplusplus
 }
@@ -40,7 +42,20 @@ constexpr uint32_t kBossSeedSalt = 0xB055E5u;
 // The shuffled entrance for `entrance` taken from scene `fromScene`; `entrance` itself when nothing changes. Shared by
 // the logic and the game. `layout`: the temple behind each temple door; `bossLayout` (may be null): the temple whose
 // boss's lair is behind each temple's boss door. Both in the save encoding: temple + 1 per slot, all 0 = vanilla.
-int32_t Remap(int32_t entrance, int32_t fromScene, const uint8_t layout[kSlots], const uint8_t bossLayout[kSlots]);
+//
+// Cross-Game Dungeon Entrances (combo/rando/CrossDungeons.h): `cross` (may be null) is the OOT door each temple door
+// swapped with, as door + 1 per slot (0 = none). A transition that leads into Hyrule returns kToHyrule and, when
+// `hyruleTarget` isn't null, sets it to the symbolic OOT arrival (CrossTarget). Remap never moves an entrance taken
+// from the logic's root (SCENE_MAX): those are the oracle's own ways in.
+constexpr int32_t kToHyrule = -1;
+int32_t Remap(int32_t entrance, int32_t fromScene, const uint8_t layout[kSlots], const uint8_t bossLayout[kSlots],
+              const uint8_t cross[kSlots] = nullptr, int* hyruleTarget = nullptr);
+// The temple behind slot `slot`'s door under `layout` (its own when vanilla).
+int TempleBehind(const uint8_t layout[kSlots], int slot);
+// The temple door slot `entrance` is (a temple's door, entered from outside), or -1.
+int DoorSlot(int32_t entrance);
+// The vanilla temple door entrance of slot `slot` (Woodfall, Snowhead, Great Bay, Stone Tower).
+int32_t SlotDoor(int slot);
 // A random permutation from `seed` (every temple behind some door).
 void Shuffle(uint32_t seed, uint8_t layout[kSlots]);
 

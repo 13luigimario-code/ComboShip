@@ -170,6 +170,19 @@ inline bool OraclePortalOpen(const OracleFns& o) {
     return o.GetPortalOpen == nullptr || o.GetPortalOpen() != 0;
 }
 
+// The seed's swapped dungeon doors (Cross-Game Dungeon Entrances): the fill's spoiler carries them as "crossDungeons",
+// the consolidated spoiler as "entrances.cross". Absent = none.
+inline CrossDungeonPairs CrossDungeonsFromSpoiler(const std::string& spoilerJson) {
+    try {
+        auto j = nlohmann::json::parse(spoilerJson);
+        if (j.contains("crossDungeons"))
+            return CrossDungeonsFromJson(j["crossDungeons"]);
+        return CrossDungeonsFromJson(
+            j.value("entrances", nlohmann::json::object()).value("cross", nlohmann::json::array()));
+    } catch (...) {}
+    return {};
+}
+
 using ReachSet = std::shared_ptr<const std::unordered_set<std::string>>;
 
 // A memoized query result: the reachable set plus the portal bit that belonged to the same search.
@@ -308,6 +321,7 @@ inline RequirednessResult PareDownPlaythrough(const std::string& spoilerJson, co
     // else from empty until stable. creditedOut (optional) reports what was credited when the run
     // ended (at a win: exactly what was collected strictly before the goal first held).
     const std::vector<std::string> sharedStartingMm = SharedStartingMmFromSpoiler(spoilerJson);
+    const CrossDungeonPairs crossDungeons = CrossDungeonsFromSpoiler(spoilerJson);
     auto winsWithout = [&](const std::unordered_set<size_t>& excludeIdx, std::vector<char>* creditedOut) {
         std::vector<std::string> ootOwned, mmOwned = sharedStartingMm;
         std::vector<char> credited(placements.size(), 0);
@@ -316,7 +330,8 @@ inline RequirednessResult PareDownPlaythrough(const std::string& spoilerJson, co
         // Latched: MM stays open once OOT can reach the Happy Mask Shop. Ungated (NO_LOGIC) = open,
         // and an MM start (#135) roots MM from the beginning.
         bool portalOpen = !portalGated || mmStart;
-        CrossWarpLatch crossLatch; // cross-game teleport songs
+        CrossWarpLatch crossLatch;      // cross-game teleport songs
+        CrossDungeonLatch dungeonLatch; // swapped dungeon doors
         size_t sharedGiven[SF_COUNT] = { 0 };
         for (;;) {
             auto ootQ = QueryReachableMemo(ootOracle, ootOwned, ootMemo);
@@ -325,15 +340,22 @@ inline RequirednessResult PareDownPlaythrough(const std::string& spoilerJson, co
             // Shared Items: same mirror as the fill and RunPlaythrough.
             ApplySharedMirror(sharedMask, ootOwned, mmOwned, sharedGiven);
             uint32_t mmCrossOut = 0;
-            if (portalOpen) {
-                auto mmQ = QueryReachableMemo(mmOracle, mmOwned, mmMemo);
+            std::vector<std::string> mmAsk;
+            if (CrossMmQueryOwned(portalOpen, dungeonLatch, mmOwned, mmAsk)) {
+                auto mmQ = QueryReachableMemo(mmOracle, mmAsk, mmMemo);
                 mmReach = mmQ.reach;
                 mmCrossOut = mmQ.crossOut;
             } else {
                 mmReach = kEmptyReach;
             }
             // A new cross ability changes what is reachable: re-query before testing the goal.
-            if (ApplyCrossWarps(ootQ.crossOut, mmCrossOut, portalOpen, mmStart, ootOwned, mmOwned, crossLatch))
+            bool again = ApplyCrossWarps(ootQ.crossOut, portalOpen ? mmCrossOut : 0u, portalOpen, mmStart, ootOwned,
+                                         mmOwned, crossLatch, !crossDungeons.empty());
+            if (ApplyCrossDungeons(crossDungeons, ootQ.crossOut, portalOpen ? mmCrossOut : 0u,
+                                   (mmCrossOut & CW_MM_OUT_AGE) != 0, ootOwned, mmOwned, dungeonLatch)) {
+                again = true;
+            }
+            if (again)
                 continue;
             // Test the goal per sphere and stop at the first win: we only break when the goal IS met
             // and never un-credit an item, so an early win is final regardless of oracle monotonicity.
@@ -490,21 +512,44 @@ inline PlaythroughResult RunPlaythrough(const std::string& spoilerJson, const Or
     // MM start (#135) roots MM from the beginning.
     bool portalOpen = !portalGated || mmStart;
     size_t sharedGiven[SF_COUNT] = { 0 };
-    CrossWarpLatch crossLatch; // cross-game teleport
+    CrossWarpLatch crossLatch;      // cross-game teleport
+    CrossDungeonLatch dungeonLatch; // swapped dungeon doors
+    const CrossDungeonPairs crossDungeons = CrossDungeonsFromSpoiler(spoilerJson);
+    // MM's reach for these owned lists (asked shut when only a swapped temple lets Link in), and its cross bits.
+    auto queryMm = [&](const std::vector<std::string>& mmOwned, bool open, const CrossDungeonLatch& latch,
+                       uint32_t& crossOut) {
+        std::vector<std::string> ask;
+        crossOut = 0;
+        if (!CrossMmQueryOwned(open, latch, mmOwned, ask))
+            return std::unordered_set<std::string>{};
+        auto r = queryReachable(mmOracle, ask);
+        crossOut = OracleCrossOut(mmOracle);
+        return r;
+    };
+    // Settle what each side now does for the other (teleport songs, swapped dungeon doors). True: query again.
+    auto exchange = [&](uint32_t ootOut, uint32_t mmOut, bool open, std::vector<std::string>& oot,
+                        std::vector<std::string>& mm, CrossWarpLatch& warps, CrossDungeonLatch& doors) {
+        bool again = ApplyCrossWarps(ootOut, open ? mmOut : 0u, open, mmStart, oot, mm, warps, !crossDungeons.empty());
+        if (ApplyCrossDungeons(crossDungeons, ootOut, open ? mmOut : 0u, (mmOut & CW_MM_OUT_AGE) != 0, oot, mm,
+                               doors)) {
+            again = true;
+        }
+        return again;
+    };
     for (int sphere = 0; sphere < kMaxSpheres; ++sphere) {
         auto ootReach = queryReachable(ootOracle, ownedOot);
         // Portal bit belongs to the OOT query just made; read it before crediting any MM check.
         portalOpen = portalOpen || OraclePortalOpen(ootOracle);
         ApplySharedMirror(sharedMask, ownedOot, ownedMm, sharedGiven);
         uint32_t ootCrossOut = OracleCrossOut(ootOracle);
-        auto mmReach = portalOpen ? queryReachable(mmOracle, ownedMm) : std::unordered_set<std::string>{};
+        uint32_t mmCrossOut = 0;
+        auto mmReach = queryMm(ownedMm, portalOpen, dungeonLatch, mmCrossOut);
         // Cross-game teleport: settle what each side now does for the other inside this sphere
-        while (ApplyCrossWarps(ootCrossOut, portalOpen ? OracleCrossOut(mmOracle) : 0u, portalOpen, mmStart, ownedOot,
-                               ownedMm, crossLatch)) {
+        while (exchange(ootCrossOut, mmCrossOut, portalOpen, ownedOot, ownedMm, crossLatch, dungeonLatch)) {
             ootReach = queryReachable(ootOracle, ownedOot);
             portalOpen = portalOpen || OraclePortalOpen(ootOracle);
             ootCrossOut = OracleCrossOut(ootOracle);
-            mmReach = portalOpen ? queryReachable(mmOracle, ownedMm) : std::unordered_set<std::string>{};
+            mmReach = queryMm(ownedMm, portalOpen, dungeonLatch, mmCrossOut);
         }
         bool canGanon = ootReach.count(kOotGanon) > 0;
         bool canMajora = mmReach.count(kMmWin) > 0;
@@ -570,14 +615,15 @@ inline PlaythroughResult RunPlaythrough(const std::string& spoilerJson, const Or
     size_t everSharedGiven[SF_COUNT] = { 0 };
     ApplySharedMirror(sharedMask, allOot, allMm, everSharedGiven);
     uint32_t everOotCrossOut = OracleCrossOut(ootOracle);
-    auto everReachMm = everPortalOpen ? queryReachable(mmOracle, allMm) : std::unordered_set<std::string>{};
     CrossWarpLatch everCrossLatch;
-    while (ApplyCrossWarps(everOotCrossOut, everPortalOpen ? OracleCrossOut(mmOracle) : 0u, everPortalOpen, mmStart,
-                           allOot, allMm, everCrossLatch)) {
+    CrossDungeonLatch everDungeonLatch;
+    uint32_t everMmCrossOut = 0;
+    auto everReachMm = queryMm(allMm, everPortalOpen, everDungeonLatch, everMmCrossOut);
+    while (exchange(everOotCrossOut, everMmCrossOut, everPortalOpen, allOot, allMm, everCrossLatch, everDungeonLatch)) {
         everReachOot = queryReachable(ootOracle, allOot);
         everPortalOpen = everPortalOpen || OraclePortalOpen(ootOracle);
         everOotCrossOut = OracleCrossOut(ootOracle);
-        everReachMm = everPortalOpen ? queryReachable(mmOracle, allMm) : std::unordered_set<std::string>{};
+        everReachMm = queryMm(allMm, everPortalOpen, everDungeonLatch, everMmCrossOut);
     }
     result.ganonReachable = everReachOot.count(kOotGanon) > 0;
     result.majoraReachable = everReachMm.count(kMmWin) > 0;

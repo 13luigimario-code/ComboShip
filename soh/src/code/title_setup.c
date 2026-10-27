@@ -9,6 +9,7 @@
 extern s32 gComboReturnFileNum;
 // ComboShip (teleport songs): arrival entrance pushed by the launcher (>= 0), consumed once.
 extern s32 gComboTargetEntrance;
+s32 Combo_OoT_ResolveCrossTarget(s32 target); // ComboCrossDungeons.cpp
 extern s32 gComboCrossArrival;
 void Combo_OoT_ApplyFwArrival(void);
 // ComboShip (#27, Majora's Mask title screen + file select): a file action MM's file select handed over
@@ -41,9 +42,12 @@ void TitleSetup_InitImpl(GameState* gameState) {
         // Must follow OnLoadGame: the rando handler's Entrance_SetSavewarpEntrance() recomputes from
         // savedSceneNum (never set by the portal handoff) and would clobber this with Link's House.
         if (gComboTargetEntrance >= 0) {
-            // ComboShip (teleport songs): cross-game arrival, routed through entrance rando.
+            // ComboShip (teleport songs): cross-game arrival, routed through entrance rando. A swapped dungeon door's
+            // arrival (Cross-Game Dungeon Entrances) is resolved here instead, exactly.
             LUSLOG_INFO("[ComboShip] TitleSetup combo arrival at entrance 0x%X", gComboTargetEntrance);
-            gSaveContext.entranceIndex = Entrance_OverrideNextIndex((s16)gComboTargetEntrance);
+            const s32 crossDungeon = Combo_OoT_ResolveCrossTarget(gComboTargetEntrance);
+            gSaveContext.entranceIndex =
+                (crossDungeon >= 0) ? (s16)crossDungeon : Entrance_OverrideNextIndex((s16)gComboTargetEntrance);
             gComboTargetEntrance = -1;
             gComboCrossArrival = 1;
             Combo_OoT_ApplyFwArrival(); // Cross-Games Farore's Wind: arrive at the warp point (ComboCrossFw.cpp)

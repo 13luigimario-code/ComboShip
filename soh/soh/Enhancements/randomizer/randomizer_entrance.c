@@ -263,6 +263,10 @@ void Entrance_Init(void) {
     hasModifiedEntranceTable = true;
 }
 
+#ifdef COMBO_BUILD
+s16 Combo_OoT_CrossDungeonOverride(s16 original, s16 overridden); // ComboCrossDungeons.cpp
+#endif
+
 s16 Entrance_GetOverride(s16 index) {
     // The game sometimes uses special indices from 0x7FF9 -> 0x7FFF for exiting
     // grottos and fairy fountains. These aren't handled here since the game
@@ -295,13 +299,25 @@ s16 Entrance_OverrideNextIndex(s16 nextEntranceIndex) {
 
     Entrance_SetEntranceDiscovered(nextEntranceIndex, false);
     EntranceTracker_SetLastEntranceOverride(nextEntranceIndex);
+#ifdef COMBO_BUILD
+    // ComboShip (Cross-Game Dungeon Entrances): a swapped door, or the way out of the dungeon behind one, goes to
+    // Termina (ComboCrossDungeons.cpp).
+    return Grotto_OverrideSpecialEntrance(
+        Combo_OoT_CrossDungeonOverride(nextEntranceIndex, Entrance_GetOverride(nextEntranceIndex)));
+#else
     return Grotto_OverrideSpecialEntrance(Entrance_GetOverride(nextEntranceIndex));
+#endif
 }
 
 s16 Entrance_OverrideDynamicExit(s16 dynamicExitIndex) {
     Entrance_SetEntranceDiscovered(dynamicExitList[dynamicExitIndex], false);
     EntranceTracker_SetLastEntranceOverride(dynamicExitList[dynamicExitIndex]);
+#ifdef COMBO_BUILD
+    return Grotto_OverrideSpecialEntrance(Combo_OoT_CrossDungeonOverride(
+        dynamicExitList[dynamicExitIndex], Entrance_GetOverride(dynamicExitList[dynamicExitIndex])));
+#else
     return Grotto_OverrideSpecialEntrance(Entrance_GetOverride(dynamicExitList[dynamicExitIndex]));
+#endif
 }
 
 u32 Entrance_SceneAndSpawnAre(u8 scene, u8 spawn) {
