@@ -3477,6 +3477,8 @@ typedef enum {
     // Dungeon entrance shuffle: the four temples' doors lead into a shuffled temple
     // (MiscBehavior/DungeonEntrances.cpp).
     RO_SHUFFLE_DUNGEON_ENTRANCES,
+    // Boss room shuffle: each temple's boss door leads into a shuffled boss lair (MiscBehavior/DungeonEntrances.cpp).
+    RO_SHUFFLE_BOSS_ENTRANCES,
 #endif
     RO_MAX,
 } RandoOptionId;
