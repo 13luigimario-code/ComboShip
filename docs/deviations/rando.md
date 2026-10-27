@@ -3256,6 +3256,11 @@ Snowhead Temple's door is swapped with OOT's Ice Cavern door, behind which OOT p
   OOT's loop, but a transition that set its next game state in the same frame kept it going. The switch now also
   clears the next game state (`OTRGlobals.cpp`, the switch's frame hook), which ends OOT's loop either way.
 
+- Found later: each candidate set of swaps disconnected entrances in OOT's logic graph and nothing put them back, so a
+  rejected candidate's cuts stayed for the next one and for the fill (a door could then be swapped in the game but not
+  in the logic). Each logic apply now first reconnects what the previous one cut (`RestoreCuts`). With that fixed, the
+  same 10 seeds generate 6/10 with the option on, as many as with it off.
+
 **Not done:** hints and the entrance tracker don't name the other game's door. Cross-game boss rooms: see Cross-Game
 Boss Entrances below.
 
@@ -3337,8 +3342,7 @@ put Barinade's room behind Dodongo's Cavern's boss door):
   lands outside MM's Stone Tower Temple door without switching (Jabu Jabu's Belly's door swapped with it). MM Woodfall
   Temple's boss door switches to OOT inside King Dodongo's room, and its blue warp lands outside OOT's Bottom of the
   Well without switching (Woodfall Temple's door swapped with it).
-- Found while testing: each candidate set of swaps disconnected entrances in OOT's logic graph and nothing put them
-  back, so a rejected candidate's cuts stayed for the next one (and the fill). Each logic apply now first reconnects
-  what the previous one cut (`RestoreCuts`, for both the dungeon and the boss swaps).
+- The boss swaps' logic apply undoes the previous candidate's cuts too (`RestoreCuts`, see Cross-Game Dungeon
+  Entrances).
 
 **Not done:** hints and the entrance tracker don't name the other game's boss rooms.

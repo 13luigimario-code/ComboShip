@@ -23,6 +23,7 @@
 #include "soh/Enhancements/randomizer/SeedContext.h"
 
 #include <map>
+#include <vector>
 #include <string>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
