@@ -16,6 +16,7 @@
 #include "soh/Enhancements/randomizer/SeedContext.h"
 
 #include <map>
+#include <vector>
 #include <string>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -79,6 +80,30 @@ void ReadPairs(const char* json, int out[kCrossOotDoors]) {
         out[k] = -1;
     for (const auto& p : CrossDungeonsFromString(json))
         out[p.oot] = p.mm;
+}
+
+// Entrances a logic apply disconnected, by their vanilla regions (a fresh graph from the next entrance shuffle makes the
+// Entrance objects new), so the next apply can put them back first: the swaps are tried several times per attempt.
+struct Cut {
+    RandomizerRegion parent;
+    RandomizerRegion original;
+    RandomizerRegion was;
+};
+std::vector<Cut> sDungeonCuts;
+
+void CutEntrance(std::vector<Cut>& cuts, Rando::Entrance* e) {
+    const RandomizerRegion original = e->GetOriginalConnectedRegionKey();
+    const RandomizerRegion parent = e->GetParentRegionKey();
+    cuts.push_back({ parent, original, e->Disconnect() });
+}
+
+void RestoreCuts(std::vector<Cut>& cuts) {
+    for (auto it = cuts.rbegin(); it != cuts.rend(); ++it) {
+        Rando::Entrance* e = GetEntrance(it->parent, it->original);
+        if ((e != nullptr) && (e->GetConnectedRegionKey() == RR_NONE) && (it->was != RR_NONE))
+            e->Connect(it->was);
+    }
+    cuts.clear();
 }
 
 bool Swapped(int door) {
@@ -165,6 +190,7 @@ extern "C" COMBO_EXPORT const char* SOH_CrossDungeonDoors(void) {
 // Generation, after the entrance shuffle (whose RegionTable_Init gave a fresh graph): the swaps into the logic graph,
 // and the game's table (the playthrough uses both).
 extern "C" COMBO_EXPORT void SOH_ApplyCrossDungeonsToLogic(const char* json) {
+    RestoreCuts(sDungeonCuts); // the previous candidate's
     ReadPairs(json, sLogicDoorMmSlot);
     ReadPairs(json, sDoorMmSlot);
     sEntrywayDoor.clear();
@@ -180,13 +206,13 @@ extern "C" COMBO_EXPORT void SOH_ApplyCrossDungeonsToLogic(const char* json) {
             continue;
         }
         sEntrywayDoor[(int)held] = k;
-        door->Disconnect(); // into Termina
+        CutEntrance(sDungeonCuts, door); // into Termina
         for (const OotDoor& d : kDoors) {
             if (d.entryway != held)
                 continue;
             Rando::Entrance* exit = GetEntrance(d.entryway, d.exitTo);
             if ((exit != nullptr) && (exit->GetConnectedRegionKey() != RR_NONE))
-                exit->Disconnect(); // back out into Termina
+                CutEntrance(sDungeonCuts, exit); // back out into Termina
         }
         // Its boss's blue warp: Ship of Harkinian sends it outside door k (its blue warp target, or its exit's for a
         // door whose vanilla dungeon has no boss).
@@ -197,7 +223,7 @@ extern "C" COMBO_EXPORT void SOH_ApplyCrossDungeonsToLogic(const char* json) {
             const RandomizerRegion lands = warp->GetConnectedRegionKey();
             if ((lands != RR_NONE) &&
                 (((kDoors[k].warpTo != RR_NONE) && (lands == kDoors[k].warpTo)) || (lands == kDoors[k].exitTo))) {
-                warp->Disconnect();
+                CutEntrance(sDungeonCuts, warp);
             }
         }
         SPDLOG_INFO("[ComboShip] cross dungeons: OOT door {} ({}) <-> MM door {}", kCrossOotDoorNames[k],

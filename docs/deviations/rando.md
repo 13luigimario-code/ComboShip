@@ -3255,4 +3255,9 @@ Snowhead Temple's door is swapped with OOT's Ice Cavern door, behind which OOT p
   OOT's loop, but a transition that set its next game state in the same frame kept it going. The switch now also
   clears the next game state (`OTRGlobals.cpp`, the switch's frame hook), which ends OOT's loop either way.
 
+- Found later: each candidate set of swaps disconnected entrances in OOT's logic graph and nothing put them back, so a
+  rejected candidate's cuts stayed for the next one and for the fill (a door could then be swapped in the game but not
+  in the logic). Each logic apply now first reconnects what the previous one cut (`RestoreCuts`). With that fixed, the same
+  10 seeds generate 6/10 with the option on, as many as with it off.
+
 **Not done:** cross-game boss room shuffle. Hints and the entrance tracker don't name the other game's door.
