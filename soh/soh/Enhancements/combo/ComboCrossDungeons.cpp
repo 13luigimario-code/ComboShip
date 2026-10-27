@@ -185,10 +185,7 @@ extern "C" COMBO_EXPORT void SOH_ApplyCrossDungeonsToLogic(const char* json) {
                 continue;
             const RandomizerRegion lands = warp->GetConnectedRegionKey();
             if ((lands != RR_NONE) &&
-                (((kDoors[k].warpTo != RR_NONE) && (lands == kDoors[k].warpTo)) || (lands == kDoors[k].exitTo)) &&
-                (warp->GetReplacement() != nullptr) &&
-                ((warp->GetReplacement()->GetIndex() == kDoors[k].warp) ||
-                 (warp->GetReplacement()->GetIndex() == kDoors[k].exit))) {
+                (((kDoors[k].warpTo != RR_NONE) && (lands == kDoors[k].warpTo)) || (lands == kDoors[k].exitTo))) {
                 warp->Disconnect();
             }
         }
