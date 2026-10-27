@@ -1854,6 +1854,9 @@ static void Combo_FinishInit() {
             gComboSceneSwitchCallback(sComboSwitchFileNum);
         }
         if (gGameState) {
+            // No next game state either: a transition already under way in this frame (an instant one through a
+            // swapped dungeon door, say) would otherwise set Play as the next state and keep OOT's loop going.
+            gGameState->init = nullptr;
             gGameState->running = false;
         }
     });
@@ -2069,7 +2072,8 @@ extern "C" void Graph_StartFrame() {
                 case SaveStateReturn::FAIL_WRONG_GAMESTATE:
                     SPDLOG_ERROR("[SOH] Can not save a state outside of \"GamePlay\"");
                     break;
-                    [[unlikely]] default : break;
+                [[unlikely]] default:
+                    break;
             }
             break;
         }
@@ -2109,7 +2113,8 @@ extern "C" void Graph_StartFrame() {
                 case SaveStateReturn::FAIL_WRONG_GAMESTATE:
                     SPDLOG_ERROR("[SOH] Can not load a state outside of \"GamePlay\"");
                     break;
-                    [[unlikely]] default : break;
+                [[unlikely]] default:
+                    break;
             }
 
             break;
@@ -5831,6 +5836,10 @@ static void EnsureOracleInit() {
 // ComboShip (teleport songs): cross-game warp inputs for the next search (cleared after it), CW_OOT_OUT_* output.
 extern "C" int gComboOracleCrossIn = 0;
 static uint32_t sComboCrossOut = 0;
+// ComboShip (Cross-Game Dungeon Entrances): ComboCrossDungeons.cpp.
+extern "C" uint32_t gComboOracleXdIn;
+bool Combo_OoT_TakeCrossDungeonIn(const std::string& name);
+uint32_t Combo_OoT_CrossDoorsReached();
 #endif
 
 extern "C" COMBO_EXPORT void Combo_SOH_Rando_Reset(void) {
@@ -5838,6 +5847,7 @@ extern "C" COMBO_EXPORT void Combo_SOH_Rando_Reset(void) {
     EnsureOracleInit();
 #ifdef COMBO_BUILD
     gComboOracleCrossIn = 0; // ComboShip (teleport songs): inputs belong to one query
+    gComboOracleXdIn = 0;    // ComboShip (Cross-Game Dungeon Entrances): likewise
 #endif
     ctx->GetLogic()->Reset();
     Regions::AccessReset();
@@ -5863,6 +5873,10 @@ extern "C" COMBO_EXPORT void Combo_SOH_Rando_SetOwnedItems(const char* itemNames
             // ComboShip (teleport songs): pseudo names carry MM's cross-warp bits (rando/CrossWarpLogic.h).
             if (const uint32_t crossBit = ComboRando::CrossWarpOotInBit(name.get<std::string>())) {
                 gComboOracleCrossIn |= static_cast<int>(crossBit);
+                continue;
+            }
+            // ComboShip (Cross-Game Dungeon Entrances): a dungeon behind an MM door Link reached (CrossDungeons.h).
+            if (Combo_OoT_TakeCrossDungeonIn(name.get<std::string>())) {
                 continue;
             }
 #endif
@@ -5906,7 +5920,10 @@ extern "C" COMBO_EXPORT const char* Combo_SOH_Rando_GetReachableChecks(void) {
             sComboCrossOut |= ComboRando::CW_OOT_OUT_ADULT_SOAR;
         }
     }
+    // ComboShip (Cross-Game Dungeon Entrances): the swapped dungeon doors Link reached, per age.
+    sComboCrossOut |= Combo_OoT_CrossDoorsReached();
     gComboOracleCrossIn = 0;
+    gComboOracleXdIn = 0;
 #endif
     nlohmann::json out = nlohmann::json::array();
     for (RandomizerCheck rc : reachable) {

@@ -46,6 +46,19 @@ void RegionTable_Init_Root() {
         ENTRANCE(RR_NOCTURNE_OF_SHADOW_WARP, logic->CanUse(RG_NOCTURNE_OF_SHADOW) || logic->ComboCrossWarp(4)),
         ENTRANCE(RR_REQUIEM_OF_SPIRIT_WARP,  logic->CanUse(RG_REQUIEM_OF_SPIRIT)  || logic->ComboCrossWarp(3)),
         ENTRANCE(RR_PRELUDE_OF_LIGHT_WARP,   logic->CanUse(RG_PRELUDE_OF_LIGHT)   || logic->ComboCrossWarp(5)),
+        // ComboShip (Cross-Game Dungeon Entrances): a dungeon behind an MM door is entered from Termina. Not area
+        // spreading: these lead nowhere outside the combined fill's oracle.
+        ENTRANCE(RR_DEKU_TREE_ENTRYWAY,              logic->ComboCrossDungeon(RR_DEKU_TREE_ENTRYWAY), false),
+        ENTRANCE(RR_DODONGOS_CAVERN_ENTRYWAY,        logic->ComboCrossDungeon(RR_DODONGOS_CAVERN_ENTRYWAY), false),
+        ENTRANCE(RR_JABU_JABUS_BELLY_ENTRYWAY,       logic->ComboCrossDungeon(RR_JABU_JABUS_BELLY_ENTRYWAY), false),
+        ENTRANCE(RR_FOREST_TEMPLE_ENTRYWAY,          logic->ComboCrossDungeon(RR_FOREST_TEMPLE_ENTRYWAY), false),
+        ENTRANCE(RR_FIRE_TEMPLE_ENTRYWAY,            logic->ComboCrossDungeon(RR_FIRE_TEMPLE_ENTRYWAY), false),
+        ENTRANCE(RR_WATER_TEMPLE_ENTRYWAY,           logic->ComboCrossDungeon(RR_WATER_TEMPLE_ENTRYWAY), false),
+        ENTRANCE(RR_SPIRIT_TEMPLE_ENTRYWAY,          logic->ComboCrossDungeon(RR_SPIRIT_TEMPLE_ENTRYWAY), false),
+        ENTRANCE(RR_SHADOW_TEMPLE_ENTRYWAY,          logic->ComboCrossDungeon(RR_SHADOW_TEMPLE_ENTRYWAY), false),
+        ENTRANCE(RR_BOTW_ENTRYWAY,                   logic->ComboCrossDungeon(RR_BOTW_ENTRYWAY), false),
+        ENTRANCE(RR_ICE_CAVERN_ENTRYWAY,             logic->ComboCrossDungeon(RR_ICE_CAVERN_ENTRYWAY), false),
+        ENTRANCE(RR_GERUDO_TRAINING_GROUND_ENTRYWAY, logic->ComboCrossDungeon(RR_GERUDO_TRAINING_GROUND_ENTRYWAY), false),
 #else
         ENTRANCE(RR_MINUET_OF_FOREST_WARP,   logic->CanUse(RG_MINUET_OF_FOREST)),
         ENTRANCE(RR_BOLERO_OF_FIRE_WARP,     logic->CanUse(RG_BOLERO_OF_FIRE)),

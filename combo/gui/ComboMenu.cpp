@@ -1820,9 +1820,24 @@ void ComboMenu::DrawComboPanel() {
                               "every boss of both games gives one of them: Odolwa can have the Forest Medallion,\n"
                               "Queen Gohma Gyorg's Remains.");
     }
+    {
+        const ComboRando::CrossShuffleDef& def = ComboRando::kCrossShuffleDefs[1]; // dungeon entrances
+        bool on = CVarGetInteger(def.cvar, 0) != 0;
+        ComboRando::ComboMenu_PushCheckbox(goalTheme);
+        if (ImGui::Checkbox("Cross-Game Dungeon Entrances", &on)) {
+            CVarSetInteger(def.cvar, on ? 1 : 0);
+        }
+        ComboRando::ComboMenu_PopCheckbox();
+        ImGui::SetItemTooltip("The dungeons of both games are shuffled together: the Deku Tree can lead into\n"
+                              "Woodfall Temple, and Snowhead Temple's door into the Fire Temple. Leaving a dungeon\n"
+                              "comes back out of the door it was behind, in that door's game.");
+    }
     ImGui::TextDisabled("Dungeon Rewards: every boss of both games (8 + 4) holds a reward of either game, and Link\n"
                         "starts with one Ocarina of Time reward in his pocket. Overrides Ocarina of Time's Dungeon\n"
-                        "Rewards and Link's Pocket and Majora's Mask's Boss Remains.");
+                        "Rewards and Link's Pocket and Majora's Mask's Boss Remains.\n"
+                        "Dungeon Entrances: needs Ocarina of Time's Dungeon Entrances shuffle (not decoupled) and\n"
+                        "Majora's Mask's Shuffle Dungeon Entrances; without both, each game shuffles on its own.\n"
+                        "Ganon's Castle stays in Ocarina of Time.");
     ImGui::EndDisabled();
     if (solo)
         ImGui::TextDisabled("Off in a one-game seed.");

@@ -7,8 +7,9 @@
 #include <libultraship/bridge/consolevariablebridge.h> // CVarGetInteger (Remember Save Location)
 // ComboShip (teleport songs): arrival entrance pushed by the launcher (>= 0), consumed once.
 extern int gComboTargetEntrance;
-void Combo_MM_ApplyFwArrival(void);       // ComboShip: Cross-Games Farore's Wind (CrossSpells.cpp)
-void Combo_AdultLink_ApplyEntryAge(void); // ComboShip: Cross-Games Age (AdultLink.cpp)
+void Combo_MM_ApplyFwArrival(void);          // ComboShip: Cross-Games Farore's Wind (CrossSpells.cpp)
+void Combo_AdultLink_ApplyEntryAge(void);    // ComboShip: Cross-Games Age (AdultLink.cpp)
+s32 Combo_MM_ResolveCrossTarget(s32 target); // ComboShip: Cross-Game Dungeon Entrances (DungeonEntrances.cpp)
 extern int gComboCrossArrival;
 #endif
 #include "z64save.h"
@@ -96,8 +97,10 @@ void Setup_InitImpl(SetupState* this) {
             gSaveContext.save.entrance = ENTRANCE(SOUTH_CLOCK_TOWN, 0);
         }
         if (gComboTargetEntrance >= 0) {
-            // ComboShip (teleport songs): cross-game arrival; after the branch above so owl-save side effects run.
-            gSaveContext.save.entrance = (u16)gComboTargetEntrance;
+            // ComboShip (teleport songs): cross-game arrival; after the branch above so owl-save side effects run. A
+            // swapped dungeon door's arrival (Cross-Game Dungeon Entrances) names a temple door slot instead.
+            const s32 crossDungeon = Combo_MM_ResolveCrossTarget(gComboTargetEntrance);
+            gSaveContext.save.entrance = (u16)((crossDungeon >= 0) ? crossDungeon : gComboTargetEntrance);
             gComboTargetEntrance = -1;
             gComboCrossArrival = 1;
             // Cross-Games Farore's Wind: arrive at the warp point itself (CrossSpells.cpp).

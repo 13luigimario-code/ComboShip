@@ -31,6 +31,7 @@ This document is the authoritative checklist. **Statuses:**
 | Validator | `comborando --playthrough` (`combo/ComboRandoHeadless.cpp`) |
 | Shared Items trim + mirror (new, 2026-09-10) | `CrossWorldCombinedFill` (`CrossWorldRando.h`) — trims MM's copies of each effective family before balancing, mirrors the OOT-owned count onto the MM oracle inside `reachableFixpoint`; `RunPlaythrough`/`ApplySharedMirror` (`ComboPlaythrough.h`) do the same for `--playthrough`. See `deviations/rando.md` |
 | Cross-Game Dungeon Rewards (new, 2026-10-26) | `CrossWorldCombinedFill` Phase R (`CrossWorldRando.h`) — assumed-fills every reward of both games (dump `dungeonReward`) onto the bosses of both games (dump `bossReward`) after Phase A0, in place of SoH's End of Dungeons `AssumedFill` and 2Ship's remains placement. See `deviations/rando.md` |
+| Cross-Game Dungeon Entrances (new, 2026-10-27) | swapped dungeon doors (`CrossDungeons.h`) exchanged inside `reachableFixpoint` and the playthrough/pare-down fixpoints (`ApplyCrossDungeons`, `CrossMmQueryOwned`), next to the teleport songs; SoH's own entrance shuffle and validation still run first, and the combined fill is what proves the swapped world beatable. See `deviations/rando.md` |
 
 ## Table 1 — SoH `Fill()` (`soh/soh/Enhancements/randomizer/3drando/fill.cpp:1301`)
 

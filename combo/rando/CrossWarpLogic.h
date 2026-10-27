@@ -18,7 +18,11 @@ namespace ComboRando {
 inline constexpr const char* kCwMmWarpPrefix = "@combo:mmWarp:";    // + '0'..'5' (OOT warp index) -> OOT oracle
 inline constexpr const char* kCwMmOwlActive = "@combo:mmOwlActive"; // MM logic has an activated owl -> OOT oracle
 inline constexpr const char* kCwMmStart = "@combo:mmStart";         // #135 MM start -> OOT oracle
-inline constexpr const char* kCwOotSoaring = "@combo:ootSoaring";   // OOT can play Soaring -> MM oracle
+// Cross-Game Dungeon Entrances: child Link reached the Happy Mask Shop (the portal) in an earlier search -> OOT
+// oracle. The same search can't tell in time: OOT's search may not revisit the root once the shop (no checks) is
+// reached.
+inline constexpr const char* kCwMmPortal = "@combo:mmPortal";
+inline constexpr const char* kCwOotSoaring = "@combo:ootSoaring"; // OOT can play Soaring -> MM oracle
 // Cross-Games Age: adult Link can play Soaring in Hyrule, so he can land in Termina as adult -> MM oracle
 inline constexpr const char* kCwOotAdultSoaring = "@combo:ootAdultSoaring";
 
@@ -28,6 +32,7 @@ enum : uint32_t {
         0x3Fu, // bit n: MM can play warp song n (Minuet, Bolero, Serenade, Requiem, Nocturne, Prelude)
     CW_OOT_IN_MM_OWL = 1u << 6,
     CW_OOT_IN_MM_START = 1u << 7,
+    CW_OOT_IN_MM_PORTAL = 1u << 8,
 };
 // GetCrossOut bits.
 enum : uint32_t {
@@ -44,10 +49,12 @@ struct CrossWarpLatch {
     bool mmAdultIn = false; // Cross-Games Age
 };
 
-// Give each game the other's new teleport-song abilities. True if anything changed: query again.
+// Give each game the other's new teleport-song abilities. True if anything changed: query again. terminaBits: OOT
+// needs to know how Link can be in Termina even without a warp song (Cross-Game Dungeon Entrances: coming back into
+// Hyrule through an MM door).
 inline bool ApplyCrossWarps(uint32_t ootOut, uint32_t mmOut, bool mmOpen, bool mmStart,
                             std::vector<std::string>& ootOwned, std::vector<std::string>& mmOwned,
-                            CrossWarpLatch& latch) {
+                            CrossWarpLatch& latch, bool terminaBits = false) {
     bool changed = false;
     if ((ootOut & CW_OOT_OUT_CAN_SOAR) && !latch.mmIn) {
         mmOwned.push_back(kCwOotSoaring);
@@ -67,9 +74,11 @@ inline bool ApplyCrossWarps(uint32_t ootOut, uint32_t mmOut, bool mmOpen, bool m
         want |= CW_OOT_IN_MM_OWL;
     if (mmStart)
         want |= CW_OOT_IN_MM_START;
+    if (terminaBits)
+        want |= CW_OOT_IN_MM_PORTAL; // mmOpen: the portal is open (or MM is the start)
     // The owl / MM-start bits only matter alongside a warp song; hold them back until one exists so a
     // seed without MM warp songs keeps byte-identical owned lists and memo keys.
-    if (!((want | latch.ootIn) & CW_OOT_IN_WARP_MASK))
+    if (!terminaBits && !((want | latch.ootIn) & CW_OOT_IN_WARP_MASK))
         return changed;
     const uint32_t fresh = want & ~latch.ootIn;
     for (int n = 0; n < 6; ++n)
@@ -79,6 +88,8 @@ inline bool ApplyCrossWarps(uint32_t ootOut, uint32_t mmOut, bool mmOpen, bool m
         ootOwned.push_back(kCwMmOwlActive);
     if (fresh & CW_OOT_IN_MM_START)
         ootOwned.push_back(kCwMmStart);
+    if (fresh & CW_OOT_IN_MM_PORTAL)
+        ootOwned.push_back(kCwMmPortal);
     latch.ootIn |= fresh;
     return changed || fresh != 0;
 }
@@ -94,6 +105,8 @@ inline uint32_t CrossWarpOotInBit(const std::string& name) {
         return CW_OOT_IN_MM_OWL;
     if (name == kCwMmStart)
         return CW_OOT_IN_MM_START;
+    if (name == kCwMmPortal)
+        return CW_OOT_IN_MM_PORTAL;
     return 0;
 }
 

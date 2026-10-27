@@ -87,6 +87,7 @@ inline void to_json(json& j, const RandoSaveInfo& rando) {
     }
     j["comboDungeonEntrances"] = rando.comboDungeonEntrances; // ComboShip: dungeon entrance shuffle
     j["comboBossEntrances"] = rando.comboBossEntrances;       // ComboShip: boss room shuffle
+    j["comboCrossDungeons"] = rando.comboCrossDungeons;       // ComboShip: Cross-Game Dungeon Entrances
 #endif
 }
 
@@ -160,6 +161,8 @@ inline void from_json(const json& j, RandoSaveInfo& rando) {
     ComboGetArrayTolerant(layout, rando.comboDungeonEntrances);
     const json& bossLayout = j.contains("comboBossEntrances") ? j["comboBossEntrances"] : noLayout;
     ComboGetArrayTolerant(bossLayout, rando.comboBossEntrances);
+    const json& cross = j.contains("comboCrossDungeons") ? j["comboCrossDungeons"] : noLayout;
+    ComboGetArrayTolerant(cross, rando.comboCrossDungeons);
 #endif
 }
 
