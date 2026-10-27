@@ -89,8 +89,8 @@ void ReadPairs(const char* json, int out[kCrossOotDoors]) {
         out[p.oot] = p.mm;
 }
 
-// Entrances a logic apply disconnected, by their vanilla regions (a fresh graph from the next entrance shuffle makes the
-// Entrance objects new), so the next apply can put them back first: the swaps are tried several times per attempt.
+// Entrances a logic apply disconnected, by their vanilla regions (a fresh graph from the next entrance shuffle makes
+// the Entrance objects new), so the next apply can put them back first: the swaps are tried several times per attempt.
 struct Cut {
     RandomizerRegion parent;
     RandomizerRegion original;
