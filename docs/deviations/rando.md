@@ -3183,7 +3183,15 @@ door and an MM temple door, which trade what's behind them:
 
 The number of swaps follows a pooled shuffle of all 15 dungeons over all 15 doors, i.e. how many OOT dungeons land
 behind the four MM doors (`ShuffleCrossDungeons`, deterministic in the master seed). The eleven OOT doors are the
-dungeon entrance shuffle's. Ganon's Castle never swaps, neither its door nor a door holding it (`SOH_CrossDungeonDoors`).
+dungeon entrance shuffle's (`SOH_CrossDungeonDoors`):
+- Ganon's Castle never swaps, neither its door nor a door holding it.
+- Coming back into Hyrule through an MM door, Link has the age he left Hyrule with, and adult Link only gets into
+  Termina by playing the Song of Soaring (the Happy Mask Shop is child-only). Without Ocarina of Time's Song of Soaring
+  setting (or starting with it), only a door holding a dungeon Link can do as child (Deku Tree, Dodongo's Cavern, Jabu
+  Jabu's Belly, Bottom of the Well) may swap.
+- Like Ship of Harkinian's own entrance validation, a set of swaps is kept only if, with every item of both games,
+  every check either game reaches without swaps is still reached (`PickCrossDungeons`, `CrossWorldRando.h`). Up to 16
+  sets are tried per attempt, then none.
 The spoiler records the swaps as `entrances.cross` (`[{oot, mm}]`, door names; absent/empty = none) and the fill's own
 spoiler as `crossDungeons`. Each game resolves everything else from its own layout, so the swaps are all either game
 needs.
@@ -3218,8 +3226,23 @@ the teleport songs. The fill, the playthrough and the pare-down use `ApplyCrossD
   - `@combo:xd:<k>:<age>` to OOT. Root Exits enter the dungeon behind door k (`Logic::ComboCrossDungeon`) at that age,
     if Link can also be in Termina at that age (`Logic::ComboInTermina`: the portal, an MM start, Soaring to an active
     owl). Without Cross-Games Age, an MM door reached at all counts for both ages. The teleport latch then also delivers
-    the owl and MM-start bits (`ApplyCrossWarps`'s `terminaBits`).
+    the owl and MM-start bits, and a portal bit once the fill has seen the Happy Mask Shop reached
+    (`ApplyCrossWarps`'s `terminaBits`, `@combo:mmPortal`): OOT's search may not revisit its root after reaching the
+    shop, which holds no checks, so the same search can't be relied on to tell.
 - A swapped temple counts even while the OOT->MM portal is shut. MM is then asked with `@combo:mmClosed`, which shuts
   logic's root (`gComboMmRootClosed`: no save warp, no owls), so only those temples are reachable.
+
+**Tested (Linux build, 2026-10-27), headless:**
+- Same settings (both games' dungeon shuffles on), 10 seeds: 5/10 generate with the option on, 6/10 with it off, and
+  `xd2` (6 seeds) 3/6 both ways, the same seeds. Every failure, with or without the option, is the same validation
+  failure ("goal=UNBEATABLE(ganon=0)" with every advancement item reachable). It comes from Ocarina of Time's own dungeon
+  entrance shuffle in the combo, not from this option. The combo places OOT's dungeon rewards, songs and own-dungeon
+  keys before it shuffles OOT's entrances, and that shuffle's validation assumes every item, so it can't see a reward
+  that its own layout puts out of reach (a stone behind an adult-only door, needed to become adult).
+- `xd1` (OOT Spirit Temple <-> MM Stone Tower Temple, Ice Cavern <-> Snowhead Temple) generates, and `--playthrough`
+  beats it at sphere 20. The same placements with the swaps removed also beat it, but collect 641 items before the win
+  instead of 597, so the logic follows the swaps.
+- Before the child-dungeon rule and `PickCrossDungeons`, swaps put adult-only dungeons behind MM doors in seeds with no
+  way for adult Link into Termina, and most seeds failed.
 
 **Not done:** cross-game boss room shuffle. Hints and the entrance tracker don't name the other game's door.

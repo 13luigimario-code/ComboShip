@@ -81,6 +81,100 @@ inline uint32_t OracleCrossOut(const OracleFns& o) {
     return o.GetCrossOut ? o.GetCrossOut() : 0u;
 }
 
+// ---------- Cross-Game Dungeon Entrances: choosing swaps that keep both worlds whole ----------
+
+// Like Ship of Harkinian's entrance validation (every location reachable with every item), for the swapped dungeon
+// doors (CrossDungeons.h): a candidate set of swaps is kept only if, with every item of both pools, every check either
+// game reached without swaps is still reached. `apply` pushes a set into both oracles. Tries a few sets from `seed`,
+// then none. Leaves the chosen set applied.
+inline CrossDungeonPairs PickCrossDungeons(uint64_t seed, const std::vector<std::string>& ootDoors,
+                                           const std::vector<std::string>& mmDoors, const std::string& sohDumpJson,
+                                           const std::string& mmDumpJson, const OracleFns& ootOracle,
+                                           const OracleFns& mmOracle,
+                                           const std::function<void(const CrossDungeonPairs&)>& apply, int tries = 16) {
+    auto allItems = [](const std::string& dump) {
+        std::vector<std::string> out;
+        try {
+            auto d = nlohmann::json::parse(dump);
+            for (const auto& it : d.value("pool", nlohmann::json::array()))
+                out.push_back(it.value("name", std::string()));
+            for (const auto& f : d.value("fixed", nlohmann::json::array()))
+                out.push_back(f.value("item", std::string()));
+        } catch (...) {}
+        return out;
+    };
+    const std::vector<std::string> ootAll = allItems(sohDumpJson), mmAll = allItems(mmDumpJson);
+    auto query = [](const OracleFns& o, const std::vector<std::string>& owned) {
+        nlohmann::json arr = owned;
+        o.Reset();
+        o.SetOwnedItems(arr.dump().c_str());
+        std::unordered_set<std::string> out;
+        try {
+            for (const auto& n : nlohmann::json::parse(o.GetReachableChecks()))
+                out.insert(n.get<std::string>());
+        } catch (...) {}
+        return out;
+    };
+    // Both worlds with every item: the swapped doors exchanged until nothing changes (portal latched).
+    auto reach = [&](const CrossDungeonPairs& pairs, std::unordered_set<std::string>& ootReach,
+                     std::unordered_set<std::string>& mmReach) {
+        std::vector<std::string> oot = ootAll, mm = mmAll;
+        CrossDungeonLatch latch;
+        CrossWarpLatch warps;
+        bool portalOpen = false;
+        for (int guard = 0; guard < 16; guard++) {
+            ootReach = query(ootOracle, oot);
+            portalOpen = portalOpen || ootOracle.GetPortalOpen == nullptr || ootOracle.GetPortalOpen() != 0;
+            const uint32_t ootOut = OracleCrossOut(ootOracle);
+            std::vector<std::string> ask;
+            uint32_t mmOut = 0;
+            mmReach.clear();
+            if (CrossMmQueryOwned(portalOpen, latch, mm, ask)) {
+                mmReach = query(mmOracle, ask);
+                mmOut = OracleCrossOut(mmOracle);
+            }
+            bool changed = ApplyCrossWarps(ootOut, portalOpen ? mmOut : 0u, portalOpen, false, oot, mm, warps, true);
+            if (ApplyCrossDungeons(pairs, ootOut, portalOpen ? mmOut : 0u, (mmOut & CW_MM_OUT_AGE) != 0, oot, mm,
+                                   latch)) {
+                changed = true;
+            }
+            if (!changed)
+                return;
+        }
+    };
+    auto covers = [](const std::unordered_set<std::string>& a, const std::unordered_set<std::string>& b) {
+        for (const auto& n : b)
+            if (!a.count(n))
+                return false;
+        return true;
+    };
+    if (ootDoors.empty() || mmDoors.empty()) {
+        apply({});
+        return {};
+    }
+    std::unordered_set<std::string> baseOot, baseMm;
+    apply({});
+    reach({}, baseOot, baseMm);
+    for (int t = 0; t < tries; t++) {
+        const CrossDungeonPairs pairs =
+            ShuffleCrossDungeons(seed + (uint64_t)t * 0x9E3779B97F4A7C15ULL, ootDoors, mmDoors);
+        if (pairs.empty()) {
+            apply({});
+            return {};
+        }
+        apply(pairs);
+        std::unordered_set<std::string> ootReach, mmReach;
+        reach(pairs, ootReach, mmReach);
+        if (covers(ootReach, baseOot) && covers(mmReach, baseMm))
+            return pairs;
+        std::cout << "[ComboShip] Cross-Game Dungeon Entrances: swaps " << CrossDungeonsToJson(pairs).dump()
+                  << " cut off part of a world; trying others\n";
+    }
+    std::cout << "[ComboShip] Cross-Game Dungeon Entrances: no swaps keep both worlds whole this attempt\n";
+    apply({});
+    return {};
+}
+
 // ---------- Data types ----------
 
 // Per-game OOT accessibility, mapped from OOT's RSK_NO_LOGIC + RSK_ALL_CHECKS_REACHABLE.

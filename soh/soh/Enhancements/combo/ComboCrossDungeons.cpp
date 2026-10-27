@@ -129,8 +129,17 @@ uint32_t Combo_OoT_CrossDoorsReached() {
     return out;
 }
 
+// The dungeons Link can do as child. Coming back into Hyrule through an MM door, Link has the age he left Hyrule with,
+// and adult Link only gets into Termina by playing the Song of Soaring (the Happy Mask Shop is child-only).
+static bool ChildDungeon(RandomizerRegion entryway) {
+    return (entryway == RR_DEKU_TREE_ENTRYWAY) || (entryway == RR_DODONGOS_CAVERN_ENTRYWAY) ||
+           (entryway == RR_JABU_JABUS_BELLY_ENTRYWAY) || (entryway == RR_BOTW_ENTRYWAY);
+}
+
 // The doors that may swap this seed: dungeon entrance shuffle on, coupled (an exit must lead back out of its own
-// door), never Ganon's Castle's door or the door holding it. Call after the entrance shuffle.
+// door), never Ganon's Castle's door or the door holding it. Without the Song of Soaring in Hyrule, adult Link can
+// never be in Termina, so only a door holding a dungeon Link can do as child may swap. Call after the entrance
+// shuffle.
 extern "C" COMBO_EXPORT const char* SOH_CrossDungeonDoors(void) {
     static std::string buf;
     nlohmann::json out = nlohmann::json::array();
@@ -138,10 +147,12 @@ extern "C" COMBO_EXPORT const char* SOH_CrossDungeonDoors(void) {
         auto ctx = OTRGlobals::Instance->gRandoContext;
         if (ctx->GetOption(RSK_SHUFFLE_DUNGEON_ENTRANCES).IsNot(RO_DUNGEON_ENTRANCE_SHUFFLE_OFF) &&
             !ctx->GetOption(RSK_DECOUPLED_ENTRANCES)) {
+            const bool adultSoars =
+                ctx->GetOption(RSK_SONG_OF_SOARING_OOT) || ctx->GetOption(RSK_STARTING_SONG_OF_SOARING);
             for (int k = 0; k < kCrossOotDoors; k++) {
                 Rando::Entrance* door = GetEntrance(kDoors[k].outside, kDoors[k].entryway);
-                if ((door != nullptr) && (door->GetConnectedRegionKey() != RR_GANONS_CASTLE_ENTRYWAY) &&
-                    (door->GetConnectedRegionKey() != RR_NONE)) {
+                const RandomizerRegion held = (door != nullptr) ? door->GetConnectedRegionKey() : RR_NONE;
+                if ((held != RR_NONE) && (held != RR_GANONS_CASTLE_ENTRYWAY) && (adultSoars || ChildDungeon(held))) {
                     out.push_back(kCrossOotDoorNames[k]);
                 }
             }
@@ -189,8 +200,8 @@ extern "C" COMBO_EXPORT void SOH_ApplyCrossDungeonsToLogic(const char* json) {
                 warp->Disconnect();
             }
         }
-        SPDLOG_INFO("[ComboShip] cross dungeons: OOT door {} <-> MM door {}", kCrossOotDoorNames[k],
-                    kCrossMmDoorNames[sLogicDoorMmSlot[k]]);
+        SPDLOG_INFO("[ComboShip] cross dungeons: OOT door {} ({}) <-> MM door {}", kCrossOotDoorNames[k],
+                    RegionTable(held)->regionName, kCrossMmDoorNames[sLogicDoorMmSlot[k]]);
     }
 }
 

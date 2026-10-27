@@ -500,25 +500,45 @@ static void PushMmDungeonEntrances(const nlohmann::json& seed) {
 
 // Cross-Game Dungeon Entrances, per generation attempt after both games' own entrance shuffles: the swapped doors
 // (none unless the option is on and both games let doors swap), pushed into both oracles. Deterministic in `seed`.
-static ComboRando::CrossDungeonPairs ShuffleCrossDungeonsForCombo(uint64_t seed, ComboRando::CrossShuffleMask mask) {
-    ComboRando::CrossDungeonPairs pairs;
+static ComboRando::CrossDungeonPairs ShuffleCrossDungeonsForCombo(uint64_t seed, ComboRando::CrossShuffleMask mask,
+                                                                  const std::string& sohDump,
+                                                                  const std::string& mmDump) {
+    auto apply = [](const ComboRando::CrossDungeonPairs& pairs) {
+        const std::string json = ComboRando::CrossDungeonsToJson(pairs).dump();
+        if (SOH_ApplyCrossDungeonsToLogic)
+            SOH_ApplyCrossDungeonsToLogic(json.c_str());
+        if (MM_SetCrossDungeons)
+            MM_SetCrossDungeons(json.c_str());
+    };
+    std::vector<std::string> oot, mm;
     if ((mask & ComboRando::CROSS_SHUFFLE_DUNGEON_ENTRANCES) && SOH_CrossDungeonDoors && MM_CrossDungeonDoors) {
         try {
-            const auto oot = nlohmann::json::parse(SOH_CrossDungeonDoors()).get<std::vector<std::string>>();
-            const auto mm = nlohmann::json::parse(MM_CrossDungeonDoors()).get<std::vector<std::string>>();
-            pairs = ComboRando::ShuffleCrossDungeons(seed, oot, mm);
-            if (oot.empty() || mm.empty())
-                std::cout << "[ComboShip] Cross-Game Dungeon Entrances: on, but " << (oot.empty() ? "OOT" : "MM")
-                          << "'s own dungeon entrance shuffle isn't — no swaps\n";
-        } catch (...) { pairs.clear(); }
+            oot = nlohmann::json::parse(SOH_CrossDungeonDoors()).get<std::vector<std::string>>();
+            mm = nlohmann::json::parse(MM_CrossDungeonDoors()).get<std::vector<std::string>>();
+        } catch (...) { oot.clear(); }
+        if (oot.empty() || mm.empty())
+            std::cout << "[ComboShip] Cross-Game Dungeon Entrances: on, but " << (oot.empty() ? "OOT" : "MM")
+                      << "'s own dungeon entrance shuffle isn't — no swaps\n";
     }
-    const std::string json = ComboRando::CrossDungeonsToJson(pairs).dump();
-    if (SOH_ApplyCrossDungeonsToLogic)
-        SOH_ApplyCrossDungeonsToLogic(json.c_str());
-    if (MM_SetCrossDungeons)
-        MM_SetCrossDungeons(json.c_str());
+    if (oot.empty() || mm.empty() || !Combo_SOH_Rando_Reset || !Combo_MM_Rando_Reset) {
+        apply({});
+        return {};
+    }
+    const ComboRando::OracleFns ootOracle = {
+        Combo_SOH_Rando_Reset,     Combo_SOH_Rando_SetOwnedItems, Combo_SOH_Rando_GetReachableChecks,
+        Combo_SOH_Rando_PlaceItem, Combo_SOH_Rando_GetPortalOpen, Combo_SOH_Rando_GetCrossOut
+    };
+    const ComboRando::OracleFns mmOracle = { Combo_MM_Rando_Reset,
+                                             Combo_MM_Rando_SetOwnedItems,
+                                             Combo_MM_Rando_GetReachableChecks,
+                                             Combo_MM_Rando_PlaceItem,
+                                             nullptr,
+                                             Combo_MM_Rando_GetCrossOut };
+    const ComboRando::CrossDungeonPairs pairs =
+        ComboRando::PickCrossDungeons(seed, oot, mm, sohDump, mmDump, ootOracle, mmOracle, apply);
     if (!pairs.empty())
-        std::cout << "[ComboShip] Cross-Game Dungeon Entrances: " << json << "\n";
+        std::cout << "[ComboShip] Cross-Game Dungeon Entrances: " << ComboRando::CrossDungeonsToJson(pairs).dump()
+                  << "\n";
     return pairs;
 }
 
@@ -2030,7 +2050,7 @@ static void RunComboFillBody(std::string inputSeed, ComboRando::ComboGenProgress
         if (MM_ShuffleDungeonEntrancesForCombo)
             MM_ShuffleDungeonEntrancesForCombo(masterSeed);
         // Cross-Game Dungeon Entrances: doors of the two games swapped over those layouts (both oracles follow).
-        crossDungeons = ShuffleCrossDungeonsForCombo(masterSeed, crossShuffle);
+        crossDungeons = ShuffleCrossDungeonsForCombo(masterSeed, crossShuffle, sohDump, mmDump);
         if (cancelled())
             return;
         if (!haveOracles)
@@ -2445,7 +2465,8 @@ static int RunComboGenTest(int numSeeds, uint32_t seedBase) {
             }
             if (MM_ShuffleDungeonEntrancesForCombo)
                 MM_ShuffleDungeonEntrancesForCombo(seed);
-            const ComboRando::CrossDungeonPairs crossDungeons = ShuffleCrossDungeonsForCombo(seed, crossShuffle);
+            const ComboRando::CrossDungeonPairs crossDungeons =
+                ShuffleCrossDungeonsForCombo(seed, crossShuffle, sohDump, mmDump);
             result = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, seed, ootOracle, mmOracle, nullptr, forcedOot,
                                                         ComboRando::OotAccessFromDump(sohDump), {},
                                                         mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, 0,
@@ -2552,7 +2573,8 @@ static void RunComboPlaythrough(const std::string& inputSeed) {
         }
         if (MM_ShuffleDungeonEntrancesForCombo)
             MM_ShuffleDungeonEntrancesForCombo(masterSeed);
-        const ComboRando::CrossDungeonPairs crossDungeons = ShuffleCrossDungeonsForCombo(masterSeed, crossShuffle);
+        const ComboRando::CrossDungeonPairs crossDungeons =
+            ShuffleCrossDungeonsForCombo(masterSeed, crossShuffle, sohDump, mmDump);
         fill = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, ootOracle, mmOracle, nullptr, forcedOot,
                                                   ComboRando::OotAccessFromDump(sohDump), {},
                                                   mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT, 0,

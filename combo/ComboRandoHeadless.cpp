@@ -232,21 +232,7 @@ static int Run(int argc, char** argv) {
         if (MM_SetCrossDungeons)
             MM_SetCrossDungeons(json.c_str());
     };
-    auto shuffleCrossDungeons = [&](uint64_t seed, ComboRando::CrossShuffleMask mask) {
-        ComboRando::CrossDungeonPairs pairs;
-        if ((mask & ComboRando::CROSS_SHUFFLE_DUNGEON_ENTRANCES) && SOH_CrossDungeonDoors && MM_CrossDungeonDoors) {
-            try {
-                pairs = ComboRando::ShuffleCrossDungeons(
-                    seed, nlohmann::json::parse(SOH_CrossDungeonDoors()).get<std::vector<std::string>>(),
-                    nlohmann::json::parse(MM_CrossDungeonDoors()).get<std::vector<std::string>>());
-            } catch (...) { pairs.clear(); }
-        }
-        applyCrossDungeons(pairs);
-        if (!pairs.empty())
-            std::cout << "[comborando] Cross-Game Dungeon Entrances: " << ComboRando::CrossDungeonsToJson(pairs).dump()
-                      << "\n";
-        return pairs;
-    };
+
     auto MM_Restore = Sym<FnOracleVoid>(mm, "Combo_MM_Rando_Restore");
     auto SOH_DumpEnabledTricks = Sym<FnDump>(soh, "SOH_DumpEnabledTricks");
     auto SOH_DumpRandoHintData = Sym<FnDump>(soh, "SOH_DumpRandoHintData"); // cross-hint verification
@@ -289,6 +275,22 @@ static int Run(int argc, char** argv) {
                                Sym<FnOraclePlaceItem>(mm, "Combo_MM_Rando_PlaceItem"),
                                nullptr,
                                Sym<uint32_t (*)(void)>(mm, "Combo_MM_Rando_GetCrossOut") };
+    auto shuffleCrossDungeons = [&](uint64_t seed, ComboRando::CrossShuffleMask mask, const std::string& sohDump,
+                                    const std::string& mmDump) {
+        std::vector<std::string> ootDoors, mmDoors;
+        if ((mask & ComboRando::CROSS_SHUFFLE_DUNGEON_ENTRANCES) && SOH_CrossDungeonDoors && MM_CrossDungeonDoors) {
+            try {
+                ootDoors = nlohmann::json::parse(SOH_CrossDungeonDoors()).get<std::vector<std::string>>();
+                mmDoors = nlohmann::json::parse(MM_CrossDungeonDoors()).get<std::vector<std::string>>();
+            } catch (...) { ootDoors.clear(); }
+        }
+        const ComboRando::CrossDungeonPairs pairs =
+            ComboRando::PickCrossDungeons(seed, ootDoors, mmDoors, sohDump, mmDump, oot, mmO, applyCrossDungeons);
+        if (!pairs.empty())
+            std::cout << "[comborando] Cross-Game Dungeon Entrances: " << ComboRando::CrossDungeonsToJson(pairs).dump()
+                      << "\n";
+        return pairs;
+    };
 
     if (!SOH_InitRandoHeadless || !MM_InitRandoHeadless || !SOH_Dump || !MM_Dump || !oot.Reset || !oot.SetOwnedItems ||
         !oot.GetReachableChecks || !oot.PlaceItem || !oot.GetPortalOpen || !mmO.Reset || !mmO.SetOwnedItems ||
@@ -725,7 +727,7 @@ static int Run(int argc, char** argv) {
             }
             if (MM_ShuffleDungeonEntrances)
                 MM_ShuffleDungeonEntrances(masterSeed);
-            crossDungeons = shuffleCrossDungeons(masterSeed, crossShuffle);
+            crossDungeons = shuffleCrossDungeons(masterSeed, crossShuffle, sohDump, mmDump);
             ComboRando::OotAccess ootAccess = ComboRando::OotAccessFromDump(sohDump);
             r = ComboRando::CrossWorldCombinedFill(sohDump, mmDump, masterSeed, oot, mmO, nullptr, forced, ootAccess,
                                                    goal, mmStart ? ComboRando::GAME_MM : ComboRando::GAME_OOT,

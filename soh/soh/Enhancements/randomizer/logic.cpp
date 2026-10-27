@@ -796,7 +796,7 @@ bool Logic::ComboCrossWarp(int warpIndex) {
 
 bool Logic::ComboInTermina() {
     const uint32_t in = static_cast<uint32_t>(gComboOracleCrossIn);
-    if (IsChild && (in & ComboRando::CW_OOT_IN_MM_START))
+    if (IsChild && (in & (ComboRando::CW_OOT_IN_MM_START | ComboRando::CW_OOT_IN_MM_PORTAL)))
         return true;
     Region* portal = RegionTable(RR_MARKET_MASK_SHOP);
     if ((IsChild && portal->Child()) || (IsAdult && portal->Adult()))
