@@ -2695,9 +2695,10 @@ first time adult Link appears.
     (skeleton limb i is MM's limb i + 1; the limbs' joint offsets in these mods are OOT's within a few units). The
     hands and the sheath are left out, as in OOT, which draws them from its own hand and sheath lists rather than the
     skeleton. Each limb list is copied between a `G_COMBO_RM_PUSH("mmadult")`/`POP` bracket, since the skeleton draw
-    submits limbs as raw pointers. A call to a material no file has becomes a no-op (logged once): Skilar's MM Adult
-    Link leaves out the materials of its hand and sheath limbs, which Ship of Harkinian never draws, and one head
-    triangle uses one of them.
+    submits limbs as raw pointers. A call to a material no file has becomes a no-op (logged), and so do the triangles
+    drawn with it, which would otherwise take the previous material's colors: Skilar's MM Adult Link leaves out the
+    materials of its hand and sheath limbs, which Ship of Harkinian never draws, and one head triangle uses one of
+    them.
   - *Lists and textures by name:* any OOT adult list or texture ComboShip draws for adult Link (fists, item hands,
     first-person arms, eyes and mouths, bottle, bow string, gauntlet plates) is taken from the mods when one replaces
     it (`Combo::AdultLinkModel::Path`).
@@ -2707,6 +2708,14 @@ first time adult Link appears.
     drawn as before. MM has no Master Sword, so a Master Sword mod changes nothing in Termina.
 - **Not carried over:** MM's hair, linen and boot color options recolor OOT's own lists, so they don't apply to a
   replaced body. The tunic color still does, through the environment color, where the model shades with it.
+
+Tested in game with Skilar's MM Adult Link, Skilar's MM Hylian Shield, Skilar's MM Master Sword and Vanilla Shields
+installed (adult Link forced with `gCombo.Dev.MmAdultLink`): the log reports 4 files and 15 body limbs; Termina's adult
+Link has Skilar's body (MM hair and face, belt, boots) with OOT's hands and MM's sheath, and Skilar's Hylian Shield on
+his back and in his fist while shielding. With the folder empty he is OOT's own model with MM's Hero's Shield, as
+before, and the folder is made with its note file. The blue square under adult Link's chin in the get-item close-up
+shows with OOT's own model too, so it isn't from this. Not tested: the Mirror Shield model, and the release at
+shutdown.
 
 ### Cross-Games Age: MM age requirements (OoTMM `items.mmAgeRequirements`) (2026-10-12)
 

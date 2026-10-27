@@ -140,8 +140,9 @@ void RegisterFactories(const std::shared_ptr<Ship::ResourceLoader>& loader) {
                                     "Blob", static_cast<uint32_t>(Ship::ResourceType::Blob), 0);
 }
 
-// The limb list, bracketed; calls to lists the mods don't have become no-ops (a model mod can leave out materials of
-// limbs Ship of Harkinian never draws from the skeleton, and a missing call would stop the interpreter).
+// The limb list, bracketed. A call to a material the mods don't have becomes a no-op, and so do the triangles drawn
+// with it (a model mod can leave out materials of limbs Ship of Harkinian never draws from the skeleton; a missing
+// call would stop the interpreter, and its triangles would take the previous material's colors).
 bool BuildLimb(BuiltLimb& out, const std::string& path) {
     out.res = sRM->LoadResource(path);
     if ((out.res == nullptr) ||
@@ -153,16 +154,24 @@ bool BuildLimb(BuiltLimb& out, const std::string& path) {
     const std::vector<Gfx>& in = std::static_pointer_cast<Fast::DisplayList>(out.res)->Instructions;
     Gfx push = gsSPComboRMPush(kRoute);
     out.gfx.push_back(push);
+    bool noMaterial = false; // the last material called is missing: its triangles are left out too
     for (size_t i = 0; i < in.size();) {
         const uint8_t op = (uint8_t)(in[i].words.w0 >> 24);
         if (op == G_ENDDL) {
             break;
         }
         const size_t words = IsTwoWordOpcode(op) ? 2 : 1;
-        if ((op == G_DL_OTR_FILEPATH) && !Exists(Strip((const char*)in[i].words.w1))) {
-            SPDLOG_WARN("[ComboShip] adult Link model: {} calls {}, which no mod has; skipped", path,
-                        (const char*)in[i].words.w1);
+        const bool triangles = (op == G_TRI1) || (op == G_TRI2) || (op == G_QUAD) || (op == G_TRI1_OTR);
+        if (op == G_DL_OTR_FILEPATH) {
+            noMaterial = !Exists(Strip((const char*)in[i].words.w1));
+        }
+        if ((op == G_DL_OTR_FILEPATH) && noMaterial) {
+            SPDLOG_WARN("[ComboShip] adult Link model: {} calls {}, which no mod has; left out with its triangles",
+                        path, (const char*)in[i].words.w1);
             Gfx noop = gsDPNoOp();
+            out.gfx.push_back(noop);
+        } else if (triangles && noMaterial) {
+            Gfx noop = gsDPNoOp(); // drawn with the previous material, they'd come out in its colors
             out.gfx.push_back(noop);
         } else {
             out.gfx.insert(out.gfx.end(), in.begin() + i, in.begin() + std::min(i + words, in.size()));
@@ -247,8 +256,13 @@ void Init() {
     // OOT's archives first (the mods' lists use OOT adult Link's textures, and anything they don't replace is OOT's),
     // then the mods on top.
     std::vector<std::string> paths;
-    for (const auto& archive : *oot->GetArchiveManager()->GetArchives()) {
-        paths.push_back(archive->GetPath());
+    const auto ootArchives = oot->GetArchiveManager()->GetArchives(); // held: a temporary would die before the loop
+    if (ootArchives != nullptr) {
+        for (const auto& archive : *ootArchives) {
+            if (archive != nullptr) {
+                paths.push_back(archive->GetPath());
+            }
+        }
     }
     paths.insert(paths.end(), mods.begin(), mods.end());
     sRM = std::make_shared<Ship::ResourceManager>();
